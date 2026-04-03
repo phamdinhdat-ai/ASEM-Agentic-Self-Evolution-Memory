@@ -1,0 +1,19 @@
+inference:
+  backend: "huggingface"  # "langchain" | "huggingface"
+  huggingface:
+    model_name_or_path: "Qwen/Qwen2.5-7B-Instruct"
+    device_map: "auto"
+    load_in_4bit: false
+    pipeline_task: "text-generation"
+    max_new_tokens: 512
+    temperature: 0.0
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+hyperparameters:
+  k1: 20
+  k2: 5
+  k: 5
+  delta: 0.30
+  lambda: 0.40
+  alpha: 0.10
+  q0: 0.50

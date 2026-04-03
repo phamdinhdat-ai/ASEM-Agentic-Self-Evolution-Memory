@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASEM — Agentic Self-Evolving Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #080c14;
+    --surface:   #0e1420;
+    --surface2:  #131b28;
+    --border:    #1e2d42;
+    --border2:   #2a3f5c;
+    --text:      #d4e4f7;
+    --muted:     #5a7a9e;
+    --accent:    #00d4ff;
+    --accent2:   #7c5cfc;
+    --add:       #00e5a0;
+    --update:    #ffc14d;
+    --delete:    #ff5370;
+    --noop:      #5a7a9e;
+    --glow:      rgba(0,212,255,0.15);
+    --glow2:     rgba(124,92,252,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── grid noise overlay ─────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── layout ─────────────────────────────────────────── */
+  .shell {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-rows: 56px 1fr;
+    grid-template-columns: 1fr;
+    height: 100vh;
+  }
+
+  /* ── header ─────────────────────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 24px;
+    background: rgba(8,12,20,.9);
+    backdrop-filter: blur(12px);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 18px;
+    letter-spacing: -.5px;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent);
+  }
+  .logo span { color: var(--text); }
+  .header-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: .5px;
+  }
+  .backend-pill {
+    margin-left: auto;
+    display: flex; gap: 6px;
+  }
+  .pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    padding: 3px 10px; border-radius: 99px;
+    border: 1px solid var(--border2);
+    cursor: pointer; transition: all .2s;
+    letter-spacing: .5px;
+    background: var(--surface);
+  }
+  .pill.active-lc  { border-color: var(--accent);  color: var(--accent);  background: rgba(0,212,255,.08); box-shadow: 0 0 10px rgba(0,212,255,.2); }
+  .pill.active-hf  { border-color: var(--accent2); color: var(--accent2); background: rgba(124,92,252,.08); box-shadow: 0 0 10px rgba(124,92,252,.2); }
+  .pill:not(.active-lc):not(.active-hf) { color: var(--muted); }
+
+  /* ── main area ──────────────────────────────────────── */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr 300px;
+    overflow: hidden;
+  }
+
+  /* ── panels ─────────────────────────────────────────── */
+  .panel {
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; color: var(--muted);
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .panel-head .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 6px var(--accent);
+    flex-shrink: 0;
+  }
+  .panel-head .dot.purple { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .panel-head .dot.green  { background: var(--add);     box-shadow: 0 0 6px var(--add); }
+
+  .panel-body { flex: 1; overflow-y: auto; padding: 12px; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ── chat ───────────────────────────────────────────── */
+  .chat-messages { display: flex; flex-direction: column; gap: 8px; }
+
+  .msg {
+    padding: 10px 12px; border-radius: 8px;
+    line-height: 1.6; font-size: 12.5px;
+    animation: fadeUp .3s ease;
+  }
+  .msg.user {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-left: 3px solid var(--accent);
+    align-self: flex-end; max-width: 90%;
+  }
+  .msg.agent {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    align-self: flex-start; max-width: 90%;
+  }
+  .msg-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    letter-spacing: .5px; margin-bottom: 4px;
+  }
+
+  .chat-input-area {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .chat-input-row { display: flex; gap: 8px; }
+  textarea {
+    flex: 1; background: var(--surface2);
+    border: 1px solid var(--border2); border-radius: 6px;
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px; padding: 8px 10px;
+    resize: none; outline: none;
+    transition: border-color .2s;
+    height: 60px;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,.1); }
+  
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .5px;
+    padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--accent);
+    color: var(--accent); background: rgba(0,212,255,.08);
+    cursor: pointer; transition: all .2s;
+    white-space: nowrap; align-self: flex-start;
+  }
+  .btn:hover { background: rgba(0,212,255,.18); box-shadow: 0 0 12px rgba(0,212,255,.2); }
+  .btn.purple { border-color: var(--accent2); color: var(--accent2); background: rgba(124,92,252,.08); }
+  .btn.purple:hover { background: rgba(124,92,252,.18); }
+  .btn.small { padding: 4px 10px; font-size: 9px; }
+
+  .preset-row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .preset-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; padding: 3px 8px; border-radius: 4px;
+    border: 1px solid var(--border2); color: var(--muted);
+    cursor: pointer; transition: all .15s;
+    background: var(--surface);
+  }
+  .preset-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── pipeline centre ────────────────────────────────── */
+  .centre-panel {
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .stage-flow {
+    flex: 1; overflow-y: auto;
+    padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .stage-flow::-webkit-scrollbar { width: 4px; }
+  .stage-flow::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .stage-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color .3s, box-shadow .3s;
+  }
+  .stage-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(0,212,255,.15);
+  }
+  .stage-card.done {
+    border-color: var(--add);
+    box-shadow: 0 0 10px rgba(0,229,160,.08);
+  }
+
+  .stage-header {
+    padding: 9px 14px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .stage-num {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 10px; color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 4px; padding: 2px 7px;
+    letter-spacing: .5px;
+  }
+  .stage-card.active .stage-num { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.08); }
+  .stage-card.done   .stage-num { border-color: var(--add);   color: var(--add);   background: rgba(0,229,160,.08); }
+
+  .stage-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; flex: 1; }
+  .stage-status {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    padding: 2px 8px; border-radius: 99px;
+    background: var(--surface2); color: var(--muted);
+    border: 1px solid var(--border2);
+  }
+  .stage-card.active .stage-status { background: rgba(0,212,255,.1); color: var(--accent); border-color: var(--accent); }
+  .stage-card.done   .stage-status { background: rgba(0,229,160,.1); color: var(--add);   border-color: var(--add); }
+
+  .stage-body { padding: 10px 14px; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+  .stage-detail { display: none; }
+  .stage-detail.open { display: block; }
+
+  .kv-row { display: flex; gap: 6px; margin: 3px 0; flex-wrap: wrap; }
+  .kv-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--accent); letter-spacing: .3px;
+    white-space: nowrap;
+  }
+  .kv-val { color: var(--text); font-size: 11px; }
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; padding: 1px 7px; border-radius: 4px;
+    border: 1px solid var(--border2); color: var(--text);
+    background: var(--surface2);
+  }
+  .tag.cyan   { border-color: rgba(0,212,255,.4);   color: var(--accent); }
+  .tag.purple { border-color: rgba(124,92,252,.4);  color: var(--accent2); }
+  .tag.green  { border-color: rgba(0,229,160,.4);   color: var(--add); }
+  .tag.yellow { border-color: rgba(255,193,77,.4);  color: var(--update); }
+  .tag.red    { border-color: rgba(255,83,112,.4);  color: var(--delete); }
+
+  .op-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 3px 12px; border-radius: 6px; letter-spacing: .5px;
+  }
+  .op-ADD    { background: rgba(0,229,160,.15);  border: 1px solid var(--add);    color: var(--add); }
+  .op-UPDATE { background: rgba(255,193,77,.12); border: 1px solid var(--update); color: var(--update); }
+  .op-DELETE { background: rgba(255,83,112,.12); border: 1px solid var(--delete); color: var(--delete); }
+  .op-NOOP   { background: rgba(90,122,158,.1);  border: 1px solid var(--noop);   color: var(--noop); }
+
+  .vec-bar {
+    display: flex; gap: 1px; align-items: flex-end;
+    height: 24px; margin: 4px 0;
+  }
+  .vec-seg {
+    flex: 1; border-radius: 1px;
+    background: var(--accent); opacity: .3;
+    transition: height .4s, opacity .4s;
+  }
+
+  .link-line {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; margin: 3px 0;
+  }
+  .link-arrow { color: var(--accent2); font-size: 14px; }
+
+  .score-bar { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  .score-label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); width: 70px; flex-shrink: 0; }
+  .score-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+  .score-val { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--text); width: 32px; text-align: right; flex-shrink: 0; }
+
+  .q-meter { margin: 6px 0; }
+  .q-label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); margin-bottom: 3px; }
+  .q-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .q-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .8s ease; }
+
+  .ema-formula {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 6px 10px; color: var(--accent2);
+    margin: 6px 0;
+  }
+
+  /* ── memory bank ─────────────────────────────────────── */
+  .memory-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .memory-note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    transition: all .3s;
+    animation: noteIn .4s ease;
+    cursor: pointer;
+  }
+  .memory-note:hover { border-color: var(--border2); }
+  .memory-note.selected { border-color: var(--accent2); box-shadow: 0 0 12px rgba(124,92,252,.2); }
+  .memory-note.new-note { border-color: var(--add); box-shadow: 0 0 14px rgba(0,229,160,.2); animation: noteIn .4s ease, pulse 1s ease 2; }
+  .memory-note.updated  { border-color: var(--update); box-shadow: 0 0 14px rgba(255,193,77,.2); }
+
+  .note-id {
+    font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted);
+    letter-spacing: .3px; margin-bottom: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .note-content { font-size: 11.5px; color: var(--text); line-height: 1.5; margin-bottom: 6px; }
+  .note-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 5px; }
+  .note-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+  .note-q {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    color: var(--accent2);
+  }
+  .note-links { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); }
+
+  .q-inline {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .q-mini { width: 40px; height: 3px; background: var(--border); border-radius: 1px; overflow: hidden; }
+  .q-mini-fill { height: 100%; background: var(--accent2); border-radius: 1px; transition: width .6s; }
+
+  .empty-state {
+    text-align: center; padding: 32px 16px;
+    color: var(--muted); font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: .5px;
+  }
+  .empty-state .icon { font-size: 28px; margin-bottom: 10px; opacity: .4; }
+
+  /* ── animations ─────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes noteIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 14px rgba(0,229,160,.2); }
+    50%      { box-shadow: 0 0 28px rgba(0,229,160,.5); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .2; } }
+
+  .spinner {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    animation: spin .7s linear infinite;
+    display: inline-block; flex-shrink: 0;
+  }
+  .blink { animation: blink 1s infinite; }
+
+  /* ── bottom bar ─────────────────────────────────────── */
+  .status-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 26px;
+    background: rgba(8,12,20,.95);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 16px;
+    font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted);
+    z-index: 100;
+  }
+  .status-item { display: flex; align-items: center; gap: 5px; }
+  .status-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .status-dot.green  { background: var(--add);    box-shadow: 0 0 4px var(--add); }
+  .status-dot.cyan   { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+  .status-dot.purple { background: var(--accent2);box-shadow: 0 0 4px var(--accent2); }
+
+  /* ── dividers ────────────────────────────────────────── */
+  .divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+  /* section title inside panel body */
+  .sec-title {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    color: var(--muted); letter-spacing: 1px;
+    text-transform: uppercase; margin: 10px 0 4px;
+  }
+
+  .reward-row {
+    display: flex; align-items: center; gap: 8px; margin: 4px 0;
+  }
+  .reward-label { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); width: 50px; flex-shrink:0; }
+  .reward-input {
+    width: 60px; background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 11px;
+    padding: 4px 6px; border-radius: 4px; outline: none;
+  }
+  .reward-input:focus { border-color: var(--accent2); }
+
+  /* scrollbar firefox */
+  * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── HEADER ───────────────────────────────────────────── -->
+  <header>
+    <div class="logo">ASEM<span> ·</span></div>
+    <div class="header-sub">AGENTIC SELF-EVOLVING MEMORY</div>
+    <div class="backend-pill">
+      <button class="pill active-lc" id="btn-lc" onclick="setBackend('langchain')">LANGCHAIN / LANGGRAPH</button>
+      <button class="pill" id="btn-hf" onclick="setBackend('huggingface')">HUGGINGFACE</button>
+    </div>
+  </header>
+
+  <!-- ── MAIN 3-COL ────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- LEFT: Chat + Input -->
+    <div class="panel">
+      <div class="panel-head"><div class="dot"></div> AGENT CONVERSATION</div>
+      <div class="panel-body" id="chat-panel">
+        <div class="chat-messages" id="chat-msgs">
+          <div class="msg agent">
+            <div class="msg-label">ASEM AGENT · <span id="backend-label">LangChain</span></div>
+            Hello! I'm an ASEM-powered agent. My memory evolves as we talk — I store, link, and refine knowledge across our sessions. Try telling me about yourself.
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="preset-row" id="preset-row">
+          <span class="preset-chip" onclick="usePreset(0)">My name is Alex</span>
+          <span class="preset-chip" onclick="usePreset(1)">I adopted a dog named Buddy</span>
+          <span class="preset-chip" onclick="usePreset(2)">Also got a dog named Scout</span>
+          <span class="preset-chip" onclick="usePreset(3)">I work as a data scientist</span>
+          <span class="preset-chip" onclick="usePreset(4)">What dogs do I have?</span>
+          <span class="preset-chip" onclick="usePreset(5)">What's my job?</span>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" placeholder="Type a message or use a preset above…" onkeydown="handleKey(event)"></textarea>
+          <button class="btn" onclick="sendMessage()">SEND</button>
+        </div>
+        <div class="reward-row">
+          <span class="reward-label">REWARD r</span>
+          <input class="reward-input" id="reward-input" type="number" min="-1" max="1" step="0.1" value="0.8">
+          <button class="btn small purple" onclick="applyReward()">UPDATE Q</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTRE: Pipeline stages -->
+    <div class="centre-panel">
+      <div class="panel-head"><div class="dot purple"></div> ASEM PIPELINE — LIVE TRACE</div>
+      <div class="stage-flow" id="stage-flow">
+
+        <!-- Stage 1 -->
+        <div class="stage-card" id="s1">
+          <div class="stage-header" onclick="toggleStage('s1')">
+            <span class="stage-num">S1</span>
+            <span class="stage-title">Multi-Attribute Note Construction</span>
+            <span class="stage-status" id="s1-status">IDLE</span>
+          </div>
+          <div class="stage-body">
+            <div id="s1-idle" style="color:var(--muted)">Waiting for new interaction…</div>
+            <div class="stage-detail" id="s1-detail">
+              <div class="sec-title">LLM-generated attributes (P1)</div>
+              <div class="kv-row"><span class="kv-key">K =</span><span class="kv-val" id="s1-keywords">—</span></div>
+              <div class="kv-row"><span class="kv-key">G =</span><span class="kv-val" id="s1-tags">—</span></div>
+              <div class="kv-row"><span class="kv-key">X =</span><span class="kv-val" id="s1-ctx">—</span></div>
+              <div class="sec-title">Embedding e = encode(c ∥ K ∥ G ∥ X)</div>
+              <div class="vec-bar" id="s1-vec"></div>
+              <div class="kv-row"><span class="kv-key">z =</span><span class="kv-val">intent embedding of raw content</span></div>
+              <div class="kv-row"><span class="kv-key">q₀ =</span><span class="kv-val" id="s1-q0">0.50</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 2 -->
+        <div class="stage-card" id="s2">
+          <div class="stage-header" onclick="toggleStage('s2')">
+            <span class="stage-num">S2</span>
+            <span class="stage-title">RL-Driven Memory Write Operations</span>
+            <span class="stage-status" id="s2-status">IDLE</span>
+          </div>
+          <div class="stage-body">
+            <div id="s2-idle" style="color:var(--muted)">Memory Manager (π<sub>θ</sub>) — GRPO-trained</div>
+            <div class="stage-detail" id="s2-detail">
+              <div class="sec-title">Operation selected</div>
+              <div style="margin:6px 0"><span class="op-badge" id="s2-op">—</span></div>
+              <div class="kv-row"><span class="kv-key">TARGET =</span><span class="kv-val" id="s2-target">—</span></div>
+              <div class="kv-row"><span class="kv-key">REASON =</span><span class="kv-val" id="s2-reason">—</span></div>
+              <div class="sec-title">Backend inference</div>
+              <div class="kv-row"><span class="kv-key">ENGINE =</span><span class="kv-val" id="s2-engine">LangChain → BaseChatModel</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 3 -->
+        <div class="stage-card" id="s3">
+          <div class="stage-header" onclick="toggleStage('s3')">
+            <span class="stage-num">S3</span>
+            <span class="stage-title">Dynamic Linking &amp; Memory Evolution</span>
+            <span class="stage-status" id="s3-status">IDLE</span>
+          </div>
+          <div class="stage-body">
+            <div id="s3-idle" style="color:var(--muted)">Schema-free k-NN link generation + bidirectional evolution</div>
+            <div class="stage-detail" id="s3-detail">
+              <div class="sec-title">k-NN neighbours found</div>
+              <div id="s3-links" class="memory-list"></div>
+              <div class="sec-title" style="margin-top:8px">Links generated (P2)</div>
+              <div id="s3-linklines"></div>
+              <div class="sec-title" style="margin-top:8px">Memory evolution (P3)</div>
+              <div id="s3-evolve" style="color:var(--muted);font-size:11px">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 4 -->
+        <div class="stage-card" id="s4">
+          <div class="stage-header" onclick="toggleStage('s4')">
+            <span class="stage-num">S4</span>
+            <span class="stage-title">Two-Phase Hybrid Retrieval</span>
+            <span class="stage-status" id="s4-status">IDLE</span>
+          </div>
+          <div class="stage-body">
+            <div id="s4-idle" style="color:var(--muted)">Phase A: sim filter · Phase B: Q-value re-rank · Distil</div>
+            <div class="stage-detail" id="s4-detail">
+              <div class="sec-title">Phase A — candidate pool C(q), δ=0.30</div>
+              <div id="s4-phase-a"></div>
+              <div class="sec-title" style="margin-top:8px">Phase B — composite score (λ=0.40)</div>
+              <div id="s4-phase-b"></div>
+              <div class="sec-title" style="margin-top:8px">Distilled subset M<sub>distil</sub></div>
+              <div id="s4-distil" style="color:var(--text);font-size:11.5px">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 5 -->
+        <div class="stage-card" id="s5">
+          <div class="stage-header" onclick="toggleStage('s5')">
+            <span class="stage-num">S5</span>
+            <span class="stage-title">Non-Parametric Utility Update</span>
+            <span class="stage-status" id="s5-status">IDLE</span>
+          </div>
+          <div class="stage-body">
+            <div id="s5-idle" style="color:var(--muted)">EMA q← q+α(r−q), experience consolidation</div>
+            <div class="stage-detail" id="s5-detail">
+              <div class="ema-formula">q_new ← q_old + α · (r − q_old)</div>
+              <div class="kv-row"><span class="kv-key">α =</span><span class="kv-val">0.10</span></div>
+              <div class="kv-row"><span class="kv-key">r =</span><span class="kv-val" id="s5-r">—</span></div>
+              <div id="s5-updates"></div>
+              <div class="sec-title" style="margin-top:8px">Experience consolidation</div>
+              <div id="s5-exp" style="color:var(--muted);font-size:11px">—</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /stage-flow -->
+    </div><!-- /centre-panel -->
+
+    <!-- RIGHT: Memory bank -->
+    <div class="panel">
+      <div class="panel-head"><div class="dot green"></div> MEMORY BANK M<sub>t</sub> <span id="note-count" style="margin-left:auto;font-size:9px;color:var(--muted)">0 notes</span></div>
+      <div class="panel-body">
+        <div id="memory-list" class="memory-list">
+          <div class="empty-state"><div class="icon">⬡</div>No notes yet.<br>Send a message to begin.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot green"></div> MEMORY BANK ONLINE</div>
+  <div class="status-item"><div class="status-dot cyan"></div> FAISS ANN INDEX</div>
+  <div class="status-item"><div class="status-dot purple blink" id="pipeline-dot"></div> <span id="pipeline-status">PIPELINE IDLE</span></div>
+  <div class="status-item" style="margin-left:auto">BACKBONE: <span id="backbone-label" style="color:var(--accent)">Qwen2.5-7B-Instruct · FROZEN</span></div>
+  <div class="status-item">NOTES: <span id="status-count" style="color:var(--text)">0</span></div>
+  <div class="status-item">INTERACTIONS: <span id="status-interactions" style="color:var(--text)">0</span></div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let backend = 'langchain';
+let notes   = [];
+let interactions = 0;
+let lastDistil  = [];
+
+const PRESETS = [
+  "My name is Alex.",
+  "I adopted a dog named Buddy.",
+  "I also adopted another dog named Scout.",
+  "I work as a data scientist at a tech company.",
+  "What dogs do I have?",
+  "What is my job?"
+];
+
+// knowledge map for simulation
+const KNOWLEDGE = {
+  "name":    { K:["name","identity"], G:["personal","profile"], X:"User's personal identity and name.", answer:"Your name is Alex." },
+  "dog":     { K:["dog","pet","buddy","scout"], G:["pets","animals"], X:"User owns two dogs named Buddy and Scout.", answer:"You have two dogs: Buddy and Scout." },
+  "buddy":   { K:["dog","pet","buddy"], G:["pets"], X:"User adopted a dog named Buddy.", answer:"Your first dog is named Buddy." },
+  "scout":   { K:["dog","pet","scout","buddy"], G:["pets"], X:"User has two dogs: Buddy and Scout. Scout was adopted after Buddy.", answer:"You have two dogs: Buddy and Scout." },
+  "job":     { K:["job","career","data scientist"], G:["career","professional"], X:"User works as a data scientist at a tech company.", answer:"You work as a data scientist at a tech company." },
+  "default": { K:["general"], G:["misc"], X:"General interaction with the user.", answer:"I've stored that in memory." }
+};
+
+function classify(text) {
+  const t = text.toLowerCase();
+  if (t.includes("scout") || (t.includes("dog") && notes.some(n=>n.content.toLowerCase().includes("buddy")))) return "scout";
+  if (t.includes("buddy") || t.includes("dog") || t.includes("pet")) return "buddy";
+  if (t.includes("name") || t.includes("alex")) return "name";
+  if (t.includes("job") || t.includes("work") || t.includes("data") || t.includes("scientist")) return "job";
+  return "default";
+}
+
+function isQuery(text) {
+  return text.includes("?") || /^(what|who|how|when|where|do i|did i)/i.test(text.trim());
+}
+
+// ── Backend toggle ───────────────────────────────────────────
+function setBackend(b) {
+  backend = b;
+  document.getElementById('btn-lc').className = 'pill' + (b==='langchain' ? ' active-lc' : '');
+  document.getElementById('btn-hf').className = 'pill' + (b==='huggingface' ? ' active-hf' : '');
+  const lbl = b==='langchain' ? 'LangChain' : 'HuggingFace';
+  document.getElementById('backend-label').textContent = lbl;
+  document.getElementById('backbone-label').textContent =
+    b==='langchain' ? 'Qwen2.5-7B via BaseChatModel · FROZEN' : 'Qwen2.5-7B-Instruct · transformers · FROZEN';
+  document.querySelectorAll('[id="s2-engine"]').forEach(el=>{
+    el.textContent = b==='langchain' ? 'LangChain → BaseChatModel' : 'HuggingFace → transformers.pipeline';
+  });
+}
+
+// ── Utilities ────────────────────────────────────────────────
+function uid() { return 'N' + Math.random().toString(36).slice(2,7).toUpperCase(); }
+
+function randVec(n=32) {
+  return Array.from({length:n}, ()=>Math.random());
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+function setStage(id, state) { // idle | active | done
+  const el = document.getElementById(id);
+  el.className = 'stage-card' + (state==='active'?' active': state==='done'?' done':'');
+  const st = document.getElementById(id+'-status');
+  st.textContent = state.toUpperCase();
+}
+
+function openDetail(id, open) {
+  document.getElementById(id+'-detail').className = 'stage-detail' + (open?' open':'');
+  document.getElementById(id+'-idle').style.display = open?'none':'block';
+}
+
+function toggleStage(id) {
+  const d = document.getElementById(id+'-detail');
+  const showing = d.classList.contains('open');
+  openDetail(id, !showing);
+  document.getElementById(id+'-idle').style.display = showing ? 'block' : 'none';
+}
+
+function renderVec(id, vec) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = vec.slice(0,32).map(v=>
+    `<div class="vec-seg" style="height:${Math.round(v*22)+2}px;opacity:${(v*.5+.2).toFixed(2)}"></div>`
+  ).join('');
+}
+
+function setPipelineStatus(msg) {
+  document.getElementById('pipeline-status').textContent = msg;
+}
+
+// ── Add chat message ─────────────────────────────────────────
+function addMsg(role, text) {
+  const wrap = document.getElementById('chat-msgs');
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  const lbl = role==='user' ? 'USER' : `ASEM AGENT · ${backend==='langchain'?'LangChain':'HuggingFace'}`;
+  d.innerHTML = `<div class="msg-label">${lbl}</div>${text}`;
+  wrap.appendChild(d);
+  document.getElementById('chat-panel').scrollTop = 99999;
+}
+
+// ── Render memory bank ────────────────────────────────────────
+function renderBank() {
+  const list = document.getElementById('memory-list');
+  const cnt  = document.getElementById('note-count');
+  const scnt = document.getElementById('status-count');
+  cnt.textContent  = notes.length + ' notes';
+  scnt.textContent = notes.length;
+  if(notes.length===0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">⬡</div>No notes yet.<br>Send a message to begin.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  [...notes].reverse().forEach(n => {
+    const div = document.createElement('div');
+    div.className = 'memory-note' + (n.isNew?' new-note': n.isUpdated?' updated':'');
+    div.id = 'note-'+n.id;
+    const qPct = Math.round(n.q*100);
+    div.innerHTML = `
+      <div class="note-id">
+        <span>${n.id}</span>
+        <span>${n.time}</span>
+      </div>
+      <div class="note-content">${n.content}</div>
+      <div class="note-tags">
+        ${n.K.map(k=>`<span class="tag cyan">${k}</span>`).join('')}
+        ${n.G.map(g=>`<span class="tag purple">${g}</span>`).join('')}
+      </div>
+      <div class="note-meta">
+        <div class="q-inline">
+          <span class="note-q">q=${n.q.toFixed(3)}</span>
+          <div class="q-mini"><div class="q-mini-fill" style="width:${qPct}%"></div></div>
+        </div>
+        <span class="note-links">${n.links.length} link${n.links.length!==1?'s':''}</span>
+      </div>
+    `;
+    setTimeout(()=>{ n.isNew=false; n.isUpdated=false; }, 2000);
+    list.appendChild(div);
+  });
+}
+
+// ── Main send ────────────────────────────────────────────────
+function handleKey(e) {
+  if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function usePreset(i) {
+  document.getElementById('chat-input').value = PRESETS[i];
+  sendMessage();
+}
+
+async function sendMessage() {
+  const inp = document.getElementById('chat-input');
+  const text = inp.value.trim();
+  if(!text) return;
+  inp.value = '';
+  addMsg('user', text);
+  interactions++;
+  document.getElementById('status-interactions').textContent = interactions;
+  setPipelineStatus('PIPELINE RUNNING');
+
+  const query = isQuery(text);
+  const cls   = classify(text);
+  const know  = KNOWLEDGE[cls] || KNOWLEDGE.default;
+
+  await runPipeline(text, know, query);
+}
+
+async function runPipeline(text, know, query) {
+  // ── Stage 1 ──
+  setStage('s1','active'); openDetail('s1',true);
+  setPipelineStatus('S1 · NOTE CONSTRUCTION');
+  document.getElementById('s1-keywords').innerHTML = know.K.map(k=>`<span class="tag cyan">${k}</span>`).join(' ');
+  document.getElementById('s1-tags').innerHTML     = know.G.map(g=>`<span class="tag purple">${g}</span>`).join(' ');
+  document.getElementById('s1-ctx').textContent    = know.X;
+  renderVec('s1-vec', randVec(32));
+  document.getElementById('s1-q0').textContent     = '0.50';
+  await sleep(700);
+  setStage('s1','done');
+
+  // Build note
+  const newNote = {
+    id:      uid(),
+    content: text,
+    K:       know.K,
+    G:       know.G,
+    X:       know.X,
+    e:       randVec(32),
+    z:       randVec(32),
+    q:       0.5,
+    links:   [],
+    time:    new Date().toLocaleTimeString(),
+    isNew:   true,
+    isUpdated: false
+  };
+
+  // ── Stage 2 ──
+  setStage('s2','active'); openDetail('s2',true);
+  setPipelineStatus('S2 · MEMORY MANAGER π_θ');
+  document.getElementById('s2-engine').textContent =
+    backend==='langchain' ? 'LangChain → BaseChatModel' : 'HuggingFace → transformers.pipeline';
+  await sleep(500);
+
+  // decide op
+  let op = 'ADD', target = 'none', reason = 'Novel information, no related note found.';
+  const relIdx = notes.findIndex(n => n.K.some(k => know.K.includes(k)));
+
+  if(query) {
+    op='NOOP'; target='—'; reason='Query — no write needed; read path will be used.';
+  } else if(relIdx>=0) {
+    const rel = notes[relIdx];
+    op='UPDATE'; target=rel.id; reason=`Complementary fact detected — merging into ${rel.id} instead of fragmenting.`;
+  }
+
+  document.getElementById('s2-op').textContent    = op;
+  document.getElementById('s2-op').className      = 'op-badge op-'+op;
+  document.getElementById('s2-target').textContent = target;
+  document.getElementById('s2-reason').textContent = reason;
+  await sleep(600);
+
+  if(op==='ADD') {
+    notes.push(newNote);
+  } else if(op==='UPDATE' && relIdx>=0) {
+    const n = notes[relIdx];
+    n.content = text;
+    n.K = [...new Set([...n.K, ...know.K])];
+    n.G = [...new Set([...n.G, ...know.G])];
+    n.X = know.X;
+    n.isUpdated = true;
+  } else if(!query) {
+    notes.push(newNote);
+  }
+  setStage('s2','done');
+
+  // ── Stage 3 ──
+  setStage('s3','active'); openDetail('s3',true);
+  setPipelineStatus('S3 · LINKING & EVOLUTION');
+  await sleep(500);
+
+  const neighbours = notes.filter(n=>n.id!==newNote.id).slice(-3);
+  const linksEl = document.getElementById('s3-links');
+  linksEl.innerHTML = '';
+  neighbours.forEach(n=>{
+    const d = document.createElement('div');
+    d.style.cssText = 'font-size:11px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;margin:2px 0;color:var(--muted)';
+    d.textContent = n.id + ' · ' + n.content.slice(0,40)+'…';
+    linksEl.appendChild(d);
+  });
+
+  const llEl = document.getElementById('s3-linklines');
+  llEl.innerHTML = '';
+  if(neighbours.length) {
+    const rels = ['semantic-relatedness','temporal-sequence','causal-inference'];
+    neighbours.slice(0,2).forEach((n,i)=>{
+      const d = document.createElement('div');
+      d.className='link-line';
+      d.innerHTML=`<span class="tag cyan">${newNote.id}</span><span class="link-arrow">→</span><span class="tag purple">${n.id}</span><span style="color:var(--muted);font-size:10px">${rels[i]||'related'}</span>`;
+      llEl.appendChild(d);
+      newNote.links.push(n.id);
+      n.links.push(newNote.id);
+    });
+  } else {
+    llEl.innerHTML = '<span style="color:var(--muted);font-size:11px">No neighbours yet — first note in bank.</span>';
+  }
+
+  document.getElementById('s3-evolve').textContent = neighbours.length
+    ? `${neighbours.length} existing notes retroactively updated with new context (P3 LLM call).`
+    : 'No prior notes to evolve.';
+  await sleep(700);
+  setStage('s3','done');
+
+  renderBank();
+
+  // ── Stage 4 (query path) ──
+  setStage('s4', query?'active':'idle');
+  if(query) {
+    openDetail('s4',true);
+    setPipelineStatus('S4 · TWO-PHASE RETRIEVAL');
+    await sleep(500);
+
+    const poolSize = Math.min(notes.length, 5);
+    const pool     = notes.slice(-poolSize);
+
+    const phA = document.getElementById('s4-phase-a');
+    phA.innerHTML = '';
+    pool.forEach(n=>{
+      const sim = (Math.random()*.4+.35).toFixed(3);
+      const d   = document.createElement('div');
+      d.className='score-bar';
+      d.innerHTML=`<span class="score-label">${n.id}</span><div class="score-track"><div class="score-fill" style="width:${Math.round(sim*100)}%;background:var(--accent)"></div></div><span class="score-val">${sim}</span>`;
+      phA.appendChild(d);
+    });
+
+    await sleep(400);
+    const phB = document.getElementById('s4-phase-b');
+    phB.innerHTML = '';
+    pool.forEach(n=>{
+      const sc = ((1-0.4)*(Math.random()*.3+.4) + 0.4*n.q).toFixed(3);
+      const d  = document.createElement('div');
+      d.className='score-bar';
+      d.innerHTML=`<span class="score-label">${n.id}</span><div class="score-track"><div class="score-fill" style="width:${Math.round(sc*100)}%;background:linear-gradient(90deg,var(--accent2),var(--accent))"></div></div><span class="score-val">${sc}</span>`;
+      phB.appendChild(d);
+    });
+
+    lastDistil = pool.slice(0,2);
+    document.getElementById('s4-distil').innerHTML =
+      lastDistil.map(n=>`<span class="tag green">${n.id}</span>`).join(' ') +
+      ' <span style="color:var(--muted)">— minimal noise-free subset</span>';
+
+    await sleep(500);
+    setStage('s4','done');
+
+    // Generate answer
+    const cls2 = classify(text);
+    const ans  = (KNOWLEDGE[cls2]||KNOWLEDGE.default).answer;
+    addMsg('agent', ans + ` <span style="color:var(--muted);font-size:10px">[retrieved from memory · ${lastDistil.map(n=>n.id).join(', ')}]</span>`);
+  } else {
+    // write path — stage 4 skipped
+    setStage('s4','idle');
+    lastDistil = notes.slice(-1);
+    addMsg('agent', `Stored to memory. <span class="op-badge op-${document.getElementById('s2-op').textContent}">${document.getElementById('s2-op').textContent}</span> operation applied.`);
+  }
+
+  // ── Stage 5 ──
+  setStage('s5','active'); openDetail('s5',true);
+  setPipelineStatus('S5 · UTILITY UPDATE');
+  const r = parseFloat(document.getElementById('reward-input').value)||0.8;
+  document.getElementById('s5-r').textContent = r.toFixed(2);
+  const upEl = document.getElementById('s5-updates');
+  upEl.innerHTML = '';
+  lastDistil.forEach(n=>{
+    const oldQ = n.q;
+    n.q = +(oldQ + 0.1*(r - oldQ)).toFixed(4);
+    const d = document.createElement('div');
+    d.className='kv-row';
+    d.innerHTML=`<span class="kv-key">${n.id}</span><span class="kv-val">${oldQ.toFixed(3)} → <strong style="color:var(--accent2)">${n.q.toFixed(3)}</strong></span>`;
+    upEl.appendChild(d);
+    const qEl = document.getElementById('s5-updates');
+    // show q-meter
+    const qm = document.createElement('div');
+    qm.className='q-meter';
+    qm.innerHTML=`<div class="q-label">q(${n.id})</div><div class="q-track"><div class="q-fill" style="width:${Math.round(n.q*100)}%"></div></div>`;
+    upEl.appendChild(qm);
+  });
+  document.getElementById('s5-exp').textContent = 'LLM summarised trajectory → new experience note appended.';
+  await sleep(500);
+  setStage('s5','done');
+
+  renderBank();
+  setPipelineStatus('PIPELINE IDLE');
+}
+
+// ── Manual Q update ──────────────────────────────────────────
+function applyReward() {
+  const r = parseFloat(document.getElementById('reward-input').value)||0.8;
+  if(lastDistil.length===0 && notes.length===0) return;
+  const targets = lastDistil.length ? lastDistil : [notes[notes.length-1]];
+  setStage('s5','active'); openDetail('s5',true);
+  document.getElementById('s5-r').textContent = r.toFixed(2);
+  const upEl = document.getElementById('s5-updates');
+  upEl.innerHTML = '';
+  targets.forEach(n=>{
+    const oldQ=n.q;
+    n.q = +(oldQ+0.1*(r-oldQ)).toFixed(4);
+    const d=document.createElement('div');
+    d.className='kv-row';
+    d.innerHTML=`<span class="kv-key">${n.id}</span><span class="kv-val">${oldQ.toFixed(3)} → <strong style="color:var(--accent2)">${n.q.toFixed(3)}</strong></span>`;
+    upEl.appendChild(d);
+  });
+  setTimeout(()=>{ setStage('s5','done'); renderBank(); }, 600);
+  addMsg('agent', `Utility updated for ${targets.map(n=>n.id).join(', ')} with r=${r.toFixed(2)}.`);
+}
+</script>
+</body>
+</html>

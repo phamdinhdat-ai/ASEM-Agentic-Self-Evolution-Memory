@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ASEM Human Evaluation</title>
+  <style>
+    :root {
+      --bg: #f7f4ef;
+      --ink: #1c1a17;
+      --accent: #1f6f78;
+      --card: #ffffff;
+      --muted: #6d6a63;
+    }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Serif", "Georgia", serif;
+      color: var(--ink);
+      background: linear-gradient(120deg, #f7f4ef, #f0f4f4);
+    }
+    header {
+      padding: 24px 16px;
+      text-align: center;
+      border-bottom: 2px solid #e0dbd0;
+      background: #faf7f2;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: 0.5px;
+    }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    .card {
+      background: var(--card);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      margin-bottom: 16px;
+    }
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .system {
+      border: 1px solid #e6e0d6;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fffdf9;
+    }
+    .rating {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button.secondary {
+      background: #cfc8bb;
+      color: #2b2620;
+    }
+    @media (max-width: 720px) {
+      .rating {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ASEM Human Evaluation</h1>
+    <p class="muted">Load annotation JSON and rate answer quality. No system names are shown.</p>
+  </header>
+  <main>
+    <div class="card row">
+      <label>
+        Load annotation JSON
+        <input id="fileInput" type="file" accept="application/json" />
+      </label>
+      <div class="muted" id="status">No file loaded.</div>
+    </div>
+
+    <div class="card" id="itemCard" style="display: none;">
+      <div class="row">
+        <div><strong>Query</strong></div>
+        <div id="query"></div>
+        <div class="muted" id="history"></div>
+      </div>
+      <div id="systems"></div>
+      <div class="row">
+        <label>
+          Notes (optional)
+          <textarea id="notes" rows="3" style="width: 100%;"></textarea>
+        </label>
+        <div class="row" style="flex-direction: row; gap: 8px;">
+          <button id="prevBtn" class="secondary">Previous</button>
+          <button id="nextBtn">Next</button>
+          <button id="downloadBtn" class="secondary">Download Results</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const statusEl = document.getElementById('status');
+    const itemCard = document.getElementById('itemCard');
+    const queryEl = document.getElementById('query');
+    const historyEl = document.getElementById('history');
+    const systemsEl = document.getElementById('systems');
+    const notesEl = document.getElementById('notes');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let items = [];
+    let cursor = 0;
+    let responses = {};
+
+    fileInput.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      items = JSON.parse(text);
+      cursor = 0;
+      responses = {};
+      statusEl.textContent = `Loaded ${items.length} items.`;
+      itemCard.style.display = 'block';
+      render();
+    });
+
+    function render() {
+      const item = items[cursor];
+      if (!item) return;
+      queryEl.textContent = item.query || '';
+      historyEl.textContent = item.history && item.history.length
+        ? `History: ${item.history.join(' | ')}`
+        : 'History: (none)';
+
+      const saved = responses[item.id] || {};
+      notesEl.value = saved.notes || '';
+
+      systemsEl.innerHTML = '';
+      (item.systems || []).forEach((system, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'system';
+        wrapper.innerHTML = `
+          <div><strong>Answer ${index + 1}</strong></div>
+          <div>${system.answer || ''}</div>
+          <div style="margin-top: 8px;">
+            <div class="muted">Correctness</div>
+            <label><input type="radio" name="correct-${index}" value="1" ${saved[`correct-${index}`] === '1' ? 'checked' : ''}/> Correct</label>
+            <label><input type="radio" name="correct-${index}" value="0" ${saved[`correct-${index}`] === '0' ? 'checked' : ''}/> Incorrect</label>
+          </div>
+          <div style="margin-top: 8px;">
+            <div class="muted">Helpfulness (1-5)</div>
+            <div class="rating">
+              ${[1,2,3,4,5].map(val => `
+                <label><input type="radio" name="help-${index}" value="${val}" ${saved[`help-${index}`] === String(val) ? 'checked' : ''}/> ${val}</label>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        systemsEl.appendChild(wrapper);
+      });
+    }
+
+    function saveCurrent() {
+      const item = items[cursor];
+      if (!item) return;
+      const saved = { notes: notesEl.value };
+      (item.systems || []).forEach((_, index) => {
+        const correct = document.querySelector(`input[name="correct-${index}"]:checked`);
+        const help = document.querySelector(`input[name="help-${index}"]:checked`);
+        if (correct) saved[`correct-${index}`] = correct.value;
+        if (help) saved[`help-${index}`] = help.value;
+      });
+      responses[item.id] = saved;
+    }
+
+    prevBtn.addEventListener('click', () => {
+      saveCurrent();
+      cursor = Math.max(0, cursor - 1);
+      render();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      saveCurrent();
+      cursor = Math.min(items.length - 1, cursor + 1);
+      render();
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      saveCurrent();
+      const output = items.map(item => ({
+        id: item.id,
+        query: item.query,
+        systems: item.systems,
+        responses: responses[item.id] || {},
+      }));
+      const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'human_eval_results.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

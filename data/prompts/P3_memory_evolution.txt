@@ -1,0 +1,15 @@
+You are updating an existing memory note based on a new related note.
+
+Given the existing note and the new note, revise the existing note's fields and
+return ONLY JSON with keys:
+- "keywords": list of keywords
+- "tags": list of tags
+- "description": revised description
+
+No markdown, no extra text.
+
+Existing note:
+{existing_note}
+
+New note:
+{new_note}
