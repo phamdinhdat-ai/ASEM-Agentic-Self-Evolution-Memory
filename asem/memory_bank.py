@@ -14,8 +14,8 @@ from .note import Note
 
 try:
     import faiss
-except ImportError as exc:  # pragma: no cover - handled by dependency setup
-    raise ImportError("faiss is required for MemoryBank") from exc
+except ImportError:  # pragma: no cover - optional at runtime
+    faiss = None
 
 
 class MemoryBank:
@@ -30,6 +30,7 @@ class MemoryBank:
 
         self._dim = self._get_dim()
         self._index = None
+        self._matrix: Optional[np.ndarray] = None
         self._id_map: List[str] = []
         self._rebuild_index()
 
@@ -70,11 +71,20 @@ class MemoryBank:
         self._rebuild_index()
 
     def ann_search(self, vector: np.ndarray, k: int) -> List[Note]:
-        if self._index is None or self._index.ntotal == 0:
+        if not self._id_map:
             return []
         query = self._normalize(vector).reshape(1, -1)
-        scores, indices = self._index.search(query, k)
-        hits = [self._id_map[i] for i in indices[0] if i >= 0]
+        if self._index is not None:
+            _, indices = self._index.search(query, k)
+            hits = [self._id_map[i] for i in indices[0] if i >= 0]
+            return self._get_notes(hits)
+
+        if self._matrix is None or self._matrix.size == 0:
+            return []
+
+        scores = np.dot(self._matrix, query.reshape(-1))
+        top = np.argsort(scores)[::-1][:k]
+        hits = [self._id_map[int(i)] for i in top]
         return self._get_notes(hits)
 
     def list_notes(self) -> List[Note]:
@@ -145,10 +155,12 @@ class MemoryBank:
     def _rebuild_index(self) -> None:
         if self._dim is None:
             self._index = None
+            self._matrix = None
             self._id_map = []
             return
 
-        self._index = faiss.IndexFlatIP(self._dim)
+        self._index = faiss.IndexFlatIP(self._dim) if faiss is not None else None
+        self._matrix = None
         self._id_map = []
 
         rows = self._conn.execute("SELECT id, e FROM notes").fetchall()
@@ -162,7 +174,10 @@ class MemoryBank:
             self._id_map.append(row["id"])
 
         matrix = np.vstack(vectors)
-        self._index.add(matrix)
+        if self._index is not None:
+            self._index.add(matrix)
+        else:
+            self._matrix = matrix
 
     def _note_to_row(self, note: Note) -> Dict[str, Any]:
         return {
