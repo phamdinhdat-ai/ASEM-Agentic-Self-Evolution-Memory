@@ -1,0 +1,17 @@
+inference:
+  backend: "langchain"
+  langchain:
+    provider: "ollama"
+    model: "gemma3:1b"
+    temperature: 0.0
+    embedder_provider: "ollama"
+    embedder_name: "granite-embedding:latest"
+
+hyperparameters:
+  k1: 20
+  k2: 5
+  k: 5
+  delta: 0.30
+  lambda: 0.40
+  alpha: 0.10
+  q0: 0.50

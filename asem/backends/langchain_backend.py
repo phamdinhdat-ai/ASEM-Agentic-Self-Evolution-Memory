@@ -22,9 +22,34 @@ class LangChainBackend(InferenceBackend):
             return str(response.content)
         return str(response)
 
+    async def agenerate(self, prompt: str, **kwargs) -> str:
+        response = await self._llm.ainvoke(prompt)
+        if hasattr(response, "content"):
+            return str(response.content)
+        return str(response)
+
     def embed(self, text: str) -> np.ndarray:
         vector = self._embedder.embed_query(text)
         return np.asarray(vector, dtype=float)
+
+    async def aembed(self, text: str) -> np.ndarray:
+        vector = await self._embedder.aembed_query(text)
+        return np.asarray(vector, dtype=float)
+    
+    async def  stream(self, prompt: str, **kwargs) -> Any:
+        async for response in self._llm.astream(prompt):
+            if hasattr(response, "content"):
+                yield str(response.content)
+            else:
+                yield str(response)
+    async def astream(self, prompt: str, **kwargs) -> Any:
+        async for response in self._llm.astream(prompt):
+            if hasattr(response, "content"):
+                yield str(response.content)
+            else:
+                yield str(response)
+    
+
 
     @classmethod
     def from_config(cls, cfg: Dict[str, Any]) -> "LangChainBackend":
@@ -45,7 +70,14 @@ class LangChainBackend(InferenceBackend):
                 self._inner = inner
 
             def invoke(self, prompt: str):
-                return self._inner.invoke(HumanMessage(prompt))
+                return self._inner.invoke([HumanMessage(content=prompt)])
+
+            async def ainvoke(self, prompt: str):
+                return await self._inner.ainvoke([HumanMessage(content=prompt)])
+
+            async def astream(self, prompt: str):
+                async for chunk in self._inner.astream([HumanMessage(content=prompt)]):
+                    yield chunk
 
         return cls(llm=_Wrapper(llm), embedder=embedder)
 

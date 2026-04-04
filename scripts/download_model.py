@@ -9,7 +9,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Download base model weights")
     parser.add_argument(
         "--model",
-        default="Qwen/Qwen2.5-7B-Instruct",
+        default="Qwen/Qwen2.5-1.5B-Instruct",
         help="Model name or path",
     )
     parser.add_argument(
