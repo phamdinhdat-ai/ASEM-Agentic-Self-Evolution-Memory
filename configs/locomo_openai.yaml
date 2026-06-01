@@ -1,0 +1,17 @@
+inference:
+  backend: "langchain"
+  langchain:
+    provider: "openai"
+    model: "gpt-5.2"          # using ckey.vn proxy; swap to gpt-4o, gpt-4o-mini, etc.
+    temperature: 0.0
+    embedder_provider: "huggingface"
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"  # cheap + fast; swap to text-embedding-3-large for higher quality
+
+hyperparameters:
+  k1: 20
+  k2: 5
+  k: 5
+  delta: 0.30
+  lambda: 0.40
+  alpha: 0.10
+  q0: 0.50
