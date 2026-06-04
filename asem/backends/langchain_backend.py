@@ -86,7 +86,12 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
     if provider == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model_name, temperature=temperature)
+        import os
+        kwargs: Dict[str, Any] = {"model": model_name, "temperature": temperature}
+        base_url = cfg.get("base_url") or os.environ.get("OPENAI_BASE_URL")
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatOpenAI(**kwargs)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 

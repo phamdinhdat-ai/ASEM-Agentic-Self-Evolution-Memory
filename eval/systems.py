@@ -82,7 +82,12 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template="{query} {candidates}",
-        baseline_prompt_template="{query} {context}",
+        baseline_prompt_template=(
+            "Use the memory notes below to answer the question. "
+            "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+            "Memory:\n{context}\n\n"
+            "Question: {query}\n\nAnswer:"
+        ),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -138,7 +143,12 @@ def build_baselines(config_path: str, db_dir: str) -> Dict[str, object]:
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template="{query} {candidates}",
-        baseline_prompt_template="{query} {context}",
+        baseline_prompt_template=(
+            "Use the memory notes below to answer the question. "
+            "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+            "Memory:\n{context}\n\n"
+            "Question: {query}\n\nAnswer:"
+        ),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -149,13 +159,34 @@ def build_baselines(config_path: str, db_dir: str) -> Dict[str, object]:
     )
 
     return {
-        "NoMemory": NoMemory(backend=backend, prompt_template="{query}"),
-        "FullContext": FullContext(backend=backend, prompt_template="{query}\n{context}"),
+        "NoMemory": NoMemory(
+            backend=backend,
+            prompt_template=(
+                "Answer the following question as concisely as possible. "
+                "Give only the answer (a few words or one sentence). "
+                "If you are not sure, provide your best guess rather than asking for more information.\n\n"
+                "Question: {query}\n\nAnswer:"
+            ),
+        ),
+        "FullContext": FullContext(
+            backend=backend,
+            prompt_template=(
+                "Use the conversation excerpts below to answer the question. "
+                "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+                "Conversation:\n{context}\n\n"
+                "Question: {query}\n\nAnswer:"
+            ),
+        ),
         "SimRetrieval": SimRetrieval(
             backend=backend,
             memory_bank=bank,
             top_k=hp["k2"],
-            prompt_template="{query}\n{context}",
+            prompt_template=(
+                "Use the retrieved memory notes below to answer the question. "
+                "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+                "Memory:\n{context}\n\n"
+                "Question: {query}\n\nAnswer:"
+            ),
         ),
         "AtomicLinking": AtomicLinking(
             backend=backend,
@@ -163,7 +194,12 @@ def build_baselines(config_path: str, db_dir: str) -> Dict[str, object]:
             note_constructor=note_constructor,
             link_evolver=link_evolver,
             top_k=hp["k2"],
-            prompt_template="{query}\n{context}",
+            prompt_template=(
+                "Use the retrieved memory notes below to answer the question. "
+                "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+                "Memory:\n{context}\n\n"
+                "Question: {query}\n\nAnswer:"
+            ),
         ),
         "RLManagerOnly": RLManagerOnly(
             backend=backend,
@@ -171,7 +207,12 @@ def build_baselines(config_path: str, db_dir: str) -> Dict[str, object]:
             note_constructor=note_constructor,
             memory_manager=memory_manager,
             top_k=hp["k2"],
-            prompt_template="{query}\n{context}",
+            prompt_template=(
+                "Use the retrieved memory notes below to answer the question. "
+                "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+                "Memory:\n{context}\n\n"
+                "Question: {query}\n\nAnswer:"
+            ),
         ),
         "ValueRetrievalOnly": ValueRetrievalOnly(
             backend=backend,

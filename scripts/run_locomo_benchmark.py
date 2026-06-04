@@ -25,7 +25,29 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Dict, List
+import traceback
+from typing import Any, Dict, List, Optional
+
+# Ensure project root is on sys.path when running as a script
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
+# Load .env from project root (OPENAI_API_KEY, OPENAI_BASE_URL, etc.)
+_dotenv_path = os.path.join(_PROJECT_ROOT, ".env")
+if os.path.exists(_dotenv_path):
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_dotenv_path, override=False)
+    except ImportError:
+        # Fallback: parse .env manually if python-dotenv is not installed
+        with open(_dotenv_path, "r", encoding="utf-8") as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _, _v = _line.partition("=")
+                    _v = _v.strip().strip('"').strip("'")
+                    os.environ.setdefault(_k.strip(), _v)
 
 
 # ---------------------------------------------------------------------------
@@ -133,13 +155,19 @@ def main() -> None:
         action="store_true",
         help="Also report metrics broken down by QA category",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Only evaluate on the first N examples (useful for smoke-testing the pipeline)",
+    )
     args = parser.parse_args()
 
     # ------------------------------------------------------------------
     # Imports — give clear errors if deps are missing
     # ------------------------------------------------------------------
     try:
-        from eval.evaluate import EvalConfig, DatasetPaths, run_all, compute_metrics
+        from eval.evaluate import EvalConfig, DatasetPaths, compute_metrics
         from eval.systems import get_systems
     except ImportError as e:
         print(f"ERROR: Could not import eval modules: {e}")
@@ -156,6 +184,10 @@ def main() -> None:
 
     val_data = locomo_to_eval_format(raw_val)
     print(f"  Converted to eval format")
+
+    if args.limit is not None:
+        val_data = val_data[: args.limit]
+        print(f"  Limited to first {len(val_data)} examples (--limit {args.limit})")
 
     # ------------------------------------------------------------------
     # Build systems
@@ -175,12 +207,11 @@ def main() -> None:
     print(f"  Running systems: {list(systems.keys())}")
 
     # ------------------------------------------------------------------
-    # Eval config
+    # Run evaluation — incremental saving so a crash doesn't lose work
     # ------------------------------------------------------------------
     os.makedirs(os.path.dirname(args.results), exist_ok=True)
 
-    # DatasetPaths requires all three fields but we only use locomo here;
-    # pass the same path for the others so the object constructs cleanly.
+    # EvalConfig used only for compute_metrics; DatasetPaths not used in the loop
     eval_config = EvalConfig(
         datasets=DatasetPaths(
             longmemeval=args.val,
@@ -191,15 +222,102 @@ def main() -> None:
         metrics=args.metrics,
     )
 
-    # ------------------------------------------------------------------
-    # Run evaluation
-    # ------------------------------------------------------------------
+    preds_dir = os.path.join(os.path.dirname(args.results), "preds")
+    os.makedirs(preds_dir, exist_ok=True)
+
+    # Load any previously completed results so we can resume
+    results: Dict[str, Any] = {}
+    if os.path.exists(args.results):
+        with open(args.results, "r", encoding="utf-8") as fh:
+            try:
+                results = json.load(fh)
+            except json.JSONDecodeError:
+                results = {}
+
+    def _flush_results(res: Dict[str, Any]) -> None:
+        """Atomically write results JSON so a crash never leaves a corrupt file."""
+        tmp = args.results + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as _fh:
+            json.dump(res, _fh, indent=2)
+        os.replace(tmp, args.results)
+
     print(f"\nRunning evaluation ({args.metrics}) ...")
-    results = run_all(
-        baselines=systems,
-        datasets={"locomo": val_data},
-        config=eval_config,
-    )
+    for sys_name, system in systems.items():
+        key = f"locomo/{sys_name}"
+        partial_key = f"locomo/{sys_name}/__partial__"
+
+        if key in results:
+            print(f"  [{sys_name}] already completed — skipping (delete {args.results} to re-run)")
+            continue
+
+        preds_path = os.path.join(preds_dir, f"locomo_{sys_name}.jsonl")
+        # Load any partial predictions from a previous interrupted run
+        done_ids: set = set()
+        preds_so_far: List[str] = []
+        refs_so_far: List[str] = []
+        if os.path.exists(preds_path):
+            with open(preds_path, "r", encoding="utf-8") as fp:
+                for line in fp:
+                    line = line.strip()
+                    if line:
+                        rec = json.loads(line)
+                        done_ids.add(rec["idx"])
+                        preds_so_far.append(rec["pred"])
+                        refs_so_far.append(rec["ref"])
+            if done_ids:
+                print(f"  [{sys_name}] resuming from {len(done_ids)} saved predictions")
+                # Immediately publish partial metrics so the JSON is never stale
+                partial_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
+                partial_metrics["__n__"] = len(done_ids)
+                partial_metrics["__total__"] = len(val_data)
+                results[partial_key] = partial_metrics
+                _flush_results(results)
+                print(f"  [{sys_name}] partial metrics on {len(done_ids)} examples: {partial_metrics}")
+
+        with open(preds_path, "a", encoding="utf-8") as fp:
+            for idx, item in enumerate(val_data):
+                if idx in done_ids:
+                    continue
+                query = str(item.get("query", ""))
+                ref = str(item.get("answer", ""))
+                history = [str(h) for h in item.get("history", [])]
+
+                try:
+                    pred = system.answer(query, history)
+                except Exception as exc:
+                    print(f"\n  [{sys_name}] ERROR on example {idx}: {exc}")
+                    traceback.print_exc()
+                    pred = ""
+
+                preds_so_far.append(pred)
+                refs_so_far.append(ref)
+
+                # Write prediction immediately so progress survives a crash
+                fp.write(json.dumps({
+                    "idx": idx,
+                    "session_id": item.get("session_id", ""),
+                    "query": query,
+                    "pred": pred,
+                    "ref": ref,
+                }) + "\n")
+                fp.flush()
+
+                print(f"  [{sys_name}] {idx + 1}/{len(val_data)}  pred={pred[:60]!r}", flush=True)
+
+                # Update partial metrics in the JSON every 10 predictions
+                if (idx + 1) % 10 == 0 or (idx + 1) == len(val_data):
+                    partial_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
+                    partial_metrics["__n__"] = len(preds_so_far)
+                    partial_metrics["__total__"] = len(val_data)
+                    results[partial_key] = partial_metrics
+                    _flush_results(results)
+
+        # Final metrics — promote from partial to permanent and clean up partial key
+        final_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
+        results[key] = final_metrics
+        results.pop(partial_key, None)
+        _flush_results(results)
+        print(f"  [{sys_name}] metrics: {final_metrics}  (saved to {args.results})")
 
     # ------------------------------------------------------------------
     # Per-category breakdown (optional)
@@ -223,8 +341,7 @@ def main() -> None:
                 results[key] = metrics
 
         # Re-save with category breakdown included
-        with open(args.results, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2)
+        _flush_results(results)
 
     # ------------------------------------------------------------------
     # Print summary table to stdout
