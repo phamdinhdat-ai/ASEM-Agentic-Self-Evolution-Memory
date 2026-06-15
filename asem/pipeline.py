@@ -30,7 +30,14 @@ class ASEMPipeline:
 
     def write_path(self, content: str, timestamp: datetime) -> Optional[Note]:
         note = self.note_constructor.build(content, timestamp)
-        existing = self.memory_bank.list_notes()
+
+        # B4 — only pass top-k similar notes to Memory Manager, not all notes.
+        # This caps the S2 prompt at ~2000 tokens regardless of bank size.
+        e_new = self.note_constructor.backend.embed(content)
+        existing = self.memory_bank.ann_search(e_new, k=self.retriever.k2)
+        if not existing:
+            existing = self.memory_bank.list_notes()[: self.retriever.k2]
+
         op, target = self.memory_manager.select_op(content, existing)
 
         if op == Op.ADD:

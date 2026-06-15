@@ -1,11 +1,6 @@
-You are an information extraction system.
+Extract memory attributes from this dialogue turn as JSON:
+{{"keywords": ["word1", ...], "tags": ["category1", ...], "description": "1-2 sentence factual summary"}}
 
-Given the user content, extract structured memory attributes as JSON with these keys:
-- "keywords": list of short keywords or phrases
-- "tags": list of high-level categories
-- "description": a concise, factual description (1-3 sentences)
+Output ONLY the JSON object, nothing else.
 
-Return ONLY valid JSON. No markdown, no additional text.
-
-Content:
-{content}
+Turn: {content}

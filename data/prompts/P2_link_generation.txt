@@ -1,16 +1,7 @@
-You are a relationship extraction system.
+Given a new note and its neighbor notes, identify relationships. Output a JSON list:
+[{{"source": "<new_note_id>", "target": "<neighbor_id>", "relation": "<semantic|temporal|causal|same-topic|contradicts|extends>"}}, ...]
 
-Given a new memory note and its neighbors, identify semantic, causal, or temporal
-relationships between the new note and each neighbor. Return ONLY a JSON list of
-objects with keys:
-- "source": id of the source note
-- "target": id of the target note
-- "relation": short relation string
+Output ONLY the JSON array, nothing else.
 
-No markdown, no extra text.
-
-New note:
-{new_note}
-
-Neighbors:
-{neighbors}
+New note: {new_note}
+Neighbors: {neighbors}

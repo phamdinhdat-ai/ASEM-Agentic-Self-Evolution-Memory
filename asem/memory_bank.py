@@ -87,6 +87,14 @@ class MemoryBank:
         hits = [self._id_map[int(i)] for i in top]
         return self._get_notes(hits)
 
+    def get_note(self, note_id: str) -> Optional[Note]:
+        """Retrieve a single note by its ID. Returns None if not found."""
+        return self._get_note(note_id)
+
+    def get_notes_by_ids(self, note_ids: List[str]) -> List[Note]:
+        """Retrieve multiple notes by their IDs (batch lookup)."""
+        return self._get_notes(note_ids)
+
     def list_notes(self) -> List[Note]:
         rows = self._conn.execute("SELECT * FROM notes").fetchall()
         return [self._row_to_note(row) for row in rows]

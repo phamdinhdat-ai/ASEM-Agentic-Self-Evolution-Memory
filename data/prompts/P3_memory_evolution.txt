@@ -1,15 +1,9 @@
-You are updating an existing memory note based on a new related note.
 
-Given the existing note and the new note, revise the existing note's fields and
-return ONLY JSON with keys:
-- "keywords": list of keywords
-- "tags": list of tags
-- "description": revised description
 
-No markdown, no extra text.
+Revise an existing memory note given new related information. Merge keywords/tags, update description. Output JSON:
+{{"keywords": [...], "tags": [...], "description": "updated 1-2 sentence summary"}}
 
-Existing note:
-{existing_note}
+Output ONLY the JSON object, nothing else.
 
-New note:
-{new_note}
+Existing note: {existing_note}
+New note: {new_note}

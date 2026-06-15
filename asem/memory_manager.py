@@ -41,6 +41,7 @@ class MemoryManager:
         return op, target
 
     def _build_prompt(self, x: str, M_old: List[Note]) -> str:
+        # B4 — cap at top-k2=5 notes to prevent linear prompt growth
         context = [
             {
                 "id": note.id,

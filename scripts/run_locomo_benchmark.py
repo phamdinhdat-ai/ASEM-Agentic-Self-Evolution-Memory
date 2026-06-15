@@ -27,6 +27,11 @@ import os
 import sys
 import traceback
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
+
+file_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(file_dir, "..", ".env"))
+
 
 # Ensure project root is on sys.path when running as a script
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

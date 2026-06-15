@@ -1,0 +1,10 @@
+{
+  "locomo10/NoMemory": {
+    "em": 0.0,
+    "rougeL": 0.1
+  },
+  "locomo10/FullContext": {
+    "em": 0.3,
+    "rougeL": 0.4444444444444445
+  }
+}
