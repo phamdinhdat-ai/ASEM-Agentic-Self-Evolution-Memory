@@ -70,6 +70,12 @@ class MemoryBank:
         self._conn.commit()
         self._rebuild_index()
 
+    def clear(self) -> None:
+        """Remove all notes from the bank and rebuild the (empty) index."""
+        self._conn.execute("DELETE FROM notes")
+        self._conn.commit()
+        self._rebuild_index()
+
     def ann_search(self, vector: np.ndarray, k: int) -> List[Note]:
         if not self._id_map:
             return []

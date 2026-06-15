@@ -2,7 +2,9 @@
 Run ASEM experiments on the locomo10.json sample dataset.
 
 Converts raw LoCoMo conversations + QA pairs into sequential-memory evaluation
-format, then runs all systems (6 baselines + ASEM) with per-category breakdown.
+format, then runs all 7 systems (NoMemory, FullContext, SimRetrieval,
+AtomicLinking, RLManagerOnly, ValueRetrievalOnly, ASEM) with conversation-aware
+reset, incremental save/resume, and per-category breakdown.
 
 Usage
 -----
@@ -13,16 +15,26 @@ Usage
     python scripts/run_locomo10_experiments.py
 
     # Specific systems only, with BERTScore
-    python scripts/run_locomo10_experiments.py \
-        --systems NoMemory FullContext ASEM \
+    python scripts/run_locomo10_experiments.py \\
+        --systems NoMemory FullContext ASEM \\
         --metrics em rougeL bertscore_f1
 
     # With per-category breakdown
     python scripts/run_locomo10_experiments.py --per-category
 
-    # Using a different backend
-    python scripts/run_locomo10_experiments.py \
+    # Using a different backend config
+    python scripts/run_locomo10_experiments.py \\
         --config configs/langchain_ollama.yaml
+
+    # Ablation: sweep hyperparameters
+    python scripts/run_locomo10_experiments.py --ablate lambda \\
+        --lambda-values 0.0 0.2 0.4 0.6 0.8 1.0 \\
+        --systems ASEM --limit 100
+
+    # Ablation: disable components
+    python scripts/run_locomo10_experiments.py --ablate components \\
+        --disable-link-evolver --disable-zscore \\
+        --systems ASEM --limit 200
 """
 
 from __future__ import annotations
@@ -35,7 +47,7 @@ import sys
 import traceback
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Ensure project root is on sys.path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,7 +71,7 @@ if os.path.exists(_dotenv_path):
 
 
 # ---------------------------------------------------------------------------
-# LoCoMo category metadata
+# Constants
 # ---------------------------------------------------------------------------
 
 CATEGORY_NAMES = {
@@ -69,6 +81,11 @@ CATEGORY_NAMES = {
     4: "conversational",
     5: "adversarial",
 }
+
+ALL_SYSTEMS = [
+    "NoMemory", "FullContext", "SimRetrieval",
+    "AtomicLinking", "RLManagerOnly", "ValueRetrievalOnly", "ASEM",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +136,7 @@ def _build_history_for_qa(
     referenced in evidence, with session date markers, sorted chronologically.
     Evidence turns are INCLUDED — the task is retrieval, not clairvoyance.
     """
-    evidence_keys = set()
+    evidence_keys: Set[str] = set()
     raw_evidence = qa.get("evidence", [])
     for eid in raw_evidence:
         for part in re.split(r"[;,]", str(eid)):
@@ -171,13 +188,7 @@ def convert_locomo10_to_eval(
     Convert locomo10.json to the eval format expected by the evaluation harness.
 
     Each output item has:
-        - query:    enriched question with speaker context
-        - answer:   gold answer string
-        - history:  list of dialogue turn strings (chronological)
-        - category: int (1-5)
-        - category_name: str
-        - session_id: str
-        - evidence: list of evidence dia_ids
+        query, answer, history, category, category_name, session_id, evidence
     """
     print(f"Loading {dataset_path} ...")
     with open(dataset_path, "r", encoding="utf-8") as f:
@@ -244,11 +255,50 @@ def convert_locomo10_to_eval(
         eval_items = eval_items[:limit]
         print(f"  Limited to first {limit} examples (--limit)")
 
+    # Annotate with indices for O(1) lookup during evaluation
+    for i, item in enumerate(eval_items):
+        item["_idx"] = i
+
     return eval_items
 
 
+def group_by_conversation(
+    eval_items: List[Dict[str, Any]],
+) -> List[List[Dict[str, Any]]]:
+    """Group eval items by session_id while preserving order."""
+    groups: List[List[Dict[str, Any]]] = []
+    current_group: List[Dict[str, Any]] = []
+    current_sid = None
+
+    for item in eval_items:
+        sid = item.get("session_id", "")
+        if sid != current_sid:
+            if current_group:
+                groups.append(current_group)
+            current_group = [item]
+            current_sid = sid
+        else:
+            current_group.append(item)
+
+    if current_group:
+        groups.append(current_group)
+
+    return groups
+
+
+def split_by_category(
+    examples: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Split examples by category name."""
+    by_cat: Dict[str, List] = defaultdict(list)
+    for ex in examples:
+        key = ex.get("category_name") or f"cat{ex.get('category', 0)}"
+        by_cat[key].append(ex)
+    return dict(by_cat)
+
+
 # ---------------------------------------------------------------------------
-# Metrics (mirrors eval/evaluate.py but self-contained)
+# Metrics
 # ---------------------------------------------------------------------------
 
 def _normalize(text: str) -> str:
@@ -294,221 +344,215 @@ def compute_metrics(
 
 
 # ---------------------------------------------------------------------------
-# System runners — thin wrappers that process full sequential history
+# System factory
 # ---------------------------------------------------------------------------
 
-class SystemRunner:
-    """Base class for system wrappers that handle full sequential history."""
-
-    def __init__(self, name: str):
-        self.name = name
-
-    def answer(self, query: str, history: List[str]) -> str:
-        raise NotImplementedError
-
-    def reset(self) -> None:
-        """Reset per-conversation state (e.g. memory bank). Called between conversations."""
-        pass
-
-
-class NoMemoryRunner(SystemRunner):
-    """Backbone-only — ignores all history."""
-
-    def __init__(self, backend, prompt_template: str):
-        super().__init__("NoMemory")
-        self._backend = backend
-        self._prompt = prompt_template
-
-    def answer(self, query: str, history: List[str]) -> str:
-        return self._backend.generate(self._prompt.format(query=query))
-
-
-class FullContextRunner(SystemRunner):
-    """All history concatenated into the context window."""
-
-    def __init__(self, backend, prompt_template: str, max_history_turns: int = 0):
-        super().__init__("FullContext")
-        self._backend = backend
-        self._prompt = prompt_template
-        self._max_history = max_history_turns
-
-    def answer(self, query: str, history: List[str]) -> str:
-        h = history
-        if self._max_history > 0 and len(h) > self._max_history:
-            # Keep first few (setup) and last N-5 (most recent) turns
-            keep_first = 5
-            keep_last = self._max_history - keep_first
-            h = h[:keep_first] + h[-keep_last:]
-        context = "\n".join(h) if h else "(no prior conversation)"
-        return self._backend.generate(
-            self._prompt.format(query=query, context=context)
-        )
-
-
-class SimRetrievalRunner(SystemRunner):
-    """Flat ANN retrieval — writes all history as atomic notes, then retrieves."""
-
-    def __init__(self, backend, memory_bank, note_constructor, top_k: int, prompt_template: str):
-        super().__init__("SimRetrieval")
-        self._backend = backend
-        self._bank = memory_bank
-        self._note_constructor = note_constructor
-        self._top_k = top_k
-        self._prompt = prompt_template
-
-    def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            note = self._note_constructor.build(item, datetime.utcnow())
-            self._bank.add(note)
-        e_q = self._backend.embed(query)
-        notes = self._bank.ann_search(e_q, k=self._top_k)
-        context = "\n".join([n.c for n in notes]) if notes else "(no relevant memory)"
-        return self._backend.generate(
-            self._prompt.format(query=query, context=context)
-        )
-
-
-class AtomicLinkingRunner(SystemRunner):
-    """Notes + bidirectional linking — writes all history with full Stage 1 + 3."""
-
-    def __init__(
-        self, backend, memory_bank, note_constructor, link_evolver,
-        top_k: int, prompt_template: str,
-    ):
-        super().__init__("AtomicLinking")
-        self._backend = backend
-        self._bank = memory_bank
-        self._note_constructor = note_constructor
-        self._link_evolver = link_evolver
-        self._top_k = top_k
-        self._prompt = prompt_template
-
-    def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            note = self._note_constructor.build(item, datetime.utcnow())
-            self._bank.add(note)
-            self._link_evolver.link_and_evolve(note, self._bank)
-        e_q = self._backend.embed(query)
-        notes = self._bank.ann_search(e_q, k=self._top_k)
-        context = "\n".join([n.c for n in notes]) if notes else "(no relevant memory)"
-        return self._backend.generate(
-            self._prompt.format(query=query, context=context)
-        )
-
-
-class RLManagerOnlyRunner(SystemRunner):
-    """RL write ops + similarity retrieval — writes all history through MM."""
-
-    def __init__(
-        self, backend, memory_bank, note_constructor, memory_manager,
-        top_k: int, prompt_template: str,
-    ):
-        super().__init__("RLManagerOnly")
-        self._backend = backend
-        self._bank = memory_bank
-        self._note_constructor = note_constructor
-        self._memory_manager = memory_manager
-        self._top_k = top_k
-        self._prompt = prompt_template
-
-    def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            note = self._note_constructor.build(item, datetime.utcnow())
-            existing = self._bank.list_notes()
-            op, target = self._memory_manager.select_op(item, existing)
-            if op.value == "ADD":
-                self._bank.add(note)
-            elif op.value == "UPDATE":
-                updated = self._merge_update(target, note)
-                self._bank.add(updated)
-            elif op.value == "DELETE" and target is not None:
-                self._bank.delete(target.id)
-        e_q = self._backend.embed(query)
-        notes = self._bank.ann_search(e_q, k=self._top_k)
-        context = "\n".join([n.c for n in notes]) if notes else "(no relevant memory)"
-        return self._backend.generate(
-            self._prompt.format(query=query, context=context)
-        )
-
-    @staticmethod
-    def _merge_update(target, note):
-        if target is None:
-            return note
-        from asem.note import Note
-        return Note(
-            id=target.id, c=note.c, t=note.t,
-            K=note.K, G=note.G, X=note.X,
-            e=note.e, L=target.L, z=note.z, q=target.q,
-        )
-
-
-class ValueRetrievalOnlyRunner(SystemRunner):
-    """Value-aware retrieval + utility updates — writes all history."""
-
-    def __init__(
-        self, backend, memory_bank, note_constructor,
-        retriever, utility_updater, answer_agent,
-    ):
-        super().__init__("ValueRetrievalOnly")
-        self._backend = backend
-        self._bank = memory_bank
-        self._note_constructor = note_constructor
-        self._retriever = retriever
-        self._utility_updater = utility_updater
-        self._answer_agent = answer_agent
-
-    def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            note = self._note_constructor.build(item, datetime.utcnow())
-            self._bank.add(note)
-        used_notes, answer = self._answer_agent.distil_and_answer(
-            query,
-            self._retriever.retrieve(query, self._bank),
-        )
-        self._utility_updater.update(
-            reward=1.0,
-            used_notes=used_notes,
-            memory_bank=self._bank,
-        )
-        return answer
-
-
-class ASEMRunner(SystemRunner):
-    """Full ASEM pipeline — write path + read path + update path per turn."""
-
-    def __init__(self, pipeline):
-        super().__init__("ASEM")
-        self._pipeline = pipeline
-
-    def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            self._pipeline.write_path(item, datetime.utcnow())
-        _, answer = self._pipeline.read_path(query)
-        return answer
-
-
-# ---------------------------------------------------------------------------
-# System factory — builds all runners from a YAML config
-# ---------------------------------------------------------------------------
-
-def _load_text(path: str) -> str:
-    with open(path, "r", encoding="utf-8") as handle:
-        return handle.read()
-
-
-def build_runners(
-    config_path: str = "configs/locomo_openai.yaml",
-    db_dir: str = "data/benchmarks/eval_banks_locomo10",
+def build_runners_from_systems_module(
+    config_path: str,
+    db_dir: str,
     systems: Optional[List[str]] = None,
     max_history_turns: int = 0,
-) -> Dict[str, SystemRunner]:
-    """Build all system runners from a YAML config.
+) -> Dict[str, object]:
+    """Build system runners using the eval/systems.py builder.
 
-    Args:
-        max_history_turns: If > 0, truncate history for FullContextRunner
-            to this many turns (keeps first 5 + last N-5).
+    Each system gets its own isolated MemoryBank and properly handles
+    incremental history with deduplication via the fixed baselines module.
     """
+    from eval.systems import build_baselines, build_asem_system
 
+    os.makedirs(db_dir, exist_ok=True)
+
+    runners: Dict[str, object] = {}
+
+    # Build baselines (each gets its own bank)
+    baseline_runners = build_baselines(
+        config_path, db_dir, max_history_turns=max_history_turns,
+    )
+
+    # Build ASEM
+    asem_runner = build_asem_system(config_path, db_dir)
+
+    all_available = dict(baseline_runners)
+    all_available["ASEM"] = asem_runner
+
+    for name in (systems or ALL_SYSTEMS):
+        if name in all_available:
+            runners[name] = all_available[name]
+        else:
+            print(f"  WARNING: Unknown system '{name}' — skipping")
+
+    return runners
+
+
+# ---------------------------------------------------------------------------
+# Evaluation loop
+# ---------------------------------------------------------------------------
+
+def evaluate_system(
+    runner: object,
+    eval_items: List[Dict[str, Any]],
+    conversation_groups: List[List[Dict[str, Any]]],
+    metric_names: List[str],
+    preds_dir: str,
+    sys_name: str,
+    results: Dict[str, Any],
+    results_path: str,
+    flush_fn: callable,
+) -> Tuple[List[str], List[str]]:
+    """Evaluate a single system on all eval items, conversation by conversation.
+
+    Returns (predictions, references).
+    """
+    preds_path = os.path.join(preds_dir, f"locomo10_{sys_name}.jsonl")
+    done_ids: Set[int] = set()
+    preds_so_far: List[str] = []
+    refs_so_far: List[str] = []
+
+    # Resume from partial predictions
+    if os.path.exists(preds_path):
+        with open(preds_path, "r", encoding="utf-8") as fp:
+            for line in fp:
+                line = line.strip()
+                if line:
+                    rec = json.loads(line)
+                    done_ids.add(rec["idx"])
+                    preds_so_far.append(rec["pred"])
+                    refs_so_far.append(rec["ref"])
+        if done_ids:
+            print(f"    Resuming from {len(done_ids)} saved predictions")
+            partial_key = f"locomo10/{sys_name}/__partial__"
+            partial_metrics = compute_metrics(preds_so_far, refs_so_far, metric_names)
+            partial_metrics["__n__"] = len(done_ids)
+            partial_metrics["__total__"] = len(eval_items)
+            results[partial_key] = partial_metrics
+            flush_fn(results)
+
+    # Evaluate conversation by conversation
+    with open(preds_path, "a", encoding="utf-8") as fp:
+        for group in conversation_groups:
+            # Reset runner at each conversation boundary
+            if hasattr(runner, 'reset'):
+                runner.reset()
+
+            for item in group:
+                idx = item.get("_idx", -1)
+                if idx in done_ids:
+                    continue
+
+                query = str(item.get("query", ""))
+                ref = str(item.get("answer", ""))
+                history = [str(h) for h in item.get("history", [])]
+
+                try:
+                    pred = runner.answer(query, history)
+                except Exception as exc:
+                    print(f"\n    ERROR on example {idx} (session {item.get('session_id')}): {exc}")
+                    traceback.print_exc()
+                    pred = ""
+
+                preds_so_far.append(pred)
+                refs_so_far.append(ref)
+
+                fp.write(json.dumps({
+                    "idx": idx,
+                    "session_id": item.get("session_id", ""),
+                    "category": item.get("category", 0),
+                    "category_name": item.get("category_name", ""),
+                    "query": query,
+                    "pred": pred,
+                    "ref": ref,
+                }) + "\n")
+                fp.flush()
+
+                n_done = len(done_ids) + len(preds_so_far)
+                if n_done % 5 == 0 or n_done == len(eval_items):
+                    pct = n_done / len(eval_items) * 100
+                    print(f"    [{sys_name}] {n_done}/{len(eval_items)} "
+                          f"({pct:.0f}%)  latest pred: {pred[:80]!r}", flush=True)
+
+                # Save partial metrics every 25 examples
+                if n_done % 25 == 0 or n_done == len(eval_items):
+                    partial_key = f"locomo10/{sys_name}/__partial__"
+                    partial_metrics = compute_metrics(
+                        preds_so_far, refs_so_far, metric_names,
+                    )
+                    partial_metrics["__n__"] = n_done
+                    partial_metrics["__total__"] = len(eval_items)
+                    results[partial_key] = partial_metrics
+                    flush_fn(results)
+
+    return preds_so_far, refs_so_far
+
+
+# ---------------------------------------------------------------------------
+# Ablation support
+# ---------------------------------------------------------------------------
+
+def run_lambda_ablation(
+    config_path: str,
+    db_base_dir: str,
+    eval_items: List[Dict[str, Any]],
+    conversation_groups: List[List[Dict[str, Any]]],
+    metric_names: List[str],
+    lambda_values: List[float],
+    results: Dict[str, Any],
+    results_path: str,
+    preds_dir: str,
+):
+    """Sweep lambda values for ASEM only."""
+    import yaml
+    from eval.systems import build_asem_system
+
+    def _flush(res):
+        tmp = results_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(res, fh, indent=2)
+        os.replace(tmp, results_path)
+
+    for lam in lambda_values:
+        sys_name = f"ASEM_lambda={lam:.2f}"
+        key = f"locomo10/{sys_name}"
+
+        if key in results:
+            print(f"\n  [{sys_name}] already completed — skipping")
+            continue
+
+        print(f"\n  [{sys_name}] lambda={lam:.2f} ...")
+        db_dir = os.path.join(db_base_dir, f"lambda_{lam:.2f}")
+        os.makedirs(db_dir, exist_ok=True)
+
+        # Patch config to use this lambda
+        with open(config_path, "r", encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh)
+        cfg["hyperparameters"]["lambda"] = lam
+        tmp_config = os.path.join(db_dir, "_config.yaml")
+        with open(tmp_config, "w", encoding="utf-8") as fh:
+            yaml.dump(cfg, fh)
+
+        runner = build_asem_system(tmp_config, db_dir)
+        preds, refs = evaluate_system(
+            runner, eval_items, conversation_groups, metric_names,
+            preds_dir, sys_name, results, results_path, _flush,
+        )
+        results[key] = compute_metrics(preds, refs, metric_names)
+        results.pop(f"locomo10/{sys_name}/__partial__", None)
+        _flush(results)
+        print(f"    [{sys_name}] FINAL: {results[key]}")
+
+
+def run_component_ablation(
+    config_path: str,
+    db_base_dir: str,
+    eval_items: List[Dict[str, Any]],
+    conversation_groups: List[List[Dict[str, Any]]],
+    metric_names: List[str],
+    disable_link_evolver: bool,
+    disable_zscore: bool,
+    results: Dict[str, Any],
+    results_path: str,
+    preds_dir: str,
+):
+    """Run ASEM with individual components disabled."""
     import yaml
     from asem.backends import build_backend
     from asem.answer_agent import AnswerAgent
@@ -519,100 +563,43 @@ def build_runners(
     from asem.pipeline import ASEMPipeline
     from asem.retriever import HybridRetriever
     from asem.utility_updater import UtilityUpdater
+    from eval.systems import ASEMSystem, _load_text, _make_bank
 
-    with open(config_path, "r", encoding="utf-8") as handle:
-        cfg = yaml.safe_load(handle)
+    def _flush(res):
+        tmp = results_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(res, fh, indent=2)
+        os.replace(tmp, results_path)
 
-    backend = build_backend(cfg["inference"])
-    hp = cfg["hyperparameters"]
+    variants = []
+    if disable_link_evolver:
+        variants.append(("ASEM_noLinks", "link_evolver disabled"))
+    if disable_zscore:
+        variants.append(("ASEM_noZScore", "z-score normalization disabled"))
+    if disable_link_evolver and disable_zscore:
+        variants.append(("ASEM_noLinks_noZScore", "links + zscore disabled"))
 
-    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
-    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
-    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    for sys_name, desc in variants:
+        key = f"locomo10/{sys_name}"
+        if key in results:
+            print(f"\n  [{sys_name}] already completed — skipping")
+            continue
 
-    os.makedirs(db_dir, exist_ok=True)
+        print(f"\n  [{sys_name}] {desc} ...")
+        db_dir = os.path.join(db_base_dir, sys_name.lower())
+        os.makedirs(db_dir, exist_ok=True)
 
-    # Shared components (each runner gets its own memory bank for isolation)
-    def _make_bank(name: str) -> MemoryBank:
-        path = os.path.join(db_dir, f"{name}.sqlite")
-        # Remove stale files from previous crashed runs
-        for suffix in ["", "-wal", "-shm", "-journal"]:
-            p = path + suffix
-            if os.path.exists(p):
-                try:
-                    os.remove(p)
-                except PermissionError:
-                    import time
-                    time.sleep(0.5)
-                    try:
-                        os.remove(p)
-                    except PermissionError:
-                        pass  # will fail below with clear error
-        return MemoryBank(path)
+        with open(config_path, "r", encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh)
+        backend = build_backend(cfg["inference"])
+        hp = cfg["hyperparameters"]
 
-    # QA prompts — direct, task-focused, minimal tokens
-    no_memory_prompt = (
-        "Answer concisely (a few words or one sentence). "
-        "Give your best guess if unsure.\n"
-        "Question: {query}\n"
-        "Answer:"
-    )
+        note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+        link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+        evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
 
-    retrieval_prompt = (
-        "Answer the question using the conversation below. "
-        "Reply with ONLY the answer, no explanation.\n"
-        "Conversation:\n{context}\n"
-        "Question: {query}\n"
-        "Answer:"
-    )
-
-    all_runners: Dict[str, SystemRunner] = {}
-
-    # --- NoMemory ---
-    if systems is None or "NoMemory" in systems:
-        all_runners["NoMemory"] = NoMemoryRunner(backend, no_memory_prompt)
-
-    # --- FullContext ---
-    if systems is None or "FullContext" in systems:
-        all_runners["FullContext"] = FullContextRunner(
-            backend, retrieval_prompt, max_history_turns=max_history_turns,
-        )
-
-    # --- SimRetrieval ---
-    if systems is None or "SimRetrieval" in systems:
-        nc_sr = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
-        all_runners["SimRetrieval"] = SimRetrievalRunner(
-            backend=backend,
-            memory_bank=_make_bank("simretrieval"),
-            note_constructor=nc_sr,
-            top_k=hp["k2"],
-            prompt_template=retrieval_prompt,
-        )
-
-    # --- AtomicLinking ---
-    if systems is None or "AtomicLinking" in systems:
-        bank_al = _make_bank("atomiclinking")
-        nc_al = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
-        le_al = LinkEvolver(
-            backend=backend,
-            link_prompt_template=link_prompt,
-            evolve_prompt_template=evolve_prompt,
-            k=hp["k"],
-        )
-        all_runners["AtomicLinking"] = AtomicLinkingRunner(
-            backend=backend,
-            memory_bank=bank_al,
-            note_constructor=nc_al,
-            link_evolver=le_al,
-            top_k=hp["k2"],
-            prompt_template=retrieval_prompt,
-        )
-
-    # --- RLManagerOnly ---
-    if systems is None or "RLManagerOnly" in systems:
-        bank_rl = _make_bank("rlmanageronly")
-        nc_rl = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
-        mm_rl = MemoryManager(backend=backend, prompt_template=(
+        nc = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
+        mm = MemoryManager(backend=backend, prompt_template=(
             "Decide memory write operation. Output JSON:\n"
             '{{"op": "ADD|UPDATE|DELETE|NOOP", "target_id": "<note_id or null>"}}\n'
             "Rules: ADD if new info. UPDATE if similar note exists. "
@@ -620,145 +607,162 @@ def build_runners(
             "Content: {content}\n"
             "Existing notes: {memory}"
         ))
-        all_runners["RLManagerOnly"] = RLManagerOnlyRunner(
-            backend=backend,
-            memory_bank=bank_rl,
-            note_constructor=nc_rl,
-            memory_manager=mm_rl,
-            top_k=hp["k2"],
-            prompt_template=retrieval_prompt,
-        )
-
-    # --- ValueRetrievalOnly ---
-    if systems is None or "ValueRetrievalOnly" in systems:
-        bank_vr = _make_bank("valueretrievalonly")
-        nc_vr = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
-        retriever_vr = HybridRetriever(
-            backend=backend,
-            k1=hp["k1"], k2=hp["k2"],
-            delta=hp["delta"], lambda_weight=hp["lambda"],
-        )
-        aa_vr = AnswerAgent(
-            backend=backend,
-            prompt_template=(
-            "Select the memory notes needed to answer and provide the answer. "
-            "Output JSON:\n"
-            '{{"selected_ids": ["id1", ...], "answer": "concise answer"}}\n'
-            "Query: {query}\n"
-            "Memory notes: {candidates}"
-        ),
-            baseline_prompt_template=(
-            "Answer using the memory notes below. Reply with ONLY the answer.\n"
-            "Memory:\n{context}\n"
-            "Question: {query}\n"
-            "Answer:"
-        ),
-        )
-        uu_vr = UtilityUpdater(
-            backend=backend, alpha=hp["alpha"], q0=hp["q0"],
-            summary_prompt_template=(
-            "Summarize this interaction as a memory note. "
-            "Output 1-2 factual sentences capturing what was learned.\n"
-            "Query: {query}\n"
-            "Answer: {answer}\n"
-            "Reward: {reward}"
-        ),
-            note_constructor=nc_vr,
-        )
-        all_runners["ValueRetrievalOnly"] = ValueRetrievalOnlyRunner(
-            backend=backend,
-            memory_bank=bank_vr,
-            note_constructor=nc_vr,
-            retriever=retriever_vr,
-            utility_updater=uu_vr,
-            answer_agent=aa_vr,
-        )
-
-    # --- ASEM (full pipeline) ---
-    if systems is None or "ASEM" in systems:
-        bank_asem = _make_bank("asem")
-        nc_asem = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
-        mm_asem = MemoryManager(backend=backend, prompt_template=(
-            "Decide memory write operation. Output JSON:\n"
-            '{{"op": "ADD|UPDATE|DELETE|NOOP", "target_id": "<note_id or null>"}}\n'
-            "Rules: ADD if new info. UPDATE if similar note exists. "
-            "DELETE if contradicted. NOOP if irrelevant.\n"
-            "Content: {content}\n"
-            "Existing notes: {memory}"
-        ))
-        le_asem = LinkEvolver(
+        le = LinkEvolver(
             backend=backend,
             link_prompt_template=link_prompt,
             evolve_prompt_template=evolve_prompt,
             k=hp["k"],
         )
-        retriever_asem = HybridRetriever(
+        ret = HybridRetriever(
             backend=backend,
             k1=hp["k1"], k2=hp["k2"],
             delta=hp["delta"], lambda_weight=hp["lambda"],
+            use_zscore=not disable_zscore,
         )
-        aa_asem = AnswerAgent(
+        aa = AnswerAgent(
             backend=backend,
             prompt_template=(
-            "Select the memory notes needed to answer and provide the answer. "
-            "Output JSON:\n"
-            '{{"selected_ids": ["id1", ...], "answer": "concise answer"}}\n'
-            "Query: {query}\n"
-            "Memory notes: {candidates}"
-        ),
+                "Select the memory notes needed to answer and provide the answer. "
+                "Output JSON:\n"
+                '{{"selected_ids": ["id1", ...], "answer": "concise answer"}}\n'
+                "Query: {query}\n"
+                "Memory notes: {candidates}"
+            ),
             baseline_prompt_template=(
-            "Answer using the memory notes below. Reply with ONLY the answer.\n"
-            "Memory:\n{context}\n"
-            "Question: {query}\n"
-            "Answer:"
-        ),
+                "Answer using the memory notes below. Reply with ONLY the answer.\n"
+                "Memory:\n{context}\n"
+                "Question: {query}\n"
+                "Answer:"
+            ),
         )
-        uu_asem = UtilityUpdater(
+        uu = UtilityUpdater(
             backend=backend, alpha=hp["alpha"], q0=hp["q0"],
             summary_prompt_template=(
-            "Summarize this interaction as a memory note. "
-            "Output 1-2 factual sentences capturing what was learned.\n"
-            "Query: {query}\n"
-            "Answer: {answer}\n"
-            "Reward: {reward}"
-        ),
-            note_constructor=nc_asem,
+                "Summarize this interaction as a memory note. "
+                "Output 1-2 factual sentences capturing what was learned.\n"
+                "Query: {query}\n"
+                "Answer: {answer}\n"
+                "Reward: {reward}"
+            ),
+            note_constructor=nc,
         )
+
         pipeline = ASEMPipeline(
-            memory_bank=bank_asem,
-            note_constructor=nc_asem,
-            memory_manager=mm_asem,
-            link_evolver=le_asem,
-            retriever=retriever_asem,
-            answer_agent=aa_asem,
-            utility_updater=uu_asem,
+            memory_bank=_make_bank(db_dir, sys_name.lower()),
+            note_constructor=nc,
+            memory_manager=mm,
+            link_evolver=le,
+            retriever=ret,
+            answer_agent=aa,
+            utility_updater=uu,
         )
-        all_runners["ASEM"] = ASEMRunner(pipeline=pipeline)
 
-    return all_runners
+        # If link evolver is disabled, patch it out
+        if disable_link_evolver:
+            pipeline.link_evolver = _NoOpLinkEvolver()
+
+        runner = ASEMSystem(pipeline=pipeline)
+        preds, refs = evaluate_system(
+            runner, eval_items, conversation_groups, metric_names,
+            preds_dir, sys_name, results, results_path, _flush,
+        )
+        results[key] = compute_metrics(preds, refs, metric_names)
+        results.pop(f"locomo10/{sys_name}/__partial__", None)
+        _flush(results)
+        print(f"    [{sys_name}] FINAL: {results[key]}")
+
+
+class _NoOpLinkEvolver:
+    """Drop-in replacement that skips all linking."""
+    def link_and_evolve(self, note, bank):
+        pass
 
 
 # ---------------------------------------------------------------------------
-# Per-category split
+# Results table
 # ---------------------------------------------------------------------------
 
-def split_by_category(
-    examples: List[Dict[str, Any]],
-) -> Dict[str, List[Dict[str, Any]]]:
-    by_cat: Dict[str, List] = defaultdict(list)
-    for ex in examples:
-        key = ex.get("category_name") or f"cat{ex.get('category', 0)}"
-        by_cat[key].append(ex)
-    return dict(by_cat)
+def print_summary_table(
+    results: Dict[str, Any],
+    metric_names: List[str],
+    system_names: List[str],
+    by_cat: Optional[Dict[str, List]] = None,
+    per_category: bool = False,
+):
+    """Print a formatted summary table of results."""
+    col_w = 16
+    header = f"{'System':<30}" + "".join(f"{m:>{col_w}}" for m in metric_names)
+    print(header)
+    print("-" * len(header))
+
+    for sys_name in system_names:
+        key = f"locomo10/{sys_name}"
+        metrics = results.get(key, {})
+        row = f"{sys_name:<30}" + "".join(
+            f"{metrics.get(m, 0.0):>{col_w}.4f}" for m in metric_names
+        )
+        print(row)
+
+    # Also print any ablation keys
+    ablation_keys = sorted(
+        [k for k in results if k.startswith("locomo10/ASEM_")],
+    )
+    if ablation_keys:
+        print()
+        print("Ablation results:")
+        print(header)
+        print("-" * len(header))
+        for key in ablation_keys:
+            name = key.split("/", 1)[1]
+            metrics = results.get(key, {})
+            row = f"{name:<30}" + "".join(
+                f"{metrics.get(m, 0.0):>{col_w}.4f}" for m in metric_names
+            )
+            print(row)
+
+    if per_category and by_cat:
+        print(f"\n{'='*60}")
+        print("PER-CATEGORY BREAKDOWN")
+        print(f"{'='*60}")
+        for cat_name in sorted(by_cat.keys()):
+            print(f"\n  [{cat_name}]")
+            cat_header = f"  {'System':<28}" + "".join(
+                f"{m:>{col_w}}" for m in metric_names
+            )
+            print(cat_header)
+            print("  " + "-" * (len(cat_header) - 2))
+            for sys_name in system_names:
+                cat_key = f"locomo10_cat_{cat_name}/{sys_name}"
+                if cat_key in results:
+                    m = results[cat_key]
+                    row = f"  {sys_name:<28}" + "".join(
+                        f"{m.get(met, 0.0):>{col_w}.4f}" for met in metric_names
+                    )
+                    print(row)
 
 
 # ---------------------------------------------------------------------------
-# Main experiment runner
+# Main entry point
 # ---------------------------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run ASEM experiments on locomo10.json"
+        description="Run ASEM experiments on locomo10.json",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Quick test
+  python scripts/run_locomo10_experiments.py --limit 10
+
+  # Full run with all systems
+  python scripts/run_locomo10_experiments.py --per-category --metrics em rougeL bertscore_f1
+
+  # Lambda sweep
+  python scripts/run_locomo10_experiments.py --ablate lambda --lambda-values 0.0 0.2 0.4 0.6 0.8 1.0 --systems ASEM --limit 200
+
+  # Component ablation
+  python scripts/run_locomo10_experiments.py --ablate components --disable-link-evolver --disable-zscore --systems ASEM --limit 200
+""",
     )
     parser.add_argument(
         "--input",
@@ -784,11 +788,7 @@ def main() -> None:
         "--systems",
         nargs="+",
         default=None,
-        help=(
-            "Systems to run. Choices: NoMemory FullContext SimRetrieval "
-            "AtomicLinking RLManagerOnly ValueRetrievalOnly ASEM. "
-            "Default: all."
-        ),
+        help=f"Systems to run. Choices: {' '.join(ALL_SYSTEMS)}. Default: all.",
     )
     parser.add_argument(
         "--metrics",
@@ -811,11 +811,31 @@ def main() -> None:
         "--max-history-turns",
         type=int,
         default=0,
-        help=(
-            "Truncate history for FullContext to this many turns "
-            "(0 = no truncation). History is very long in LoCoMo (~688 turns) "
-            "so a value of 100-200 is recommended for FullContext."
-        ),
+        help="Truncate history for FullContext to this many turns (0=no truncation). "
+             "Recommended: 150 for LoCoMo full runs.",
+    )
+    parser.add_argument(
+        "--ablate",
+        choices=["lambda", "components"],
+        default=None,
+        help="Run ablation study instead of standard evaluation",
+    )
+    parser.add_argument(
+        "--lambda-values",
+        type=float,
+        nargs="+",
+        default=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+        help="Lambda values to sweep (for --ablate lambda)",
+    )
+    parser.add_argument(
+        "--disable-link-evolver",
+        action="store_true",
+        help="Disable link evolver (for --ablate components)",
+    )
+    parser.add_argument(
+        "--disable-zscore",
+        action="store_true",
+        help="Disable z-score normalization (for --ablate components)",
     )
     parser.add_argument(
         "--clean",
@@ -824,9 +844,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Use timestamped db-dir to avoid Windows SQLite file locks from previous runs
-    from datetime import datetime as _dt
-    db_dir = os.path.join(args.db_dir, _dt.now().strftime("%Y%m%d_%H%M%S"))
+    # Use timestamped db-dir to avoid stale SQLite file locks
+    db_dir = os.path.join(args.db_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
     os.makedirs(db_dir, exist_ok=True)
     print(f"DB dir: {db_dir}")
 
@@ -838,7 +857,12 @@ def main() -> None:
     print("=" * 60)
     eval_data = convert_locomo10_to_eval(args.input, limit=args.limit)
 
-    # Print category distribution
+    # Group by conversation (needed for conversation-aware reset)
+    conversation_groups = group_by_conversation(eval_data)
+    print(f"  {len(conversation_groups)} conversations")
+    print(f"  avg {len(eval_data) / len(conversation_groups):.1f} QA pairs per conversation")
+
+    # Category distribution
     by_cat = split_by_category(eval_data)
     print("\nCategory distribution:")
     for cat_name, items in sorted(by_cat.items()):
@@ -850,13 +874,18 @@ def main() -> None:
     print(f"\n{'='*60}")
     print(f"STEP 2: Build system runners  (config: {args.config})")
     print(f"{'='*60}")
-    runners = build_runners(
-        config_path=args.config,
-        db_dir=db_dir,
-        systems=args.systems,
-        max_history_turns=args.max_history_turns,
-    )
-    print(f"  Systems: {list(runners.keys())}")
+
+    if args.ablate:
+        # Ablation mode — build only the systems we need
+        runners = {}
+    else:
+        runners = build_runners_from_systems_module(
+            config_path=args.config,
+            db_dir=db_dir,
+            systems=args.systems,
+            max_history_turns=args.max_history_turns,
+        )
+    print(f"  Systems: {list(runners.keys()) if runners else '(ablation mode)'}")
 
     # ------------------------------------------------------------------
     # Step 3: Run evaluation
@@ -868,6 +897,19 @@ def main() -> None:
     os.makedirs(os.path.dirname(args.results), exist_ok=True)
     preds_dir = os.path.join(os.path.dirname(args.results), "preds")
     os.makedirs(preds_dir, exist_ok=True)
+
+    # Clean mode
+    if args.clean:
+        import shutil
+        for path in [args.results, preds_dir, db_dir]:
+            if os.path.exists(path):
+                if os.path.isdir(path):
+                    shutil.rmtree(path, ignore_errors=True)
+                else:
+                    os.remove(path)
+        os.makedirs(preds_dir, exist_ok=True)
+        os.makedirs(db_dir, exist_ok=True)
+        print("  Cleaned all previous results, predictions, and databases.")
 
     # Load previous results for incremental resume
     results: Dict[str, Any] = {}
@@ -884,144 +926,110 @@ def main() -> None:
             json.dump(res, fh, indent=2)
         os.replace(tmp, args.results)
 
-    for sys_name, runner in runners.items():
-        key = f"locomo10/{sys_name}"
-        partial_key = f"locomo10/{sys_name}/__partial__"
+    # --- Ablation path ---
+    if args.ablate == "lambda":
+        run_lambda_ablation(
+            config_path=args.config,
+            db_base_dir=db_dir,
+            eval_items=eval_data,
+            conversation_groups=conversation_groups,
+            metric_names=args.metrics,
+            lambda_values=args.lambda_values,
+            results=results,
+            results_path=args.results,
+            preds_dir=preds_dir,
+        )
 
-        if key in results:
-            print(f"\n  [{sys_name}] already completed — skipping")
-            continue
+    elif args.ablate == "components":
+        run_component_ablation(
+            config_path=args.config,
+            db_base_dir=db_dir,
+            eval_items=eval_data,
+            conversation_groups=conversation_groups,
+            metric_names=args.metrics,
+            disable_link_evolver=args.disable_link_evolver,
+            disable_zscore=args.disable_zscore,
+            results=results,
+            results_path=args.results,
+            preds_dir=preds_dir,
+        )
 
-        print(f"\n  [{sys_name}] running on {len(eval_data)} examples ...")
+    else:
+        # --- Standard evaluation path ---
+        for sys_name, runner in runners.items():
+            key = f"locomo10/{sys_name}"
 
-        preds_path = os.path.join(preds_dir, f"locomo10_{sys_name}.jsonl")
-        done_ids: set = set()
-        preds_so_far: List[str] = []
-        refs_so_far: List[str] = []
+            if key in results:
+                print(f"\n  [{sys_name}] already completed — skipping")
+                continue
 
-        # Resume from partial predictions
-        if os.path.exists(preds_path):
-            with open(preds_path, "r", encoding="utf-8") as fp:
-                for line in fp:
-                    line = line.strip()
-                    if line:
-                        rec = json.loads(line)
-                        done_ids.add(rec["idx"])
-                        preds_so_far.append(rec["pred"])
-                        refs_so_far.append(rec["ref"])
-            if done_ids:
-                print(f"    Resuming from {len(done_ids)} saved predictions")
-                partial_metrics = compute_metrics(preds_so_far, refs_so_far, args.metrics)
-                partial_metrics["__n__"] = len(done_ids)
-                partial_metrics["__total__"] = len(eval_data)
-                results[partial_key] = partial_metrics
-                _flush_results(results)
+            print(f"\n  [{sys_name}] running on {len(eval_data)} examples ...")
 
-        runner.reset()
+            preds, refs = evaluate_system(
+                runner=runner,
+                eval_items=eval_data,
+                conversation_groups=conversation_groups,
+                metric_names=args.metrics,
+                preds_dir=preds_dir,
+                sys_name=sys_name,
+                results=results,
+                results_path=args.results,
+                flush_fn=_flush_results,
+            )
 
-        with open(preds_path, "a", encoding="utf-8") as fp:
-            for idx, item in enumerate(eval_data):
-                if idx in done_ids:
-                    continue
-
-                query = str(item.get("query", ""))
-                ref = str(item.get("answer", ""))
-                history = [str(h) for h in item.get("history", [])]
-
-                try:
-                    pred = runner.answer(query, history)
-                except Exception as exc:
-                    print(f"\n    ERROR on example {idx}: {exc}")
-                    traceback.print_exc()
-                    pred = ""
-
-                preds_so_far.append(pred)
-                refs_so_far.append(ref)
-
-                fp.write(json.dumps({
-                    "idx": idx,
-                    "session_id": item.get("session_id", ""),
-                    "category": item.get("category", 0),
-                    "category_name": item.get("category_name", ""),
-                    "query": query,
-                    "pred": pred,
-                    "ref": ref,
-                }) + "\n")
-                fp.flush()
-
-                if (idx + 1) % 5 == 0 or (idx + 1) == len(eval_data):
-                    pct = (idx + 1) / len(eval_data) * 100
-                    print(f"    [{sys_name}] {idx + 1}/{len(eval_data)} "
-                          f"({pct:.0f}%)  latest pred: {pred[:80]!r}", flush=True)
-
-                # Save partial metrics every 25 examples
-                if (idx + 1) % 25 == 0 or (idx + 1) == len(eval_data):
-                    partial_metrics = compute_metrics(
-                        preds_so_far, refs_so_far, args.metrics
-                    )
-                    partial_metrics["__n__"] = len(preds_so_far)
-                    partial_metrics["__total__"] = len(eval_data)
-                    results[partial_key] = partial_metrics
-                    _flush_results(results)
-
-        # Final metrics
-        final_metrics = compute_metrics(preds_so_far, refs_so_far, args.metrics)
-        results[key] = final_metrics
-        results.pop(partial_key, None)
-        _flush_results(results)
-        print(f"    [{sys_name}] FINAL: {final_metrics}")
+            # Final metrics
+            final_metrics = compute_metrics(preds, refs, args.metrics)
+            results[key] = final_metrics
+            results.pop(f"locomo10/{sys_name}/__partial__", None)
+            _flush_results(results)
+            print(f"    [{sys_name}] FINAL: {final_metrics}")
 
     # ------------------------------------------------------------------
     # Step 4: Per-category breakdown (optional)
     # ------------------------------------------------------------------
-    if args.per_category:
+    if args.per_category and not args.ablate:
         print(f"\n{'='*60}")
         print("STEP 4: Per-category breakdown")
         print(f"{'='*60}")
 
-        for cat_name, cat_examples in sorted(by_cat.items()):
-            cat_preds: Dict[str, List[str]] = defaultdict(list)
-            cat_refs: List[str] = [ex["answer"] for ex in cat_examples]
+        preds_dir_cat = os.path.join(preds_dir, "by_category")
+        os.makedirs(preds_dir_cat, exist_ok=True)
 
-            preds_dir_cat = os.path.join(preds_dir, "by_category")
-            os.makedirs(preds_dir_cat, exist_ok=True)
+        for cat_name, cat_examples in sorted(by_cat.items()):
+            cat_groups = group_by_conversation(cat_examples)
+            cat_refs = [ex["answer"] for ex in cat_examples]
 
             for sys_name, runner in runners.items():
-                cat_preds_path = os.path.join(
-                    preds_dir_cat, f"locomo10_{cat_name}_{sys_name}.jsonl"
+                cat_key = f"locomo10_cat_{cat_name}/{sys_name}"
+                if cat_key in results:
+                    print(f"  [{cat_name}/{sys_name}] cached — skipping")
+                    continue
+
+                # Use a fresh runner for per-category evaluation
+                fresh_runners = build_runners_from_systems_module(
+                    config_path=args.config,
+                    db_dir=os.path.join(db_dir, f"cat_{cat_name}"),
+                    systems=[sys_name],
+                    max_history_turns=args.max_history_turns,
                 )
-                cat_preds[sys_name] = []
+                if sys_name not in fresh_runners:
+                    continue
+                cat_runner = fresh_runners[sys_name]
 
-                if os.path.exists(cat_preds_path):
-                    with open(cat_preds_path, "r", encoding="utf-8") as fp:
-                        for line in fp:
-                            line = line.strip()
-                            if line:
-                                cat_preds[sys_name].append(
-                                    json.loads(line)["pred"]
-                                )
-                    if len(cat_preds[sys_name]) == len(cat_examples):
-                        print(f"  [{cat_name}/{sys_name}] cached — skipping")
-                        continue
-
-                runner.reset()
-                cat_preds[sys_name] = []
-                with open(cat_preds_path, "w", encoding="utf-8") as fp:
-                    for idx, ex in enumerate(cat_examples):
-                        try:
-                            pred = runner.answer(ex["query"], ex["history"])
-                        except Exception:
-                            pred = ""
-                        cat_preds[sys_name].append(pred)
-                        fp.write(json.dumps({
-                            "idx": idx, "pred": pred, "ref": ex["answer"],
-                        }) + "\n")
-
-                metrics = compute_metrics(
-                    cat_preds[sys_name], cat_refs, args.metrics
+                cat_preds, _ = evaluate_system(
+                    runner=cat_runner,
+                    eval_items=cat_examples,
+                    conversation_groups=cat_groups,
+                    metric_names=args.metrics,
+                    preds_dir=preds_dir_cat,
+                    sys_name=f"{cat_name}_{sys_name}",
+                    results=results,
+                    results_path=args.results,
+                    flush_fn=_flush_results,
                 )
-                key = f"locomo10_cat_{cat_name}/{sys_name}"
-                results[key] = metrics
+
+                metrics = compute_metrics(cat_preds, cat_refs, args.metrics)
+                results[cat_key] = metrics
                 print(f"  [{cat_name}/{sys_name}]: {metrics}")
 
         _flush_results(results)
@@ -1029,46 +1037,26 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Step 5: Print summary table
     # ------------------------------------------------------------------
+    system_names = list(runners.keys()) if runners else []
+    if args.ablate:
+        # Collect all system-like keys from results
+        system_names = sorted(set(
+            k.split("/", 1)[1]
+            for k in results
+            if k.startswith("locomo10/") and "__partial__" not in k and "cat_" not in k
+        ))
+
     print(f"\n{'='*60}")
     print("RESULTS SUMMARY")
     print(f"{'='*60}")
 
-    header_metrics = args.metrics
-    col_w = 16
-    header = f"{'System':<30}" + "".join(f"{m:>{col_w}}" for m in header_metrics)
-    print(header)
-    print("-" * len(header))
-
-    for key, metrics in sorted(results.items()):
-        if "/" not in key or "__partial__" in key:
-            continue
-        dataset, sys_name = key.split("/", 1)
-        if dataset != "locomo10":
-            continue
-        row = f"{sys_name:<30}" + "".join(
-            f"{metrics.get(m, 0.0):>{col_w}.4f}" for m in header_metrics
-        )
-        print(row)
-
-    if args.per_category:
-        print(f"\n{'='*60}")
-        print("PER-CATEGORY BREAKDOWN")
-        print(f"{'='*60}")
-        for cat_name in sorted(by_cat.keys()):
-            print(f"\n  [{cat_name}]")
-            cat_header = f"  {'System':<28}" + "".join(
-                f"{m:>{col_w}}" for m in header_metrics
-            )
-            print(cat_header)
-            print("  " + "-" * (len(cat_header) - 2))
-            for sys_name in runners.keys():
-                cat_key = f"locomo10_cat_{cat_name}/{sys_name}"
-                if cat_key in results:
-                    m = results[cat_key]
-                    row = f"  {sys_name:<28}" + "".join(
-                        f"{m.get(met, 0.0):>{col_w}.4f}" for met in header_metrics
-                    )
-                    print(row)
+    print_summary_table(
+        results=results,
+        metric_names=args.metrics,
+        system_names=system_names,
+        by_cat=by_cat,
+        per_category=args.per_category and not args.ablate,
+    )
 
     print(f"\nResults saved to: {args.results}")
     print(f"Predictions saved to: {preds_dir}/")
