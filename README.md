@@ -103,7 +103,7 @@ export OPENAI_BASE_URL="http://localhost:8000/v1"
 
 PYTHONPATH="." python scripts/run_locomo_benchmark.py \
   --val     data/training/val.jsonl \
-  --config  configs/locomo_vllm_qwen3_27b.yaml \
+  --config  configs/locomo_vllm_qwen3_4b-2507.yaml \
   --results data/benchmarks/results/locomo_vllm.json \
   --db-dir  data/benchmarks/eval_banks_vllm \
   --systems NoMemory FullContext SimRetrieval \
