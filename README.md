@@ -92,7 +92,7 @@ python scripts/run_locomo_benchmark.py `
   --metrics em rougeL
 ```
 
-## Run Benchmark — vLLM (Qwen3-27B, or any served model)
+## Run Benchmark — vLLM (Qwen3-4B-2507, or any served model)
 
 Your vLLM server exposes an OpenAI-compatible API at `http://localhost:8000/v1`.
 

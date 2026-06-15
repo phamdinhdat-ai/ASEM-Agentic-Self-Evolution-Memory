@@ -49,6 +49,9 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+
+os.environ["OPENAI_BASE_URL"] = "http://localhost:8000/v1"
+os.environ["OPENAI_API_KEY"] = "sk-datpd5"
 # Ensure project root is on sys.path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
