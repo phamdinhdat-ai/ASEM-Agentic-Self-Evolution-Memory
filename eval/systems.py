@@ -16,6 +16,7 @@ import yaml
 from asem.answer_agent import AnswerAgent
 from asem.backends import build_backend
 from asem.link_evolver import LinkEvolver
+from asem.logging_utils import get_logger, log_config
 from asem.memory_bank import MemoryBank
 from asem.memory_manager import MemoryManager
 from asem.note import NoteConstructor
@@ -37,11 +38,28 @@ class ASEMSystem:
     """Wrapper that exposes the ASEM pipeline as a baseline-style interface."""
 
     pipeline: ASEMPipeline
+    _logger = get_logger(__name__)
 
     def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            self.pipeline.write_path(item, datetime.utcnow())
-        _, answer = self.pipeline.read_path(query)
+        self._logger.debug("ASEMSystem.answer | query={!r} | history_turns={}",
+                          query[:120], len(history))
+        for i, item in enumerate(history):
+            try:
+                self.pipeline.write_path(item, datetime.utcnow())
+            except Exception as exc:
+                self._logger.opt(exception=exc).error(
+                    "ASEMSystem.answer | write_path failed at turn {} | content={!r}",
+                    i, item[:80])
+                raise
+        try:
+            used_notes, answer = self.pipeline.read_path(query)
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.answer | read_path failed for query={!r}", query[:120])
+            raise
+
+        self._logger.info("ASEMSystem.answer → answer={!r} | used_notes={}",
+                         answer[:150], [n.id for n in used_notes])
         return answer
 
     def reset(self) -> None:
@@ -147,6 +165,8 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
 def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     """Build the full ASEM pipeline wrapped as an eval system."""
     cfg = _load_config(config_path)
+    log_config(cfg, prefix=f"ASEM System Config ({config_path})")
+
     backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 
@@ -211,6 +231,7 @@ def build_baselines(
             0 = no truncation. Default 150 for LoCoMo.
     """
     cfg = _load_config(config_path)
+    log_config(cfg, prefix=f"Baselines Config ({config_path})")
     backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 

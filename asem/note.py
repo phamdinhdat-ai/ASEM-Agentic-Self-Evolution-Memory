@@ -11,6 +11,9 @@ from typing import Any, Dict, List
 import numpy as np
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
+
+_logger = get_logger(__name__)
 
 
 @dataclass
@@ -74,14 +77,21 @@ class NoteConstructor:
     q0: float = 0.5
 
     def build(self, content: str, timestamp: datetime) -> Note:
+        _logger.debug("NoteConstructor.build | content={!r}", content[:120])
+
         prompt = self.prompt_template.format(content=content)
         raw = self.backend.generate(prompt)
         K, G, X = self._parse_note_fields(raw)
 
-        e_vec = self.backend.embed(" ".join([content, " ".join(K), " ".join(G), X]))
+        if not K and not G and not X:
+            _logger.warning("NoteConstructor.build | empty parse result for content={!r} | raw={!r}",
+                           content[:80], raw[:100])
+
+        e_text = " ".join([content, " ".join(K), " ".join(G), X])
+        e_vec = self.backend.embed(e_text)
         z_vec = self.backend.embed(content)
 
-        return Note(
+        note = Note(
             id=str(uuid.uuid4()),
             c=content,
             t=timestamp,
@@ -93,6 +103,9 @@ class NoteConstructor:
             z=z_vec,
             q=self.q0,
         )
+        _logger.debug("NoteConstructor.build → note {} | K={} G={} X={!r}",
+                      note.id, K[:3], G[:3], X[:80])
+        return note
 
     def _parse_note_fields(self, raw: str) -> tuple[List[str], List[str], str]:
         try:

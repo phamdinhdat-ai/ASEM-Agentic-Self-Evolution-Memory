@@ -7,8 +7,11 @@ from dataclasses import dataclass
 from typing import List, Set
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .note import Note
+
+_logger = get_logger(__name__)
 
 # Relations that trigger memory evolution (B2: sparse evolution gate).
 # Weak relations like "same-topic" or "temporal" don't justify re-describing
@@ -47,9 +50,15 @@ class LinkEvolver:
     def link_and_evolve(self, m_new: Note, M: MemoryBank) -> None:
         neighbors = M.ann_search(m_new.e, k=self.k)
         if not neighbors:
+            _logger.debug("link_and_evolve | note {} has no neighbors (empty bank)", m_new.id)
             return
 
+        _logger.debug("link_and_evolve | note {} | neighbors={}",
+                      m_new.id, [n.id for n in neighbors])
+
         relations = self._generate_links(m_new, neighbors)
+        _logger.debug("link_and_evolve | {} relations generated", len(relations))
+
         self._apply_links(m_new, neighbors, relations, M)
 
         # B2 — only evolve neighbors with a strong relationship
@@ -57,7 +66,11 @@ class LinkEvolver:
         strong_neighbors = [n for n in neighbors if n.id in strong_ids]
 
         if not strong_neighbors:
+            _logger.debug("link_and_evolve | no strong relations → skip evolution")
             return
+
+        _logger.info("link_and_evolve | evolving {} neighbors (strong relations: {})",
+                     len(strong_neighbors), strong_ids)
 
         # B1 — batch-evolve all strong neighbors in one LLM call
         updated_notes = self._evolve_notes_batched(m_new, strong_neighbors)
@@ -71,6 +84,8 @@ class LinkEvolver:
                 "G": updated.G,
                 "X": updated.X,
             })
+            _logger.debug("link_and_evolve | evolved note {} K={} G={}",
+                          orig.id, updated.K[:3], updated.G[:3])
 
     # ------------------------------------------------------------------
     # B2 helper: extract neighbor IDs with strong relations

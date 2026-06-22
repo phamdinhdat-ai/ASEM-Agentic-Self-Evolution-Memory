@@ -72,6 +72,10 @@ if os.path.exists(_dotenv_path):
                     _v = _v.strip().strip('"').strip("'")
                     os.environ.setdefault(_k.strip(), _v)
 
+# Configure logging early
+from asem.logging_utils import setup_logging  # noqa: E402
+setup_logging(level=os.environ.get("LOG_LEVEL", "INFO"))
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -846,6 +850,16 @@ Examples:
         help="Force-clean all previous results, predictions, and databases before running.",
     )
     args = parser.parse_args()
+
+    # Load config early and apply logging settings from it
+    import yaml as _yaml  # noqa: E402
+    from asem.logging_utils import setup_logging_from_config  # noqa: E402
+    try:
+        with open(args.config, "r", encoding="utf-8") as _fh:
+            _cfg = _yaml.safe_load(_fh)
+        setup_logging_from_config(_cfg)
+    except Exception:
+        pass  # fall back to LOG_LEVEL env var / defaults
 
     # Use timestamped db-dir to avoid stale SQLite file locks
     db_dir = os.path.join(args.db_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))

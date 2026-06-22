@@ -15,3 +15,12 @@ hyperparameters:
   lambda: 0.40
   alpha: 0.10
   q0: 0.50
+
+# Optional: configure loguru logging
+# Set LOG_LEVEL env var or use the level below. File logging is optional.
+logging:
+  level: "DEBUG"               # TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL
+  log_file: "logs/asem.log"    # set to null to disable file logging
+  rotation: "10 MB"
+  retention: "7 days"
+  serialize_json: false

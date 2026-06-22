@@ -19,12 +19,15 @@ from asem.answer_agent import AnswerAgent
 from asem.backends import build_backend
 from asem.backends.base import InferenceBackend
 from asem.link_evolver import LinkEvolver
+from asem.logging_utils import get_logger, log_config, setup_logging, setup_logging_from_config
 from asem.memory_bank import MemoryBank
 from asem.memory_manager import MemoryManager, Op
 from asem.note import Note, NoteConstructor
 from asem.pipeline import ASEMPipeline
 from asem.retriever import HybridRetriever
 from asem.utility_updater import UtilityUpdater
+
+_logger = get_logger(__name__)
 
 
 NOTE_PROMPT = "ASEM_STAGE=NOTE\nCONTENT:{content}"
@@ -344,6 +347,9 @@ def build_pipeline_from_config(config_path: str, db_path: str) -> ASEMPipeline:
 
 	with open(config_path, "r", encoding="utf-8") as handle:
 		cfg = yaml.safe_load(handle)
+
+	setup_logging_from_config(cfg)
+	log_config(cfg, prefix=f"Pipeline Config ({config_path})")
 
 	backend = build_backend(cfg["inference"])
 	hp = cfg["hyperparameters"]

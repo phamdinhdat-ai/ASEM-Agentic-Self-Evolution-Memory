@@ -8,7 +8,10 @@ from enum import Enum
 from typing import List, Optional, Tuple
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .note import Note
+
+_logger = get_logger(__name__)
 
 
 class Op(str, Enum):
@@ -29,15 +32,19 @@ class MemoryManager:
 
     def select_op(self, x: str, M_old: List[Note]) -> Tuple[Op, Optional[Note]]:
         """Select a write operation and optional target note."""
+        _logger.debug("select_op | content={!r} | existing_notes={}",
+                      x[:120], [n.id for n in M_old])
 
         prompt = self._build_prompt(x, M_old)
         raw = self.backend.generate(prompt)
         op, target_id = self._parse_decision(raw)
 
         if op is None:
+            _logger.warning("select_op | LLM parse failed, using heuristic fallback | raw={!r}", raw[:100])
             return self._heuristic_fallback(x, M_old)
 
         target = self._find_target(target_id, M_old)
+        _logger.debug("select_op → op={} target_id={}", op.value, target_id or "-")
         return op, target
 
     def _build_prompt(self, x: str, M_old: List[Note]) -> str:

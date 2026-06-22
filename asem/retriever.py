@@ -9,8 +9,11 @@ from typing import Dict, List, Set, Tuple
 import numpy as np
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .note import Note
+
+_logger = get_logger(__name__)
 
 # A4 — query-type indicators for adaptive lambda
 _FACTUAL_PATTERNS = re.compile(
@@ -61,11 +64,15 @@ class HybridRetriever:
 
         # A4 — adaptive lambda based on query type
         lam = self._adaptive_lambda(query) if self.enable_adaptive_lambda else self.lambda_weight
+        qtype = self._classify_query_type(query)
+        _logger.debug("retrieve | query={!r} | lambda={:.3f} | query_type={} | bank_size={}",
+                      query[:100], lam, qtype, len(M.list_notes()))
 
         e_q = self.backend.embed(query)
         candidates = M.ann_search(e_q, k=self.k1)
         if not candidates:
             self.stats["phase_a_hits"] = 0
+            _logger.debug("retrieve | Phase A: 0 candidates (empty bank or no matches)")
             return []
 
         sims = [self._cosine(e_q, note.e) for note in candidates]
@@ -76,9 +83,12 @@ class HybridRetriever:
         ]
         if not filtered:
             self.stats["phase_a_hits"] = 0
+            _logger.debug("retrieve | Phase A: 0 candidates passed delta={:.3f} filter", self.delta)
             return []
 
         self.stats["phase_a_hits"] = len(filtered)
+        _logger.debug("retrieve | Phase A: {} candidates (k1={}, delta={:.3f})",
+                      len(filtered), self.k1, self.delta)
 
         notes, sim_scores = zip(*filtered)
         q_scores = [note.q for note in notes]
@@ -99,7 +109,10 @@ class HybridRetriever:
         result = [note for _, note in top_k]
 
         self.stats["lambda_used"] = lam
-        self.stats["query_type"] = self._classify_query_type(query)
+        self.stats["query_type"] = qtype
+
+        _logger.debug("retrieve | Phase B: top-{} results | scores={}",
+                      self.k2, [f"{s:.3f}" for s, _ in top_k])
 
         # A1 — traverse link graph from top candidates
         if self.enable_link_traversal and result:
@@ -107,7 +120,11 @@ class HybridRetriever:
             result = list(dict.fromkeys(result + linked))  # dedupe, preserve order
             self.stats["link_traversal_added"] = len(linked)
             self.stats["total_retrieved"] = len(result)
+            _logger.debug("retrieve | Phase C: +{} linked neighbors → {} total",
+                          len(linked), len(result))
 
+        _logger.info("retrieve → {} notes | λ={:.2f} qtype={} phase_a={}",
+                     len(result), lam, qtype, len(filtered))
         return result
 
     # ------------------------------------------------------------------

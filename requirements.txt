@@ -9,3 +9,5 @@ pydantic
 pytest
 accelerate
 bitsandbytes
+loguru
+pyyaml

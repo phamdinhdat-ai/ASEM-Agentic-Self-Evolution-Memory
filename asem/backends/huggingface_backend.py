@@ -7,6 +7,9 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from .base import InferenceBackend
+from ..logging_utils import get_logger
+
+_logger = get_logger(__name__)
 
 
 class HuggingFaceBackend(InferenceBackend):
@@ -15,24 +18,51 @@ class HuggingFaceBackend(InferenceBackend):
     def __init__(self, text_generator: Any, embedder: Any) -> None:
         self._text_generator = text_generator
         self._embedder = embedder
+        _logger.info("HuggingFaceBackend initialized (generator={}, embedder={})",
+                     type(text_generator).__name__, type(embedder).__name__)
 
     def generate(self, prompt: str, **kwargs) -> str:
-        outputs = self._text_generator(prompt, **kwargs)
+        _logger.debug("HF generate | prompt_len={} | prompt_preview={!r}",
+                      len(prompt), prompt[:120])
+        try:
+            outputs = self._text_generator(prompt, **kwargs)
+        except Exception as exc:
+            _logger.opt(exception=exc).error("HF generate failed")
+            raise
+
         if not outputs:
+            _logger.warning("HF generate returned empty output")
             return ""
+
         first = outputs[0]
         if isinstance(first, dict):
             if "generated_text" in first:
-                return str(first["generated_text"])
-            if "text" in first:
-                return str(first["text"])
-        return str(first)
+                result = str(first["generated_text"])
+            elif "text" in first:
+                result = str(first["text"])
+            else:
+                result = str(first)
+        else:
+            result = str(first)
+
+        _logger.debug("HF response | len={} | preview={!r}",
+                      len(result), result[:200])
+        return result
 
     def embed(self, text: str) -> np.ndarray:
-        vector = self._embedder.encode(text, convert_to_numpy=True)
+        _logger.debug("HF embed | text_len={} | preview={!r}",
+                      len(text), text[:100])
+        try:
+            vector = self._embedder.encode(text, convert_to_numpy=True)
+        except Exception as exc:
+            _logger.opt(exception=exc).error("HF embedding failed")
+            raise
+
         vector = np.asarray(vector)
         if vector.ndim > 1:
             vector = vector.reshape(-1)
+        _logger.debug("HF embed result | shape={} | norm={:.4f}",
+                      vector.shape, float(np.linalg.norm(vector)))
         return vector
 
     @classmethod
