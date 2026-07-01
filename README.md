@@ -61,7 +61,7 @@ Output:
 ```bash
 # Set your API credentials
 export OPENAI_API_KEY="sk-..."
-export OPENAI_BASE_URL="https://api.openai.com/v1"   # or your proxy
+export OPENAI_BASE_URL="https://api.deepseek.com"   # or your proxy
 
 # Run benchmark
 PYTHONPATH="." python scripts/run_locomo_benchmark.py \

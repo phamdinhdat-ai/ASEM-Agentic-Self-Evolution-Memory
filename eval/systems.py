@@ -40,9 +40,28 @@ class ASEMSystem:
     pipeline: ASEMPipeline
     _logger = get_logger(__name__)
 
+    def ingest(self, content: str) -> None:
+        """Write a single turn into the memory bank without answering.
+
+        Used for session-aware pre-ingestion: all conversation turns for a
+        session are ingested first, then queries are answered.
+        """
+        self._logger.debug("ASEMSystem.ingest | content={!r}", content[:120])
+        try:
+            self.pipeline.write_path(content, datetime.utcnow())
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.ingest | write_path failed | content={!r}", content[:80])
+            raise
+
+    @property
+    def bank_size(self) -> int:
+        """Return the number of notes currently in the memory bank."""
+        return len(self.pipeline.memory_bank.list_notes())
+
     def answer(self, query: str, history: List[str]) -> str:
-        self._logger.debug("ASEMSystem.answer | query={!r} | history_turns={}",
-                          query[:120], len(history))
+        self._logger.debug("ASEMSystem.answer | query={!r} | history_turns={} | bank_size={}",
+                          query[:120], len(history), self.bank_size)
         for i, item in enumerate(history):
             try:
                 self.pipeline.write_path(item, datetime.utcnow())
@@ -58,8 +77,8 @@ class ASEMSystem:
                 "ASEMSystem.answer | read_path failed for query={!r}", query[:120])
             raise
 
-        self._logger.info("ASEMSystem.answer → answer={!r} | used_notes={}",
-                         answer[:150], [n.id for n in used_notes])
+        self._logger.info("ASEMSystem.answer → answer={!r} | used_notes={} | bank_size={}",
+                         answer[:150], [n.id for n in used_notes], self.bank_size)
         return answer
 
     def reset(self) -> None:

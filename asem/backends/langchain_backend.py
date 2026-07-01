@@ -151,9 +151,13 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
 
         import os
         kwargs: Dict[str, Any] = {"model": model_name, "temperature": temperature}
+        kwargs['extra_body'] = {
+            "chat_template_kwargs": {"enable_thinking": False},
+        }
         base_url = cfg.get("base_url") or os.environ.get("OPENAI_BASE_URL")
         if base_url:
             kwargs["base_url"] = base_url
+
         return ChatOpenAI(**kwargs)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -173,6 +177,7 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
 def _build_embedder(cfg: Dict[str, Any]) -> Any:
     provider = cfg.get("embedder_provider", cfg.get("provider", "openai"))
     model_name = cfg.get("embedder_name") or cfg.get("embedder_model")
+    device = cfg.get("embedder_device", "cpu")  # default cpu since LLM is API-based
 
     if provider == "openai":
         from langchain_openai import OpenAIEmbeddings
@@ -181,7 +186,10 @@ def _build_embedder(cfg: Dict[str, Any]) -> Any:
     if provider in {"huggingface_hub", "huggingface"}:
         from langchain_huggingface import HuggingFaceEmbeddings
 
-        return HuggingFaceEmbeddings(model_name=model_name)
+        return HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs={"device": device},
+        )
     if provider == "ollama":
         from langchain_ollama import OllamaEmbeddings
 

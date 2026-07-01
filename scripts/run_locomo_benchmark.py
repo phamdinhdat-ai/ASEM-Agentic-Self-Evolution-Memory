@@ -166,6 +166,17 @@ def main() -> None:
         default=None,
         help="Only evaluate on the first N examples (useful for smoke-testing the pipeline)",
     )
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Run LLM-as-Judge evaluation on all predictions after standard metrics",
+    )
+    parser.add_argument(
+        "--judge-limit",
+        type=int,
+        default=None,
+        help="Limit LLM-as-Judge to first N predictions (for cost control)",
+    )
     args = parser.parse_args()
 
     # ------------------------------------------------------------------
@@ -173,7 +184,8 @@ def main() -> None:
     # ------------------------------------------------------------------
     try:
         from eval.evaluate import EvalConfig, DatasetPaths, compute_metrics
-        from eval.systems import get_systems
+        from eval.systems import get_systems, _load_config
+        from asem.backends import build_backend
     except ImportError as e:
         print(f"ERROR: Could not import eval modules: {e}")
         print("Make sure you are running from the project root:")
@@ -247,6 +259,42 @@ def main() -> None:
         os.replace(tmp, args.results)
 
     print(f"\nRunning evaluation ({args.metrics}) ...")
+
+    # ------------------------------------------------------------------
+    # Session-aware grouping: pre-compute session map for systems that
+    # support pre-ingestion (ASEM + memory-using baselines).
+    # NoMemory and FullContext don't benefit from grouping.
+    # ------------------------------------------------------------------
+    from collections import OrderedDict
+
+    def _build_session_map(data: List[Dict[str, Any]]) -> OrderedDict:
+        """Group examples by session_id, collecting unique history turns."""
+        smap: OrderedDict = OrderedDict()
+        for idx, item in enumerate(data):
+            sid = item.get("session_id", "__unknown__")
+            if sid not in smap:
+                smap[sid] = {"indices": [], "all_history": OrderedDict()}
+            smap[sid]["indices"].append(idx)
+            for h in item.get("history", []):
+                h_stripped = str(h).strip()
+                if h_stripped:
+                    # Deduplicate by content while preserving insertion order
+                    smap[sid]["all_history"][h_stripped] = None
+        # Convert OrderedDict keys to list for iteration
+        for sid in smap:
+            smap[sid]["all_history"] = list(smap[sid]["all_history"].keys())
+        return smap
+
+    def _system_supports_ingest(system: Any) -> bool:
+        """Check if a system exposes an ingest() method for pre-writing turns."""
+        return hasattr(system, "ingest") and callable(getattr(system, "ingest", None))
+
+    # Build session map once (shared across systems)
+    session_map = _build_session_map(val_data)
+    session_order = list(session_map.keys())
+    print(f"  Grouped into {len(session_order)} sessions "
+          f"(avg {sum(len(sm['all_history']) for sm in session_map.values()) / max(1, len(session_order)):.1f} unique turns/session)")
+
     for sys_name, system in systems.items():
         key = f"locomo/{sys_name}"
         partial_key = f"locomo/{sys_name}/__partial__"
@@ -271,7 +319,6 @@ def main() -> None:
                         refs_so_far.append(rec["ref"])
             if done_ids:
                 print(f"  [{sys_name}] resuming from {len(done_ids)} saved predictions")
-                # Immediately publish partial metrics so the JSON is never stale
                 partial_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
                 partial_metrics["__n__"] = len(done_ids)
                 partial_metrics["__total__"] = len(val_data)
@@ -279,45 +326,76 @@ def main() -> None:
                 _flush_results(results)
                 print(f"  [{sys_name}] partial metrics on {len(done_ids)} examples: {partial_metrics}")
 
+        use_session_mode = _system_supports_ingest(system)
+
         with open(preds_path, "a", encoding="utf-8") as fp:
-            for idx, item in enumerate(val_data):
-                if idx in done_ids:
-                    continue
-                query = str(item.get("query", ""))
-                ref = str(item.get("answer", ""))
-                history = [str(h) for h in item.get("history", [])]
+            for sid in session_order:
+                group = session_map[sid]
 
-                try:
-                    pred = system.answer(query, history)
-                except Exception as exc:
-                    print(f"\n  [{sys_name}] ERROR on example {idx}: {exc}")
-                    traceback.print_exc()
-                    pred = ""
+                # Reset memory bank at session boundary
+                if use_session_mode and hasattr(system, "reset"):
+                    system.reset()
+                    bank_before = getattr(system, "bank_size", "?")
+                    if isinstance(bank_before, int) and bank_before > 0:
+                        print(f"  [{sys_name}] session={sid} | bank not empty after reset: {bank_before} notes")
 
-                preds_so_far.append(pred)
-                refs_so_far.append(ref)
+                # Pre-ingest all unique history turns for this session
+                if use_session_mode:
+                    all_turns = group["all_history"]
+                    if all_turns:
+                        print(f"  [{sys_name}] session={sid} | ingesting {len(all_turns)} unique turns ...", flush=True)
+                        for turn_text in all_turns:
+                            try:
+                                system.ingest(turn_text)
+                            except Exception as exc:
+                                print(f"\n  [{sys_name}] ERROR ingesting turn in session {sid}: {exc}")
+                                traceback.print_exc()
+                        bank_after = getattr(system, "bank_size", "?")
+                        print(f"  [{sys_name}] session={sid} | bank={bank_after} notes after ingestion", flush=True)
 
-                # Write prediction immediately so progress survives a crash
-                fp.write(json.dumps({
-                    "idx": idx,
-                    "session_id": item.get("session_id", ""),
-                    "query": query,
-                    "pred": pred,
-                    "ref": ref,
-                }) + "\n")
-                fp.flush()
+                # Answer all queries for this session
+                for idx in group["indices"]:
+                    if idx in done_ids:
+                        continue
+                    item = val_data[idx]
+                    query = str(item.get("query", ""))
+                    ref = str(item.get("answer", ""))
+                    history = [str(h) for h in item.get("history", [])]
 
-                print(f"  [{sys_name}] {idx + 1}/{len(val_data)}  pred={pred[:60]!r}", flush=True)
+                    try:
+                        if use_session_mode:
+                            # History already ingested — pass empty list
+                            pred = system.answer(query, [])
+                        else:
+                            pred = system.answer(query, history)
+                    except Exception as exc:
+                        print(f"\n  [{sys_name}] ERROR on example {idx}: {exc}")
+                        traceback.print_exc()
+                        pred = ""
 
-                # Update partial metrics in the JSON every 10 predictions
-                if (idx + 1) % 10 == 0 or (idx + 1) == len(val_data):
-                    partial_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
-                    partial_metrics["__n__"] = len(preds_so_far)
-                    partial_metrics["__total__"] = len(val_data)
-                    results[partial_key] = partial_metrics
-                    _flush_results(results)
+                    preds_so_far.append(pred)
+                    refs_so_far.append(ref)
 
-        # Final metrics — promote from partial to permanent and clean up partial key
+                    fp.write(json.dumps({
+                        "idx": idx,
+                        "session_id": item.get("session_id", ""),
+                        "query": query,
+                        "pred": pred,
+                        "ref": ref,
+                    }) + "\n")
+                    fp.flush()
+
+                    print(f"  [{sys_name}] {len(preds_so_far)}/{len(val_data)}  pred={pred[:60]!r}", flush=True)
+
+                    # Update partial metrics every 10 predictions
+                    if len(preds_so_far) % 10 == 0 or len(preds_so_far) == len(val_data):
+                        partial_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
+                        partial_metrics["__n__"] = len(preds_so_far)
+                        partial_metrics["__total__"] = len(val_data)
+                        results[partial_key] = partial_metrics
+                        _flush_results(results)
+
+        # Final metrics
         final_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
         results[key] = final_metrics
         results.pop(partial_key, None)
@@ -373,6 +451,81 @@ def main() -> None:
         print(row)
 
     print(f"\nDone. Results written to: {args.results}")
+
+    # ------------------------------------------------------------------
+    # LLM-as-Judge evaluation (optional)
+    # ------------------------------------------------------------------
+    if args.judge:
+        print(f"\n{'='*60}")
+        print("LLM-as-Judge Evaluation")
+        print(f"{'='*60}")
+
+        from eval.llm_as_a_judge import LLMJudge, compute_judge_metrics
+
+        # Build judge using the same config
+        cfg = _load_config(args.config)
+        judge_backend = build_backend(cfg["inference"])
+        judge = LLMJudge(backend=judge_backend)
+
+        judge_results: Dict[str, Any] = {}
+        for sys_name in systems.keys():
+            preds_path = os.path.join(preds_dir, f"locomo_{sys_name}.jsonl")
+            if not os.path.exists(preds_path):
+                print(f"  [{sys_name}] no predictions file — skipping")
+                continue
+
+            # Load predictions with context
+            examples = []
+            with open(preds_path, "r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line:
+                        rec = json.loads(line)
+                        idx = rec.get("idx", 0)
+                        if idx < len(val_data):
+                            item = val_data[idx]
+                            rec["context"] = "\n".join(
+                                str(h) for h in item.get("history", [])
+                            )
+                        else:
+                            rec["context"] = ""
+                        examples.append(rec)
+
+            if args.judge_limit:
+                examples = examples[:args.judge_limit]
+
+            print(f"  [{sys_name}] judging {len(examples)} predictions ...")
+            results_list = judge.judge_batch(
+                examples,
+                context_key="context",
+                query_key="query",
+                pred_key="pred",
+                gold_key="ref",
+            )
+            metrics = compute_judge_metrics(results_list)
+            judge_results[f"locomo/{sys_name}"] = {
+                "judge_mean": metrics.mean_score,
+                "judge_median": metrics.median_score,
+                "judge_pct_perfect": metrics.pct_perfect,
+                "judge_pct_acceptable": metrics.pct_acceptable,
+                "judge_pct_poor": metrics.pct_poor,
+                "judge_distribution": metrics.score_distribution,
+                "judge_n": metrics.num_judgments,
+            }
+            print(f"  [{sys_name}] judge: mean={metrics.mean_score:.3f} "
+                  f"median={metrics.median_score:.3f} "
+                  f"perfect={metrics.pct_perfect:.1f}% "
+                  f"acceptable={metrics.pct_acceptable:.1f}%")
+
+        # Merge judge results into main results JSON
+        for key, jmetrics in judge_results.items():
+            if key in results:
+                results[key].update(jmetrics)
+            else:
+                results[key] = jmetrics
+        _flush_results(results)
+        print(f"\nJudge results merged into {args.results}")
+
     print(f"Next step: python scripts/make_results_table.py "
           f"--results {args.results} "
           f"--output data/benchmarks/results/locomo_baseline_table.md")

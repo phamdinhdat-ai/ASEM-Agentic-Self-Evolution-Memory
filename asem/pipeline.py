@@ -100,7 +100,7 @@ class ASEMPipeline:
         self.utility_updater.update(reward, used_notes, self.memory_bank, query, answer)
 
         for note in used_notes:
-            new_q = self.memory_bank.get(note.id)
+            new_q = self.memory_bank.get_note(note.id)
             if new_q:
                 old_q = before_qs.get(note.id, 0.0)
                 _logger.info("update_path | q({}): {:.3f} → {:.3f} (reward={:.3f})",

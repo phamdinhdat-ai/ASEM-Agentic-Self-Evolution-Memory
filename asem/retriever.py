@@ -117,7 +117,14 @@ class HybridRetriever:
         # A1 — traverse link graph from top candidates
         if self.enable_link_traversal and result:
             linked = self._traverse_links(result, e_q, M)
-            result = list(dict.fromkeys(result + linked))  # dedupe, preserve order
+            # Dedupe by Note ID, preserving order (Note is unhashable)
+            seen_ids: set = set()
+            merged = result + linked
+            result = []
+            for note in merged:
+                if note.id not in seen_ids:
+                    seen_ids.add(note.id)
+                    result.append(note)
             self.stats["link_traversal_added"] = len(linked)
             self.stats["total_retrieved"] = len(result)
             _logger.debug("retrieve | Phase C: +{} linked neighbors → {} total",
