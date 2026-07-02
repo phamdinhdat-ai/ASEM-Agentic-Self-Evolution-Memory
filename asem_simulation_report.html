@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASEM Pipeline Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14; --surface: #0e1420; --surface2: #131b28;
+    --border: #1e2d42; --border2: #2a3f5c;
+    --text: #d4e4f7; --muted: #5a7a9e;
+    --accent: #00d4ff; --accent2: #7c5cfc;
+    --add: #00e5a0; --update: #ffc14d; --delete: #ff5370;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    min-height: 100vh;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0,212,255,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  header {
+    text-align: center; padding: 32px 0;
+    border-bottom: 1px solid var(--border); margin-bottom: 32px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 28px;
+    color: var(--accent); text-shadow: 0 0 20px rgba(0,212,255,.3);
+    letter-spacing: -1px;
+  }
+  h1 span { color: var(--text); }
+  .subtitle {
+    font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+    letter-spacing: 1px; margin-top: 6px;
+  }
+
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-bottom: 32px;
+  }
+  .summary-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .summary-card .value {
+    font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800;
+    color: var(--accent);
+  }
+  .summary-card .label {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    color: var(--muted); letter-spacing: 1px; margin-top: 4px;
+  }
+
+  .turn-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 20px; overflow: hidden;
+    transition: border-color .3s;
+  }
+  .turn-card.query { border-color: rgba(124,92,252,.3); }
+  .turn-card.fact { border-color: rgba(0,212,255,.2); }
+
+  .turn-header {
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace; font-size: 10px;
+  }
+  .turn-num {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 3px 8px; color: var(--accent);
+    font-weight: 700;
+  }
+  .turn-type {
+    padding: 2px 10px; border-radius: 99px; font-size: 9px; font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .turn-type.fact { background: rgba(0,212,255,.1); color: var(--accent); border: 1px solid rgba(0,212,255,.3); }
+  .turn-type.query { background: rgba(124,92,252,.1); color: var(--accent2); border: 1px solid rgba(124,92,252,.3); }
+  .turn-content {
+    flex: 1; color: var(--text); font-size: 12.5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .turn-body { padding: 12px 16px; }
+
+  .stage-row {
+    display: grid; grid-template-columns: 60px 1fr; gap: 12px;
+    padding: 8px 0; border-bottom: 1px solid rgba(30,45,66,.5);
+    align-items: start;
+  }
+  .stage-row:last-child { border-bottom: none; }
+
+  .stage-badge {
+    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 800;
+    padding: 3px 8px; border-radius: 4px; text-align: center;
+    letter-spacing: .5px;
+  }
+  .stage-badge.s1 { background: rgba(0,212,255,.12); color: var(--accent); border: 1px solid rgba(0,212,255,.3); }
+  .stage-badge.s2 { background: rgba(255,193,77,.12); color: var(--update); border: 1px solid rgba(255,193,77,.3); }
+  .stage-badge.s3 { background: rgba(0,229,160,.12); color: var(--add); border: 1px solid rgba(0,229,160,.3); }
+  .stage-badge.s4 { background: rgba(124,92,252,.12); color: var(--accent2); border: 1px solid rgba(124,92,252,.3); }
+  .stage-badge.s5 { background: rgba(255,83,112,.12); color: var(--delete); border: 1px solid rgba(255,83,112,.3); }
+
+  .stage-detail { font-size: 11.5px; line-height: 1.6; }
+  .stage-detail .kv { display: flex; gap: 6px; margin: 2px 0; flex-wrap: wrap; }
+  .stage-detail .kv-key { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--accent); }
+  .stage-detail .kv-val { color: var(--text); }
+
+  .tag {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    padding: 1px 7px; border-radius: 4px;
+    border: 1px solid var(--border2); color: var(--text);
+    background: var(--surface2); display: inline-block; margin: 1px;
+  }
+  .tag.cyan { border-color: rgba(0,212,255,.4); color: var(--accent); }
+  .tag.purple { border-color: rgba(124,92,252,.4); color: var(--accent2); }
+  .tag.green { border-color: rgba(0,229,160,.4); color: var(--add); }
+
+  .op-badge {
+    display: inline-block; font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 700; padding: 3px 12px; border-radius: 6px;
+    letter-spacing: .5px;
+  }
+  .op-ADD { background: rgba(0,229,160,.15); border: 1px solid var(--add); color: var(--add); }
+  .op-UPDATE { background: rgba(255,193,77,.12); border: 1px solid var(--update); color: var(--update); }
+  .op-DELETE { background: rgba(255,83,112,.12); border: 1px solid var(--delete); color: var(--delete); }
+  .op-NOOP { background: rgba(90,122,158,.1); border: 1px solid var(--muted); color: var(--muted); }
+
+  .answer-box {
+    background: var(--surface2); border: 1px solid var(--accent2);
+    border-radius: 8px; padding: 10px 14px; margin: 8px 0;
+    font-size: 13px; color: var(--text);
+    border-left: 3px solid var(--accent2);
+  }
+
+  .bank-section {
+    margin-top: 32px; padding-top: 24px;
+    border-top: 2px solid var(--border);
+  }
+  .bank-section h2 {
+    font-family: 'Syne', sans-serif; font-size: 16px; margin-bottom: 16px;
+    color: var(--add);
+  }
+  .bank-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .note-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .note-card .note-id {
+    font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .note-card .note-desc { font-size: 11.5px; color: var(--text); margin-bottom: 6px; }
+  .note-card .q-bar {
+    height: 3px; background: var(--border); border-radius: 2px;
+    overflow: hidden; margin-top: 6px;
+  }
+  .note-card .q-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 2px;
+  }
+
+  .score-bar { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  .score-id { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); width: 70px; flex-shrink: 0; }
+  .score-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 2px; }
+  .score-val { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--text); width: 36px; text-align: right; }
+
+  .link-line {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    color: var(--muted); margin: 2px 0; display: flex; gap: 6px; align-items: center;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .turn-card { animation: fadeIn .4s ease; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>ASEM<span> · </span>Pipeline Simulation</h1>
+    <div class="subtitle">FIVE-STAGE AGENTIC SELF-EVOLVING MEMORY · DETERMINISTIC DEMO BACKEND</div>
+  </header>
+  <div id="report"></div>
+</div>
+
+<script>
+const DATA = {
+  "turns": [
+    {
+      "content": "My name is Alex.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.775837+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+          "keywords": [
+            "my",
+            "alex",
+            "name",
+            "identity"
+          ],
+          "tags": [
+            "personal"
+          ],
+          "description": "User's personal identity and name.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "ADD",
+          "target_id": null,
+          "reason": "New information \u2014 no related note found in memory bank."
+        },
+        "s3": {
+          "neighbors": [],
+          "links": [],
+          "evolved": []
+        }
+      }
+    },
+    {
+      "content": "I adopted a dog named Buddy last month.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.778518+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+          "keywords": [
+            "buddy",
+            "dog",
+            "pet",
+            "animal",
+            "name",
+            "identity"
+          ],
+          "tags": [
+            "personal",
+            "pets"
+          ],
+          "description": "User adopted a dog named Buddy.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "ADD",
+          "target_id": null,
+          "reason": "New information \u2014 no related note found in memory bank."
+        },
+        "s3": {
+          "neighbors": [
+            "10e5e178-d43f-4554-9a59-8d3435f67c10"
+          ],
+          "links": [
+            {
+              "source": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "target": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "relation": "extends"
+            }
+          ],
+          "evolved": [
+            "10e5e178-d43f-4554-9a59-8d3435f67c10"
+          ]
+        }
+      }
+    },
+    {
+      "content": "I also adopted another dog named Scout.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.779911+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "7eb53724-2c19-4b7a-a7cf-a85148d0ceea",
+          "keywords": [
+            "scout",
+            "dog",
+            "pet",
+            "animal",
+            "name",
+            "identity"
+          ],
+          "tags": [
+            "personal",
+            "pets"
+          ],
+          "description": "User has multiple dogs including Scout.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "UPDATE",
+          "target_id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+          "reason": "Merging into existing note 54fcf636 \u2014 complementary information detected."
+        },
+        "s3": {
+          "neighbors": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+            "10e5e178-d43f-4554-9a59-8d3435f67c10"
+          ],
+          "links": [
+            {
+              "source": "7eb53724-2c19-4b7a-a7cf-a85148d0ceea",
+              "target": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "relation": "extends"
+            },
+            {
+              "source": "7eb53724-2c19-4b7a-a7cf-a85148d0ceea",
+              "target": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "relation": "extends"
+            }
+          ],
+          "evolved": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ]
+        }
+      }
+    },
+    {
+      "content": "I work as a data scientist at Google in Mountain View.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.781359+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+          "keywords": [
+            "google",
+            "mountain",
+            "view",
+            "data scientist",
+            "job",
+            "career"
+          ],
+          "tags": [
+            "personal",
+            "location",
+            "professional"
+          ],
+          "description": "User's professional occupation and workplace.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "ADD",
+          "target_id": null,
+          "reason": "New information \u2014 no related note found in memory bank."
+        },
+        "s3": {
+          "neighbors": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+            "10e5e178-d43f-4554-9a59-8d3435f67c10"
+          ],
+          "links": [
+            {
+              "source": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "target": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "relation": "semantic"
+            },
+            {
+              "source": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "target": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "relation": "semantic"
+            }
+          ],
+          "evolved": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ]
+        }
+      }
+    },
+    {
+      "content": "Last weekend I took Buddy and Scout to the dog park.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.783214+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "8e632e44-742a-4e1b-b20a-f1f0a9c7116c",
+          "keywords": [
+            "last",
+            "buddy",
+            "scout",
+            "dog",
+            "pet",
+            "animal"
+          ],
+          "tags": [
+            "personal",
+            "pets"
+          ],
+          "description": "User shared: Last weekend I took Buddy and Scout to the dog park.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "UPDATE",
+          "target_id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+          "reason": "Merging into existing note 54fcf636 \u2014 complementary information detected."
+        },
+        "s3": {
+          "neighbors": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+            "10e5e178-d43f-4554-9a59-8d3435f67c10",
+            "746830bf-ad72-415c-9ade-6b2aa3a2a4f9"
+          ],
+          "links": [
+            {
+              "source": "8e632e44-742a-4e1b-b20a-f1f0a9c7116c",
+              "target": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "relation": "extends"
+            },
+            {
+              "source": "8e632e44-742a-4e1b-b20a-f1f0a9c7116c",
+              "target": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "relation": "semantic"
+            },
+            {
+              "source": "8e632e44-742a-4e1b-b20a-f1f0a9c7116c",
+              "target": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "relation": "semantic"
+            }
+          ],
+          "evolved": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ]
+        }
+      }
+    },
+    {
+      "content": "Scout is a golden retriever and Buddy is a beagle.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.786207+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "1ba8a1a2-92f1-4620-a3cf-9f8a664fff10",
+          "keywords": [
+            "scout",
+            "buddy"
+          ],
+          "tags": [
+            "personal"
+          ],
+          "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "UPDATE",
+          "target_id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+          "reason": "Merging into existing note 54fcf636 \u2014 complementary information detected."
+        },
+        "s3": {
+          "neighbors": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+            "10e5e178-d43f-4554-9a59-8d3435f67c10",
+            "746830bf-ad72-415c-9ade-6b2aa3a2a4f9"
+          ],
+          "links": [
+            {
+              "source": "1ba8a1a2-92f1-4620-a3cf-9f8a664fff10",
+              "target": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "relation": "extends"
+            },
+            {
+              "source": "1ba8a1a2-92f1-4620-a3cf-9f8a664fff10",
+              "target": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "relation": "semantic"
+            },
+            {
+              "source": "1ba8a1a2-92f1-4620-a3cf-9f8a664fff10",
+              "target": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "relation": "semantic"
+            }
+          ],
+          "evolved": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ]
+        }
+      }
+    },
+    {
+      "content": "What dogs do I have?",
+      "type": "query",
+      "timestamp": "2026-07-01T14:19:46.789370+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "80db32d1-5849-4bf9-aada-6ea96239bb62",
+          "keywords": [
+            "what",
+            "dog",
+            "pet",
+            "animal"
+          ],
+          "tags": [
+            "personal",
+            "pets"
+          ],
+          "description": "User shared: What dogs do I have?",
+          "q0": 0.5
+        },
+        "s4": {
+          "phase_a": [
+            {
+              "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "sim": 0.15
+            }
+          ],
+          "phase_b": [
+            {
+              "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "score": 0.29000000000000004
+            }
+          ],
+          "selected_ids": [
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ],
+          "answer": "You have dogs named: buddy, name, identity, scout, last."
+        },
+        "s5": {
+          "updates": [
+            {
+              "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "old_q": 0.5,
+              "new_q": 0.54
+            }
+          ],
+          "consolidated_id": null
+        }
+      }
+    },
+    {
+      "content": "I recently got promoted to Senior Data Scientist.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.792356+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+          "keywords": [
+            "senior",
+            "data",
+            "scientist",
+            "data scientist",
+            "job",
+            "career"
+          ],
+          "tags": [
+            "personal",
+            "professional"
+          ],
+          "description": "User shared: I recently got promoted to Senior Data Scientist.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "ADD",
+          "target_id": null,
+          "reason": "New information \u2014 no related note found in memory bank."
+        },
+        "s3": {
+          "neighbors": [
+            "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ],
+          "links": [
+            {
+              "source": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+              "target": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "relation": "extends"
+            },
+            {
+              "source": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+              "target": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "relation": "semantic"
+            }
+          ],
+          "evolved": [
+            "746830bf-ad72-415c-9ade-6b2aa3a2a4f9"
+          ]
+        }
+      }
+    },
+    {
+      "content": "What is my job?",
+      "type": "query",
+      "timestamp": "2026-07-01T14:19:46.795119+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "2a6a9f07-b745-4b30-bac4-a799a6c8f73d",
+          "keywords": [
+            "what",
+            "job",
+            "career",
+            "work"
+          ],
+          "tags": [
+            "personal",
+            "professional"
+          ],
+          "description": "User's professional occupation and workplace.",
+          "q0": 0.5
+        },
+        "s4": {
+          "phase_a": [
+            {
+              "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "sim": 0.5
+            },
+            {
+              "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "sim": 0.15
+            }
+          ],
+          "phase_b": [
+            {
+              "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "score": 0.5
+            },
+            {
+              "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "score": 0.29000000000000004
+            }
+          ],
+          "selected_ids": [
+            "10e5e178-d43f-4554-9a59-8d3435f67c10",
+            "746830bf-ad72-415c-9ade-6b2aa3a2a4f9"
+          ],
+          "answer": "You work as a data scientist at a tech company."
+        },
+        "s5": {
+          "updates": [
+            {
+              "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+              "old_q": 0.5,
+              "new_q": 0.55
+            },
+            {
+              "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "old_q": 0.5,
+              "new_q": 0.55
+            }
+          ],
+          "consolidated_id": null
+        }
+      }
+    },
+    {
+      "content": "I'm thinking of adopting a cat too.",
+      "type": "fact",
+      "timestamp": "2026-07-01T14:19:46.798547+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "92eb495c-ad62-4716-8a5e-7d1752ba4f4c",
+          "keywords": [
+            "cat",
+            "pet",
+            "adoption"
+          ],
+          "tags": [
+            "personal",
+            "pets"
+          ],
+          "description": "User shared: I'm thinking of adopting a cat too.",
+          "q0": 0.5
+        },
+        "s2": {
+          "op": "ADD",
+          "target_id": null,
+          "reason": "New information \u2014 no related note found in memory bank."
+        },
+        "s3": {
+          "neighbors": [
+            "91298267-93b8-472e-9895-df2f1d284013",
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7"
+          ],
+          "links": [
+            {
+              "source": "92eb495c-ad62-4716-8a5e-7d1752ba4f4c",
+              "target": "91298267-93b8-472e-9895-df2f1d284013",
+              "relation": "same-topic"
+            },
+            {
+              "source": "92eb495c-ad62-4716-8a5e-7d1752ba4f4c",
+              "target": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "relation": "same-topic"
+            }
+          ],
+          "evolved": [
+            "91298267-93b8-472e-9895-df2f1d284013"
+          ]
+        }
+      }
+    },
+    {
+      "content": "What pets do I have and what do I plan to get?",
+      "type": "query",
+      "timestamp": "2026-07-01T14:19:46.801955+00:00",
+      "stages": {
+        "s1": {
+          "note_id": "5efeb2a9-ff04-44f3-9730-088ae0402b98",
+          "keywords": [
+            "what"
+          ],
+          "tags": [
+            "personal"
+          ],
+          "description": "User shared: What pets do I have and what do I plan to get?",
+          "q0": 0.5
+        },
+        "s4": {
+          "phase_a": [
+            {
+              "id": "91298267-93b8-472e-9895-df2f1d284013",
+              "sim": 0.4444444444444444
+            },
+            {
+              "id": "3749cf4c-9387-417b-8610-e52ca3132b23",
+              "sim": 0.15
+            },
+            {
+              "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "sim": 0.15
+            },
+            {
+              "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "sim": 0.15
+            },
+            {
+              "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+              "sim": 0.2222222222222222
+            }
+          ],
+          "phase_b": [
+            {
+              "id": "91298267-93b8-472e-9895-df2f1d284013",
+              "score": 0.4666666666666667
+            },
+            {
+              "id": "3749cf4c-9387-417b-8610-e52ca3132b23",
+              "score": 0.29000000000000004
+            },
+            {
+              "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "score": 0.30600000000000005
+            },
+            {
+              "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "score": 0.31000000000000005
+            },
+            {
+              "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+              "score": 0.33333333333333337
+            }
+          ],
+          "selected_ids": [
+            "91298267-93b8-472e-9895-df2f1d284013",
+            "3749cf4c-9387-417b-8610-e52ca3132b23",
+            "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+            "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+            "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25"
+          ],
+          "answer": "Based on our conversation, I recall relevant information."
+        },
+        "s5": {
+          "updates": [
+            {
+              "id": "91298267-93b8-472e-9895-df2f1d284013",
+              "old_q": 0.5,
+              "new_q": 0.52
+            },
+            {
+              "id": "3749cf4c-9387-417b-8610-e52ca3132b23",
+              "old_q": 0.5,
+              "new_q": 0.52
+            },
+            {
+              "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+              "old_q": 0.54,
+              "new_q": 0.556
+            },
+            {
+              "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+              "old_q": 0.55,
+              "new_q": 0.5650000000000001
+            },
+            {
+              "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+              "old_q": 0.5,
+              "new_q": 0.52
+            }
+          ],
+          "consolidated_id": null
+        }
+      }
+    }
+  ],
+  "bank_snapshots": [
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "I adopted a dog named Buddy last month.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User adopted a dog named Buddy.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "I also adopted another dog named Scout.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User has multiple dogs including Scout.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "I also adopted another dog named Scout.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User has multiple dogs including Scout.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Last weekend I took Buddy and Scout to the dog park.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Last weekend I took Buddy and Scout to the dog park.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Scout is a golden retriever and Buddy is a beagle.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Scout is a golden retriever and Buddy is a beagle.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+        "q": 0.54,
+        "links": []
+      },
+      {
+        "id": "91298267-93b8-472e-9895-df2f1d284013",
+        "content": "Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity, scout, last. | Reward: 0.9",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "dog",
+          "pet",
+          "animal"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Scout is a golden retriever and Buddy is a beagle.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+        "q": 0.54,
+        "links": []
+      },
+      {
+        "id": "91298267-93b8-472e-9895-df2f1d284013",
+        "content": "Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity, scout, last. | Reward: 0.9",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "dog",
+          "pet",
+          "animal"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+        "content": "I recently got promoted to Senior Data Scientist.",
+        "keywords": [
+          "senior",
+          "data",
+          "scientist",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User shared: I recently got promoted to Senior Data Scientist.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Scout is a golden retriever and Buddy is a beagle.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+        "q": 0.54,
+        "links": []
+      },
+      {
+        "id": "91298267-93b8-472e-9895-df2f1d284013",
+        "content": "Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity, scout, last. | Reward: 0.9",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "dog",
+          "pet",
+          "animal"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+        "content": "I recently got promoted to Senior Data Scientist.",
+        "keywords": [
+          "senior",
+          "data",
+          "scientist",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User shared: I recently got promoted to Senior Data Scientist.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.55,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.55,
+        "links": []
+      },
+      {
+        "id": "3749cf4c-9387-417b-8610-e52ca3132b23",
+        "content": "Query: What is my job? | Answer: You work as a data scientist at a tech company. | Reward: 1.0",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "job",
+          "career",
+          "work"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Scout is a golden retriever and Buddy is a beagle.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+        "q": 0.54,
+        "links": []
+      },
+      {
+        "id": "91298267-93b8-472e-9895-df2f1d284013",
+        "content": "Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity, scout, last. | Reward: 0.9",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "dog",
+          "pet",
+          "animal"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+        "content": "I recently got promoted to Senior Data Scientist.",
+        "keywords": [
+          "senior",
+          "data",
+          "scientist",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User shared: I recently got promoted to Senior Data Scientist.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.55,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.55,
+        "links": []
+      },
+      {
+        "id": "3749cf4c-9387-417b-8610-e52ca3132b23",
+        "content": "Query: What is my job? | Answer: You work as a data scientist at a tech company. | Reward: 1.0",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "job",
+          "career",
+          "work"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "92eb495c-ad62-4716-8a5e-7d1752ba4f4c",
+        "content": "I'm thinking of adopting a cat too.",
+        "keywords": [
+          "cat",
+          "pet",
+          "adoption"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: I'm thinking of adopting a cat too.",
+        "q": 0.5,
+        "links": []
+      }
+    ],
+    [
+      {
+        "id": "10e5e178-d43f-4554-9a59-8d3435f67c10",
+        "content": "My name is Alex.",
+        "keywords": [
+          "my",
+          "alex",
+          "name",
+          "identity"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User's personal identity and name.",
+        "q": 0.55,
+        "links": []
+      },
+      {
+        "id": "92eb495c-ad62-4716-8a5e-7d1752ba4f4c",
+        "content": "I'm thinking of adopting a cat too.",
+        "keywords": [
+          "cat",
+          "pet",
+          "adoption"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: I'm thinking of adopting a cat too.",
+        "q": 0.5,
+        "links": []
+      },
+      {
+        "id": "91298267-93b8-472e-9895-df2f1d284013",
+        "content": "Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity, scout, last. | Reward: 0.9",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "dog",
+          "pet",
+          "animal"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Query: What dogs do I have? | Answer: You have dogs named: buddy, name, identity",
+        "q": 0.52,
+        "links": []
+      },
+      {
+        "id": "3749cf4c-9387-417b-8610-e52ca3132b23",
+        "content": "Query: What is my job? | Answer: You work as a data scientist at a tech company. | Reward: 1.0",
+        "keywords": [
+          "query",
+          "what",
+          "answer",
+          "job",
+          "career",
+          "work"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.52,
+        "links": []
+      },
+      {
+        "id": "54fcf636-7af5-489d-ba27-e64ee5bc58b7",
+        "content": "Scout is a golden retriever and Buddy is a beagle.",
+        "keywords": [
+          "buddy",
+          "dog",
+          "pet",
+          "animal",
+          "name",
+          "identity",
+          "scout",
+          "last"
+        ],
+        "tags": [
+          "personal",
+          "pets"
+        ],
+        "description": "User shared: Scout is a golden retriever and Buddy is a beagle.",
+        "q": 0.556,
+        "links": []
+      },
+      {
+        "id": "746830bf-ad72-415c-9ade-6b2aa3a2a4f9",
+        "content": "I work as a data scientist at Google in Mountain View.",
+        "keywords": [
+          "google",
+          "mountain",
+          "view",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "location",
+          "professional"
+        ],
+        "description": "User's professional occupation and workplace.",
+        "q": 0.5650000000000001,
+        "links": []
+      },
+      {
+        "id": "eb6318a8-65fd-4d0e-a3ce-5dbc2ef46a25",
+        "content": "I recently got promoted to Senior Data Scientist.",
+        "keywords": [
+          "senior",
+          "data",
+          "scientist",
+          "data scientist",
+          "job",
+          "career"
+        ],
+        "tags": [
+          "personal",
+          "professional"
+        ],
+        "description": "User shared: I recently got promoted to Senior Data Scientist.",
+        "q": 0.52,
+        "links": []
+      },
+      {
+        "id": "ba386e8f-2f84-4125-81a3-a600939dbb8b",
+        "content": "Query: What pets do I have and what do I plan to get? | Answer: Based on our conversation, I recall relevant information. | Reward: 0.7",
+        "keywords": [
+          "query",
+          "what",
+          "answer"
+        ],
+        "tags": [
+          "personal"
+        ],
+        "description": "User shared: Query: What pets do I have and what do I plan to get? | Answer: Based on our con",
+        "q": 0.5,
+        "links": []
+      }
+    ]
+  ],
+  "title": "ASEM Pipeline Simulation"
+};
+
+function render() {
+  const container = document.getElementById('report');
+  const turns = DATA.turns;
+  const snapshots = DATA.bank_snapshots;
+
+  // Summary
+  const facts = turns.filter(t => t.type === 'fact').length;
+  const queries = turns.filter(t => t.type === 'query').length;
+  const finalNotes = snapshots.length ? snapshots[snapshots.length-1].length : 0;
+  const answers = turns.filter(t => t.stages.s4 && t.stages.s4.answer).length;
+
+  container.innerHTML = `
+    <div class="summary-grid">
+      <div class="summary-card"><div class="value">${turns.length}</div><div class="label">TOTAL TURNS</div></div>
+      <div class="summary-card"><div class="value">${facts}</div><div class="label">FACTS INGESTED</div></div>
+      <div class="summary-card"><div class="value">${queries}</div><div class="label">QUERIES ANSWERED</div></div>
+      <div class="summary-card"><div class="value">${finalNotes}</div><div class="label">FINAL BANK SIZE</div></div>
+    </div>
+  ` + turns.map((turn, i) => renderTurn(turn, i)).join('') +
+  renderBank(snapshots.length ? snapshots[snapshots.length-1] : []);
+
+  function renderTurn(turn, i) {
+    const isQuery = turn.type === 'query';
+    const stages = turn.stages;
+    let html = `
+    <div class="turn-card ${isQuery ? 'query' : 'fact'}">
+      <div class="turn-header">
+        <span class="turn-num">#${i+1}</span>
+        <span class="turn-type ${isQuery ? 'query' : 'fact'}">${isQuery ? 'QUERY' : 'FACT'}</span>
+        <span class="turn-content">${esc(turn.content)}</span>
+      </div>
+      <div class="turn-body">`;
+
+    // S1
+    if (stages.s1) {
+      const s = stages.s1;
+      html += `<div class="stage-row">
+        <span class="stage-badge s1">S1</span>
+        <div class="stage-detail">
+          <div class="kv"><span class="kv-key">NOTE =</span><span class="kv-val">${esc(s.note_id)}</span></div>
+          <div class="kv"><span class="kv-key">K =</span><span class="kv-val">${s.keywords.map(k=>`<span class="tag cyan">${esc(k)}</span>`).join(' ')}</span></div>
+          <div class="kv"><span class="kv-key">G =</span><span class="kv-val">${s.tags.map(g=>`<span class="tag purple">${esc(g)}</span>`).join(' ')}</span></div>
+          <div class="kv"><span class="kv-key">X =</span><span class="kv-val">${esc(s.description)}</span></div>
+          <div class="kv"><span class="kv-key">q₀ =</span><span class="kv-val">${s.q0.toFixed(2)}</span></div>
+        </div>
+      </div>`;
+    }
+
+    // S2
+    if (stages.s2) {
+      const s = stages.s2;
+      html += `<div class="stage-row">
+        <span class="stage-badge s2">S2</span>
+        <div class="stage-detail">
+          <span class="op-badge op-${s.op}">${s.op}</span>
+          <span style="color:var(--muted);font-size:11px;margin-left:8px">target: ${esc(s.target_id || '—')}</span>
+          <div style="color:var(--muted);font-size:10px;margin-top:3px">${esc(s.reason)}</div>
+        </div>
+      </div>`;
+    }
+
+    // S3
+    if (stages.s3 && stages.s3.links && stages.s3.links.length) {
+      const s = stages.s3;
+      html += `<div class="stage-row">
+        <span class="stage-badge s3">S3</span>
+        <div class="stage-detail">
+          <div style="color:var(--muted);font-size:10px;margin-bottom:3px">${s.neighbors.length} neighbours · ${s.links.length} links · ${s.evolved.length} evolved</div>
+          ${s.links.map(l=>`<div class="link-line"><span class="tag cyan">${esc(l.source.slice(0,8))}</span> → <span class="tag purple">${esc(l.target.slice(0,8))}</span> ${esc(l.relation)}</div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    // S4
+    if (stages.s4) {
+      const s = stages.s4;
+      html += `<div class="stage-row">
+        <span class="stage-badge s4">S4</span>
+        <div class="stage-detail">`;
+      if (s.phase_a && s.phase_a.length) {
+        html += `<div style="color:var(--muted);font-size:9px;letter-spacing:.5px;margin-bottom:4px">PHASE A — similarity (δ=0.30)</div>`;
+        s.phase_a.forEach(p => {
+          html += `<div class="score-bar"><span class="score-id">${esc(p.id.slice(0,8))}</span><div class="score-track"><div class="score-fill" style="width:${Math.round(p.sim*100)}%;background:var(--accent)"></div></div><span class="score-val">${p.sim.toFixed(3)}</span></div>`;
+        });
+      }
+      if (s.phase_b && s.phase_b.length) {
+        html += `<div style="color:var(--muted);font-size:9px;letter-spacing:.5px;margin:8px 0 4px">PHASE B — composite (λ=0.40)</div>`;
+        s.phase_b.forEach(p => {
+          html += `<div class="score-bar"><span class="score-id">${esc(p.id.slice(0,8))}</span><div class="score-track"><div class="score-fill" style="width:${Math.round(p.score*100)}%;background:linear-gradient(90deg,var(--accent2),var(--accent))"></div></div><span class="score-val">${p.score.toFixed(3)}</span></div>`;
+        });
+      }
+      html += `<div style="color:var(--muted);font-size:9px;margin-top:6px">SELECTED: ${s.selected_ids.map(id=>`<span class="tag green">${esc(id.slice(0,8))}</span>`).join(' ')}</div>
+        </div>
+      </div>`;
+    }
+
+    // Answer
+    if (stages.s4 && stages.s4.answer) {
+      html += `<div class="answer-box">💬 ${esc(stages.s4.answer)}</div>`;
+    }
+
+    // S5
+    if (stages.s5 && stages.s5.updates && stages.s5.updates.length) {
+      const s = stages.s5;
+      html += `<div class="stage-row">
+        <span class="stage-badge s5">S5</span>
+        <div class="stage-detail">
+          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--accent2);margin-bottom:4px">q ← q + α·(r − q)  |  α = 0.10</div>
+          ${s.updates.map(u=>`<div class="kv"><span class="kv-key">${esc(u.id.slice(0,8))}</span><span class="kv-val">${u.old_q.toFixed(3)} → <strong style="color:var(--accent2)">${u.new_q.toFixed(3)}</strong></span></div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+  }
+
+  function renderBank(notes) {
+    if (!notes || !notes.length) return '';
+    return `
+    <div class="bank-section">
+      <h2>⬡ FINAL MEMORY BANK — ${notes.length} NOTES</h2>
+      <div class="bank-grid">
+        ${notes.map(n => `
+          <div class="note-card">
+            <div class="note-id">${esc(n.id.slice(0,8))} · Q=${n.q.toFixed(3)} · ${n.links.length} links</div>
+            <div class="note-desc">${esc(n.description || n.content.slice(0,80))}</div>
+            <div>${(n.keywords||[]).map(k=>`<span class="tag cyan">${esc(k)}</span>`).join(' ')}</div>
+            <div class="q-bar"><div class="q-fill" style="width:${Math.round(n.q*100)}%"></div></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+}
+
+render();
+</script>
+</body>
+</html>

@@ -112,7 +112,7 @@ class LinkEvolver:
 
     def _generate_links(self, m_new: Note, neighbors: List[Note]) -> List[dict]:
         prompt = self.link_prompt_template.format(
-            new_note=self._note_payload(m_new),
+            new_note=json.dumps(self._note_payload(m_new)),
             neighbors=json.dumps([self._note_payload(n) for n in neighbors]),
         )
         raw = self.backend.generate(prompt)
@@ -210,8 +210,8 @@ class LinkEvolver:
     def _evolve_note_single(self, note: Note, m_new: Note) -> Note | None:
         """Single-note evolution (fallback when batch parsing fails)."""
         prompt = self.evolve_prompt_template.format(
-            existing_note=self._note_payload(note),
-            new_note=self._note_payload(m_new),
+            existing_note=json.dumps(self._note_payload(note)),
+            new_note=json.dumps(self._note_payload(m_new)),
         )
         raw = self.backend.generate(prompt)
         try:

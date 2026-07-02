@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASEM Knowledge Graph Evolution</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080c14; color: #d4e4f7;
+    font-family: 'Space Mono', monospace;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 16px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif; font-size: 22px;
+    color: #00d4ff; margin-bottom: 4px;
+  }
+  .subtitle { font-size: 10px; color: #5a7a9e; letter-spacing: 1px; margin-bottom: 16px; }
+  .slideshow {
+    position: relative; max-width: 1000px; width: 100%;
+    border: 1px solid #1e2d42; border-radius: 12px; overflow: hidden;
+    background: #0e1420;
+  }
+  .slide { display: none; text-align: center; }
+  .slide.active { display: block; }
+  .slide img { width: 100%; height: auto; border-radius: 0; }
+  .caption {
+    padding: 10px; font-size: 11px; color: #5a7a9e;
+    background: #0e1420; border-top: 1px solid #1e2d42;
+  }
+  .controls {
+    display: flex; gap: 12px; align-items: center;
+    margin-top: 16px; font-size: 12px;
+  }
+  button {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #00d4ff; color: #00d4ff;
+    background: rgba(0,212,255,.08); transition: all .2s;
+  }
+  button:hover { background: rgba(0,212,255,.18); }
+  button.auto { border-color: #00e5a0; color: #00e5a0; background: rgba(0,229,160,.08); }
+  button.auto:hover { background: rgba(0,229,160,.18); }
+  button.auto.running { border-color: #ff5370; color: #ff5370; background: rgba(255,83,112,.1); }
+  .counter { color: #7c5cfc; font-weight: bold; min-width: 60px; text-align: center; }
+</style>
+</head>
+<body>
+  <h1>ASEM · Knowledge Graph Evolution</h1>
+  <div class="subtitle">11 TURNS · FULL PIPELINE TRACE</div>
+  <div class="slideshow" id="slideshow">
+      <div class="slide active" id="slide0">
+        <img src="graph_frames/turn_01_fact_ADD.png" alt="Turn 1">
+        <div class="caption">Turn 1 — turn 01 fact ADD</div>
+      </div>
+      <div class="slide " id="slide1">
+        <img src="graph_frames/turn_02_fact_ADD.png" alt="Turn 2">
+        <div class="caption">Turn 2 — turn 02 fact ADD</div>
+      </div>
+      <div class="slide " id="slide2">
+        <img src="graph_frames/turn_03_fact_UPDATE.png" alt="Turn 3">
+        <div class="caption">Turn 3 — turn 03 fact UPDATE</div>
+      </div>
+      <div class="slide " id="slide3">
+        <img src="graph_frames/turn_04_fact_ADD.png" alt="Turn 4">
+        <div class="caption">Turn 4 — turn 04 fact ADD</div>
+      </div>
+      <div class="slide " id="slide4">
+        <img src="graph_frames/turn_05_fact_UPDATE.png" alt="Turn 5">
+        <div class="caption">Turn 5 — turn 05 fact UPDATE</div>
+      </div>
+      <div class="slide " id="slide5">
+        <img src="graph_frames/turn_06_fact_UPDATE.png" alt="Turn 6">
+        <div class="caption">Turn 6 — turn 06 fact UPDATE</div>
+      </div>
+      <div class="slide " id="slide6">
+        <img src="graph_frames/turn_07_query_QUERY.png" alt="Turn 7">
+        <div class="caption">Turn 7 — turn 07 query QUERY</div>
+      </div>
+      <div class="slide " id="slide7">
+        <img src="graph_frames/turn_08_fact_ADD.png" alt="Turn 8">
+        <div class="caption">Turn 8 — turn 08 fact ADD</div>
+      </div>
+      <div class="slide " id="slide8">
+        <img src="graph_frames/turn_09_query_QUERY.png" alt="Turn 9">
+        <div class="caption">Turn 9 — turn 09 query QUERY</div>
+      </div>
+      <div class="slide " id="slide9">
+        <img src="graph_frames/turn_10_fact_ADD.png" alt="Turn 10">
+        <div class="caption">Turn 10 — turn 10 fact ADD</div>
+      </div>
+      <div class="slide " id="slide10">
+        <img src="graph_frames/turn_11_query_QUERY.png" alt="Turn 11">
+        <div class="caption">Turn 11 — turn 11 query QUERY</div>
+      </div>
+  </div>
+  <div class="controls">
+    <button onclick="prevSlide()">◀ PREV</button>
+    <span class="counter" id="counter">1 / 11</span>
+    <button onclick="nextSlide()">NEXT ▶</button>
+    <button class="auto" id="autoBtn" onclick="toggleAuto()">▶ AUTO PLAY</button>
+    <span style="color:#5a7a9e;font-size:10px">every 1.5s</span>
+  </div>
+
+<script>
+let current = 0;
+const total = 11;
+let autoInterval = null;
+
+function showSlide(n) {
+  document.querySelectorAll('.slide').forEach((s,i) => s.classList.toggle('active', i===n));
+  document.getElementById('counter').textContent = (n+1) + ' / ' + total;
+  current = n;
+}
+
+function nextSlide() { showSlide((current + 1) % total); }
+function prevSlide() { showSlide((current - 1 + total) % total); }
+
+function toggleAuto() {
+  const btn = document.getElementById('autoBtn');
+  if (autoInterval) {
+    clearInterval(autoInterval); autoInterval = null;
+    btn.textContent = '▶ AUTO PLAY'; btn.classList.remove('running');
+  } else {
+    autoInterval = setInterval(nextSlide, 1500);
+    btn.textContent = '⏸ PAUSE'; btn.classList.add('running');
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') nextSlide();
+  if (e.key === 'ArrowLeft') prevSlide();
+  if (e.key === ' ') { e.preventDefault(); toggleAuto(); }
+});
+</script>
+</body>
+</html>

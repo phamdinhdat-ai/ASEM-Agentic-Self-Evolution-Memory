@@ -116,19 +116,23 @@ class HybridRetriever:
 
         # A1 — traverse link graph from top candidates
         if self.enable_link_traversal and result:
-            linked = self._traverse_links(result, e_q, M)
-            # Dedupe by Note ID, preserving order (Note is unhashable)
-            seen_ids: set = set()
-            merged = result + linked
-            result = []
-            for note in merged:
-                if note.id not in seen_ids:
-                    seen_ids.add(note.id)
-                    result.append(note)
-            self.stats["link_traversal_added"] = len(linked)
-            self.stats["total_retrieved"] = len(result)
-            _logger.debug("retrieve | Phase C: +{} linked neighbors → {} total",
-                          len(linked), len(result))
+            linked_scored = self._traverse_links(result, e_q, M, lam)
+            if linked_scored:
+                # Interleave linked notes into top-k ranking based on score
+                seen_ids: Set[str] = {n.id for n in result}
+                merged_scored = list(top_k)  # (score, Note) from Phase B
+                for score, note in linked_scored:
+                    if note.id not in seen_ids:
+                        seen_ids.add(note.id)
+                        merged_scored.append((score, note))
+                merged_scored.sort(key=lambda x: x[0], reverse=True)
+                result = [note for _, note in merged_scored[:self.k2]]
+                self.stats["link_traversal_added"] = len(linked_scored)
+                self.stats["total_retrieved"] = len(result)
+                _logger.debug("retrieve | Phase C: +{} linked neighbors → {} total | interleaved",
+                              len(linked_scored), len(result))
+            else:
+                _logger.debug("retrieve | Phase C: no linked neighbors found")
 
         _logger.info("retrieve → {} notes | λ={:.2f} qtype={} phase_a={}",
                      len(result), lam, qtype, len(filtered))
@@ -169,33 +173,62 @@ class HybridRetriever:
         seed_notes: List[Note],
         query_embedding: np.ndarray,
         M: MemoryBank,
-    ) -> List[Note]:
-        """Follow the link graph from seed notes to discover linked neighbors.
+        lam: float = 0.40,
+    ) -> List[Tuple[float, Note]]:
+        """Follow the link graph from seed notes up to max_link_hops away.
 
-        Only follows direct (1-hop) links by default.  Each linked neighbor
-        is scored by similarity to the query and its utility.  The top
-        `link_traversal_topn` are added to the retrieved set.
+        Uses BFS over the bidirectional link set L. Each discovered note is
+        scored with the same composite formula as Phase B:
+            score = (1-λ)·sim + λ·q  + link_bonus
+        where link_bonus = 0.02 per hop (decays with distance).
+
+        Returns all scored linked notes (caller interleaves into ranking).
         """
         seen_ids: Set[str] = {n.id for n in seed_notes}
-        candidate_notes: List[Tuple[float, Note]] = []
+        candidate_map: Dict[str, Tuple[float, Note]] = {}  # id → (score, note)
+        current_ring: List[Note] = seed_notes
+        hop = 0
 
-        for seed in seed_notes:
-            if not seed.L:
-                continue
-            # Batch-lookup linked neighbors by ID
-            linked_notes = M.get_notes_by_ids(seed.L)
-            for neighbor in linked_notes:
-                if neighbor.id in seen_ids:
+        while hop < self.max_link_hops:
+            hop += 1
+            next_ids: Set[str] = set()
+            for seed in current_ring:
+                if not seed.L:
                     continue
-                seen_ids.add(neighbor.id)
-                sim = self._cosine(query_embedding, neighbor.e)
-                # Weight by utility — high-q linked neighbors are preferred
-                score = sim * (0.5 + 0.5 * neighbor.q)
-                candidate_notes.append((score, neighbor))
+                for linked_id in seed.L:
+                    if linked_id in seen_ids:
+                        continue
+                    seen_ids.add(linked_id)
+                    next_ids.add(linked_id)
 
-        candidate_notes.sort(key=lambda item: item[0], reverse=True)
-        added = [note for _, note in candidate_notes[: self.link_traversal_topn]]
-        return added
+            if not next_ids:
+                break
+
+            # Batch-lookup all discovered neighbors
+            linked_notes = M.get_notes_by_ids(list(next_ids))
+            # Compute scores using Phase B formula + link distance decay
+            linked_sims = [self._cosine(query_embedding, n.e) for n in linked_notes]
+            linked_qs = [n.q for n in linked_notes]
+            if self.use_zscore and len(linked_sims) > 1:
+                sim_norm = self._zscore(linked_sims)
+                q_norm = self._zscore(linked_qs)
+            else:
+                sim_norm = list(linked_sims)
+                q_norm = list(linked_qs)
+
+            link_bonus = 0.05 / hop  # 0.05 for 1-hop, 0.025 for 2-hop, etc.
+
+            for note, s_norm, q_norm_val in zip(linked_notes, sim_norm, q_norm):
+                score = (1.0 - lam) * s_norm + lam * q_norm_val + link_bonus
+                if note.id not in candidate_map or score > candidate_map[note.id][0]:
+                    candidate_map[note.id] = (score, note)
+
+            current_ring = linked_notes
+
+        # Return all scored candidates sorted by score
+        scored = list(candidate_map.values())
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return scored[:self.link_traversal_topn]
 
     # ------------------------------------------------------------------
     # Helpers (unchanged)

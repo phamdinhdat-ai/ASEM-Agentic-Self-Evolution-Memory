@@ -40,6 +40,8 @@ import webbrowser
 from datetime import UTC, datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
+
 # Ensure project root on path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
@@ -792,7 +794,14 @@ render();
 
 def build_demo_pipeline(db_path: str = ":memory:") -> ASEMPipeline:
     """Build a full ASEM pipeline backed by the deterministic DemoBackend."""
+    import tempfile
+
     backend = DemoBackend(embed_dim=64)
+
+    # MemoryBank requires a file path — use temp file for :memory:
+    if db_path == ":memory:":
+        db_path = os.path.join(tempfile.gettempdir(), f"asem_sim_{uuid.uuid4().hex[:8]}.sqlite")
+        _logger.info("Using temp memory bank: {}", db_path)
 
     note_constructor = NoteConstructor(
         backend=backend, prompt_template=NOTE_PROMPT, q0=0.5
