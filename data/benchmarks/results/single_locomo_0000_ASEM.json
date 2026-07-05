@@ -1,0 +1,73 @@
+{
+  "conversation_id": "locomo_0000",
+  "system": "ASEM",
+  "speaker_a": "Caroline",
+  "speaker_b": "Melanie",
+  "num_sessions": 2,
+  "total_turns": 35,
+  "bank_size": 14,
+  "ingest_time_s": 879.5,
+  "num_questions": 5,
+  "metrics": {
+    "em": 0.0,
+    "rougeL": 0.15714285714285717
+  },
+  "results": [
+    {
+      "conversation_id": "locomo_0000",
+      "question_type": "temporal",
+      "category": 2,
+      "question": "When did Caroline go to the LGBTQ support group?",
+      "expected_answer": "7 May 2023",
+      "ai_response": "The memory notes do not specify when Caroline went to the LGBTQ support group.",
+      "evidence": [
+        "D1:3"
+      ]
+    },
+    {
+      "conversation_id": "locomo_0000",
+      "question_type": "temporal",
+      "category": 2,
+      "question": "When did Melanie paint a sunrise?",
+      "expected_answer": "2022",
+      "ai_response": "last year (2022)",
+      "evidence": [
+        "D1:12"
+      ]
+    },
+    {
+      "conversation_id": "locomo_0000",
+      "question_type": "commonsense",
+      "category": 3,
+      "question": "What fields would Caroline be likely to pursue in her educaton?",
+      "expected_answer": "Psychology, counseling certification",
+      "ai_response": "counseling or mental health",
+      "evidence": [
+        "D1:9",
+        "D1:11"
+      ]
+    },
+    {
+      "conversation_id": "locomo_0000",
+      "question_type": "single_hop",
+      "category": 1,
+      "question": "What did Caroline research?",
+      "expected_answer": "Adoption agencies",
+      "ai_response": "Caroline said she was going to do research after discussing counseling and mental health support.",
+      "evidence": [
+        "D2:8"
+      ]
+    },
+    {
+      "conversation_id": "locomo_0000",
+      "question_type": "single_hop",
+      "category": 1,
+      "question": "What is Caroline's identity?",
+      "expected_answer": "Transgender woman",
+      "ai_response": "Caroline is an LGBTQ+ individual planning to adopt.",
+      "evidence": [
+        "D1:5"
+      ]
+    }
+  ]
+}

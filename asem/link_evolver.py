@@ -237,6 +237,52 @@ class LinkEvolver:
         )
 
     # ------------------------------------------------------------------
+    # Cross-chunk link evolution: connect notes across session batches
+    # ------------------------------------------------------------------
+
+    def link_evolve_all(self, notes: List[Note], M: MemoryBank) -> None:
+        """Run link generation and evolution across ALL notes in the bank.
+
+        Processes notes in batches of size k to keep LLM prompts bounded.
+        For each note, finds its top-k neighbors via ANN search, generates
+        links, and applies them bidirectionally. Only strong relations
+        trigger note evolution (B2 sparse gate).
+        """
+        if len(notes) < 2:
+            return
+
+        _logger.info("link_evolve_all | processing {} notes in cross-chunk pass",
+                     len(notes))
+
+        for note in notes:
+            neighbors = M.ann_search(note.e, k=self.k)
+            # Exclude self from neighbor set
+            neighbors = [n for n in neighbors if n.id != note.id]
+            if not neighbors:
+                continue
+
+            relations = self._generate_links(note, neighbors)
+            self._apply_links(note, neighbors, relations, M)
+
+            # B2 sparse gate: only evolve neighbors with strong relations
+            strong_ids = self._strong_neighbor_ids(relations, note.id)
+            strong_neighbors = [n for n in neighbors if n.id in strong_ids]
+            if strong_neighbors:
+                updated_notes = self._evolve_notes_batched(note, strong_neighbors)
+                neighbor_map = {n.id: n for n in strong_neighbors}
+                for updated in updated_notes:
+                    orig = neighbor_map.get(updated.id)
+                    if orig is None:
+                        continue
+                    M.update(orig.id, {
+                        "K": updated.K,
+                        "G": updated.G,
+                        "X": updated.X,
+                    })
+
+        _logger.info("link_evolve_all | cross-chunk pass complete")
+
+    # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------
 

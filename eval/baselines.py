@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 from asem.answer_agent import AnswerAgent
 from asem.backends.base import InferenceBackend
@@ -37,6 +37,31 @@ class Baseline:
     def reset(self) -> None:
         """Reset per-conversation state (called between conversations)."""
         pass
+
+    def ingest_batch(self, turns: List[str], session_label: str) -> None:
+        """Ingest a batch of turns from one session.
+
+        Default: no-op. Memory-based baselines override this for efficient
+        pre-ingestion before answering questions.
+        """
+        pass
+
+    def ingest_conversation(
+        self, session_batches: List[Tuple[str, List[str]]]
+    ) -> None:
+        """Ingest ALL sessions of a conversation in one pass.
+
+        Default: falls back to calling ingest_batch() per session.
+        """
+        for label, turns in session_batches:
+            self.ingest_batch(turns, label)
+
+    def finalize_conversation(self) -> int:
+        """Run post-ingestion cross-chunk link evolution.
+
+        Default: no-op. ASEM overrides this.
+        """
+        return 0
 
 
 @dataclass
@@ -87,14 +112,27 @@ class SimRetrieval(Baseline):
     # ---- private, not constructor args -----------------------------------
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
 
+    def ingest_batch(self, turns: List[str], session_label: str) -> None:
+        """Pre-ingest all turns from one session as a batch."""
+        enriched = [f"[{session_label}] {t}" for t in turns]
+        new = [t for t in enriched if hash(t) not in self._seen_hashes]
+        if not new:
+            return
+        for t in new:
+            self._seen_hashes.add(hash(t))
+        notes = self.note_constructor.build_batch(new, datetime.utcnow())
+        for note in notes:
+            self.memory_bank.add(note)
+
     def answer(self, query: str, history: List[str]) -> str:
-        # Process only NEW history items (dedup by content hash)
-        for item in history:
-            h = hash(item)
-            if h not in self._seen_hashes:
-                self._seen_hashes.add(h)
-                note = self.note_constructor.build(item, datetime.utcnow())
-                self.memory_bank.add(note)
+        # If not pre-ingested, fall back to per-question history processing
+        if not self._seen_hashes:
+            for item in history:
+                h = hash(item)
+                if h not in self._seen_hashes:
+                    self._seen_hashes.add(h)
+                    note = self.note_constructor.build(item, datetime.utcnow())
+                    self.memory_bank.add(note)
 
         e_q = self.backend.embed(query)
         notes = self.memory_bank.ann_search(e_q, k=self.top_k)
@@ -120,14 +158,28 @@ class AtomicLinking(Baseline):
 
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
 
+    def ingest_batch(self, turns: List[str], session_label: str) -> None:
+        """Pre-ingest all turns from one session with linking."""
+        enriched = [f"[{session_label}] {t}" for t in turns]
+        new = [t for t in enriched if hash(t) not in self._seen_hashes]
+        if not new:
+            return
+        for t in new:
+            self._seen_hashes.add(hash(t))
+        notes = self.note_constructor.build_batch(new, datetime.utcnow())
+        for note in notes:
+            self.memory_bank.add(note)
+            self.link_evolver.link_and_evolve(note, self.memory_bank)
+
     def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            h = hash(item)
-            if h not in self._seen_hashes:
-                self._seen_hashes.add(h)
-                note = self.note_constructor.build(item, datetime.utcnow())
-                self.memory_bank.add(note)
-                self.link_evolver.link_and_evolve(note, self.memory_bank)
+        if not self._seen_hashes:
+            for item in history:
+                h = hash(item)
+                if h not in self._seen_hashes:
+                    self._seen_hashes.add(h)
+                    note = self.note_constructor.build(item, datetime.utcnow())
+                    self.memory_bank.add(note)
+                    self.link_evolver.link_and_evolve(note, self.memory_bank)
 
         e_q = self.backend.embed(query)
         notes = self.memory_bank.ann_search(e_q, k=self.top_k)
@@ -153,25 +205,48 @@ class RLManagerOnly(Baseline):
 
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
 
+    def ingest_batch(self, turns: List[str], session_label: str) -> None:
+        """Pre-ingest all turns from one session with Memory Manager decisions."""
+        enriched = [f"[{session_label}] {t}" for t in turns]
+        new_turns = [(t, e) for t, e in zip(turns, enriched)
+                     if hash(e) not in self._seen_hashes]
+        if not new_turns:
+            return
+        new_contents = [e for _, e in new_turns]
+        for e in new_contents:
+            self._seen_hashes.add(hash(e))
+        notes = self.note_constructor.build_batch(new_contents, datetime.utcnow())
+        for (raw_turn, enriched), note in zip(new_turns, notes):
+            existing = self.memory_bank.list_notes()
+            top_k2 = min(len(existing), 5)
+            candidates = existing[:top_k2] if top_k2 > 0 else existing
+            op, target = self.memory_manager.select_op(enriched, candidates)
+            if op == Op.ADD:
+                self.memory_bank.add(note)
+            elif op == Op.UPDATE:
+                updated = self._merge_update(target, note)
+                self.memory_bank.add(updated)
+            elif op == Op.DELETE and target is not None:
+                self.memory_bank.delete(target.id)
+
     def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            h = hash(item)
-            if h not in self._seen_hashes:
-                self._seen_hashes.add(h)
-                note = self.note_constructor.build(item, datetime.utcnow())
-                existing = self.memory_bank.list_notes()
-                # Only pass top-k2 notes to keep prompt bounded
-                top_k2 = min(len(existing), 5)
-                candidates = existing[:top_k2] if top_k2 > 0 else existing
-                op, target = self.memory_manager.select_op(item, candidates)
-                if op == Op.ADD:
-                    self.memory_bank.add(note)
-                elif op == Op.UPDATE:
-                    updated = self._merge_update(target, note)
-                    self.memory_bank.add(updated)
-                elif op == Op.DELETE and target is not None:
-                    self.memory_bank.delete(target.id)
-                # NOOP: skip
+        if not self._seen_hashes:
+            for item in history:
+                h = hash(item)
+                if h not in self._seen_hashes:
+                    self._seen_hashes.add(h)
+                    note = self.note_constructor.build(item, datetime.utcnow())
+                    existing = self.memory_bank.list_notes()
+                    top_k2 = min(len(existing), 5)
+                    candidates = existing[:top_k2] if top_k2 > 0 else existing
+                    op, target = self.memory_manager.select_op(item, candidates)
+                    if op == Op.ADD:
+                        self.memory_bank.add(note)
+                    elif op == Op.UPDATE:
+                        updated = self._merge_update(target, note)
+                        self.memory_bank.add(updated)
+                    elif op == Op.DELETE and target is not None:
+                        self.memory_bank.delete(target.id)
 
         e_q = self.backend.embed(query)
         notes = self.memory_bank.ann_search(e_q, k=self.top_k)
@@ -214,13 +289,26 @@ class ValueRetrievalOnly(Baseline):
 
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
 
+    def ingest_batch(self, turns: List[str], session_label: str) -> None:
+        """Pre-ingest all turns from one session."""
+        enriched = [f"[{session_label}] {t}" for t in turns]
+        new = [t for t in enriched if hash(t) not in self._seen_hashes]
+        if not new:
+            return
+        for t in new:
+            self._seen_hashes.add(hash(t))
+        notes = self.note_constructor.build_batch(new, datetime.utcnow())
+        for note in notes:
+            self.memory_bank.add(note)
+
     def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            h = hash(item)
-            if h not in self._seen_hashes:
-                self._seen_hashes.add(h)
-                note = self.note_constructor.build(item, datetime.utcnow())
-                self.memory_bank.add(note)
+        if not self._seen_hashes:
+            for item in history:
+                h = hash(item)
+                if h not in self._seen_hashes:
+                    self._seen_hashes.add(h)
+                    note = self.note_constructor.build(item, datetime.utcnow())
+                    self.memory_bank.add(note)
 
         used_notes, answer = self.answer_agent.distil_and_answer(
             query,
