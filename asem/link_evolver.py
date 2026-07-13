@@ -7,8 +7,11 @@ from dataclasses import dataclass
 from typing import List, Set
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .note import Note
+
+_log = get_logger("S3.linker")
 
 # Relations that trigger memory evolution (B2: sparse evolution gate).
 # Weak relations like "same-topic" or "temporal" don't justify re-describing
@@ -47,16 +50,20 @@ class LinkEvolver:
     def link_and_evolve(self, m_new: Note, M: MemoryBank) -> None:
         neighbors = M.ann_search(m_new.e, k=self.k)
         if not neighbors:
+            _log.debug("No neighbors found for linking")
             return
 
         relations = self._generate_links(m_new, neighbors)
         self._apply_links(m_new, neighbors, relations, M)
+        _log.info("Links generated | new_id={}  neighbors={}  relations={}",
+                  m_new.id[:8], len(neighbors), len(relations))
 
         # B2 — only evolve neighbors with a strong relationship
         strong_ids = self._strong_neighbor_ids(relations, m_new.id)
         strong_neighbors = [n for n in neighbors if n.id in strong_ids]
 
         if not strong_neighbors:
+            _log.debug("No strong relations, skipping evolution")
             return
 
         # B1 — batch-evolve all strong neighbors in one LLM call
@@ -71,6 +78,7 @@ class LinkEvolver:
                 "G": updated.G,
                 "X": updated.X,
             })
+        _log.success("Evolved {}/{} strong neighbors", len(updated_notes), len(strong_neighbors))
 
     # ------------------------------------------------------------------
     # B2 helper: extract neighbor IDs with strong relations

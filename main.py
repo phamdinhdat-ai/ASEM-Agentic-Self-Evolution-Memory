@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 from datetime import UTC, datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -482,8 +483,63 @@ def main() -> None:
 	parser.add_argument("--no-seed", action="store_true", help="Skip the seeded scenario")
 	parser.add_argument("--interactive", action="store_true", help="Enter interactive chat after seeded run")
 	parser.add_argument("--reset-db", action="store_true", help="Delete existing sqlite db before starting")
+	parser.add_argument(
+		"--log-level", default="INFO",
+		choices=["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"],
+		help="Loguru log level (default: INFO)",
+	)
+	parser.add_argument("--log-file", default=None, help="Optional log file path")
+	parser.add_argument(
+		"--visualize",
+		nargs="?",
+		const="memory_graph.html",
+		default=None,
+		metavar="OUTPUT",
+		help="Visualize memory bank as an interactive graph and exit "
+		"(default output: memory_graph.html).",
+	)
+	parser.add_argument(
+		"--viz-format",
+		choices=["html", "png"],
+		default="html",
+		help="Output format for --visualize (default: html).",
+	)
+	parser.add_argument(
+		"--viz-title",
+		default="ASEM Memory Graph",
+		help="Title for the visualization.",
+	)
 
 	args = parser.parse_args()
+
+	from asem.logging_utils import setup_logging
+	setup_logging(level=args.log_level, log_file=args.log_file)
+
+	# --visualize mode: render graph and exit (no pipeline run) ----------
+	if args.visualize is not None:
+		from asem.visualizer import visualize_bank
+
+		if not os.path.exists(args.db):
+			print(f"Error: database not found: {args.db}", file=sys.stderr)
+			sys.exit(1)
+
+		output = args.visualize
+		metrics = visualize_bank(
+			db_path=args.db,
+			output=output,
+			fmt=args.viz_format,
+			title=args.viz_title,
+			physics=True,
+			infer_types=True,
+			stats=True,
+		)
+		if metrics["nodes"] == 0:
+			print("Memory bank is empty — no graph generated.", file=sys.stderr)
+		else:
+			print(f"Graph saved -> {output}")
+			if args.viz_format == "html":
+				print(f"Open: file:///{os.path.abspath(output)}")
+		return
 
 	os.makedirs(os.path.dirname(args.db), exist_ok=True)
 	if args.reset_db and os.path.exists(args.db):

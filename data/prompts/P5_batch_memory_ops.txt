@@ -1,0 +1,19 @@
+You are managing a knowledge graph memory bank. Given a batch of newly extracted notes and the current contents of the memory bank, decide what operation to perform for EACH new note.
+
+For each new note, choose one operation:
+- "ADD": The note contains new information not already in memory
+- "UPDATE": The note contains related information that should merge with an existing note — provide the existing note's ID as "target_id"
+- "DELETE": The note contradicts an existing note — provide the existing note's ID as "target_id"
+- "NOOP": The note duplicates information already well-represented in memory
+
+Output a JSON array with one decision per new note, preserving the original note index.
+
+New notes (with index):
+{new_notes}
+
+Existing memory:
+{existing_memory}
+
+Output a JSON array like:
+[{{"index": 0, "op": "ADD", "target_id": null}}, {{"index": 1, "op": "UPDATE", "target_id": "<existing_note_id>"}}, ...]
+Output ONLY the JSON array, nothing else.

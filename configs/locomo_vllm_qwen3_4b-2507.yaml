@@ -8,7 +8,7 @@ inference:
     embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
 
 hyperparameters:
-  k1: 20
+  k1: 20  
   k2: 5
   k: 5
   delta: 0.30

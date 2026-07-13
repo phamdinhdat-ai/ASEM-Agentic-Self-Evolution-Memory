@@ -8,7 +8,10 @@ from enum import Enum
 from typing import List, Optional, Tuple
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .note import Note
+
+_log = get_logger("S2.manager")
 
 
 class Op(str, Enum):
@@ -35,9 +38,12 @@ class MemoryManager:
         op, target_id = self._parse_decision(raw)
 
         if op is None:
+            _log.warning("JSON parse failed, using heuristic fallback")
             return self._heuristic_fallback(x, M_old)
 
         target = self._find_target(target_id, M_old)
+        _log.debug("LLM decision | op={}  target_id={}  found={}",
+                   op.value, target_id, target is not None)
         return op, target
 
     def _build_prompt(self, x: str, M_old: List[Note]) -> str:

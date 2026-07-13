@@ -1,8 +1,24 @@
 {
-  "locomo/NoMemory/__partial__": {
-    "em": 0.02631578947368421,
-    "rougeL": 0.13707523797152277,
-    "__n__": 190,
-    "__total__": 199
+  "locomo/NoMemory": {
+    "em": 0.02512562814070352,
+    "rougeL": 0.12930569233702546
+  },
+  "locomo/FullContext/__partial__": {
+    "em": 0.10588235294117647,
+    "rougeL": 0.4608496160288196,
+    "bertscore_f1": 0.8933782822945538,
+    "__n__": 170,
+    "__total__": 199,
+    "bertscore_f1_per_pair": 0.9049056248787122,
+    "__tokens__": 53957
+  },
+  "locomo/ASEM/__partial__": {
+    "em": 0.2,
+    "rougeL": 0.4158600336861206,
+    "bertscore_f1": 0.8386481781800588,
+    "__n__": 30,
+    "__total__": 199,
+    "bertscore_f1_per_pair": 0.8985516024487359,
+    "__tokens__": 66437
   }
 }

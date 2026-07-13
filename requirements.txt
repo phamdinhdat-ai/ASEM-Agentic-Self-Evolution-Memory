@@ -9,3 +9,6 @@ pydantic
 pytest
 accelerate
 bitsandbytes
+loguru
+networkx>=3.0
+pyvis>=0.3.0

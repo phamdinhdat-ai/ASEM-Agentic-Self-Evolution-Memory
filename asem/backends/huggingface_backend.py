@@ -13,20 +13,58 @@ class HuggingFaceBackend(InferenceBackend):
     """HuggingFace inference backend using transformers + sentence-transformers."""
 
     def __init__(self, text_generator: Any, embedder: Any) -> None:
+        super().__init__()
         self._text_generator = text_generator
         self._embedder = embedder
+        # Try to grab the tokenizer for accurate token counting
+        self._tokenizer = None
+        try:
+            if hasattr(text_generator, "tokenizer"):
+                self._tokenizer = text_generator.tokenizer
+            elif hasattr(text_generator, "model"):
+                from transformers import AutoTokenizer
+                self._tokenizer = AutoTokenizer.from_pretrained(
+                    text_generator.model.config._name_or_path
+                )
+        except Exception:
+            pass
 
     def generate(self, prompt: str, **kwargs) -> str:
+        # Count prompt tokens before generation
+        if self._tokenizer is not None:
+            try:
+                prompt_tokens = len(self._tokenizer.encode(prompt))
+            except Exception:
+                prompt_tokens = len(prompt) // 4
+        else:
+            prompt_tokens = len(prompt) // 4
+
         outputs = self._text_generator(prompt, **kwargs)
         if not outputs:
             return ""
+
         first = outputs[0]
         if isinstance(first, dict):
             if "generated_text" in first:
-                return str(first["generated_text"])
-            if "text" in first:
-                return str(first["text"])
-        return str(first)
+                result = str(first["generated_text"])
+            elif "text" in first:
+                result = str(first["text"])
+            else:
+                result = str(first)
+        else:
+            result = str(first)
+
+        # Count completion tokens
+        if self._tokenizer is not None:
+            try:
+                completion_tokens = len(self._tokenizer.encode(result))
+            except Exception:
+                completion_tokens = len(result) // 4
+        else:
+            completion_tokens = len(result) // 4
+
+        self._token_count += prompt_tokens + completion_tokens
+        return result
 
     def embed(self, text: str) -> np.ndarray:
         vector = self._embedder.encode(text, convert_to_numpy=True)

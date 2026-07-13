@@ -9,8 +9,11 @@ from typing import Dict, List, Set, Tuple
 import numpy as np
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .note import Note
+
+_log = get_logger("S4.retriever")
 
 # A4 — query-type indicators for adaptive lambda
 _FACTUAL_PATTERNS = re.compile(
@@ -66,6 +69,7 @@ class HybridRetriever:
         candidates = M.ann_search(e_q, k=self.k1)
         if not candidates:
             self.stats["phase_a_hits"] = 0
+            _log.debug("Phase A: no candidates from ANN search")
             return []
 
         sims = [self._cosine(e_q, note.e) for note in candidates]
@@ -76,9 +80,11 @@ class HybridRetriever:
         ]
         if not filtered:
             self.stats["phase_a_hits"] = 0
+            _log.debug("Phase A: all {} candidates below delta={}", len(candidates), self.delta)
             return []
 
         self.stats["phase_a_hits"] = len(filtered)
+        _log.debug("Phase A: {} / {} candidates pass delta={}", len(filtered), len(candidates), self.delta)
 
         notes, sim_scores = zip(*filtered)
         q_scores = [note.q for note in notes]
@@ -101,12 +107,22 @@ class HybridRetriever:
         self.stats["lambda_used"] = lam
         self.stats["query_type"] = self._classify_query_type(query)
 
+        _log.info("Phase B: k2={}  lambda={:.2f}  query_type={}  top_scores={}",
+                  self.k2, lam, self.stats["query_type"],
+                  [f"{s:.3f}" for s, _ in top_k[:5]])
+
         # A1 — traverse link graph from top candidates
         if self.enable_link_traversal and result:
             linked = self._traverse_links(result, e_q, M)
-            result = list(dict.fromkeys(result + linked))  # dedupe, preserve order
+            # Deduplicate by note ID (Note is unhashable due to ndarray fields)
+            seen_ids = {n.id for n in result}
+            for n in linked:
+                if n.id not in seen_ids:
+                    result.append(n)
+                    seen_ids.add(n.id)
             self.stats["link_traversal_added"] = len(linked)
             self.stats["total_retrieved"] = len(result)
+            _log.debug("Phase C: link traversal added {} notes, total={}", len(linked), len(result))
 
         return result
 

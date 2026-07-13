@@ -25,8 +25,11 @@ import argparse
 import json
 import os
 import sys
+import time
 import traceback
 from typing import Any, Dict, List, Optional
+
+import evaluate as hf_evaluate  # for per-pair BERTScore
 from dotenv import load_dotenv
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -111,6 +114,22 @@ def split_by_category(examples: List[Dict[str, Any]]) -> Dict[str, List[Dict[str
     return dict(by_cat)
 
 
+def _get_backend(system: Any) -> Any:
+    """Extract the InferenceBackend from any system (baseline or ASEM)."""
+    # Baselines (NoMemory, FullContext, SimRetrieval, etc.) have .backend
+    if hasattr(system, "backend"):
+        return system.backend
+    # ASEMSystem has .pipeline, which has components with .backend
+    if hasattr(system, "pipeline"):
+        pipeline = system.pipeline
+        for attr in ["note_constructor", "answer_agent", "memory_manager",
+                     "link_evolver", "retriever", "utility_updater"]:
+            comp = getattr(pipeline, attr, None)
+            if comp is not None and hasattr(comp, "backend"):
+                return comp.backend
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -166,7 +185,24 @@ def main() -> None:
         default=None,
         help="Only evaluate on the first N examples (useful for smoke-testing the pipeline)",
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"],
+        help="Loguru log level for console output (default: INFO)",
+    )
+    parser.add_argument(
+        "--log-file",
+        default=None,
+        help="Optional path for persistent debug log file (rotated, compressed)",
+    )
     args = parser.parse_args()
+
+    # ------------------------------------------------------------------
+    # Setup loguru logging early so all modules benefit
+    # ------------------------------------------------------------------
+    from asem.logging_utils import setup_logging
+    setup_logging(level=args.log_level, log_file=args.log_file)
 
     # ------------------------------------------------------------------
     # Imports — give clear errors if deps are missing
@@ -247,6 +283,15 @@ def main() -> None:
         os.replace(tmp, args.results)
 
     print(f"\nRunning evaluation ({args.metrics}) ...")
+
+    # Lazy-load BERTScore for per-pair scoring (only if requested)
+    _bertscore = None
+    if "bertscore_f1" in args.metrics:
+        try:
+            _bertscore = hf_evaluate.load("bertscore")
+        except Exception as exc:
+            print(f"WARNING: Could not load bertscore: {exc}")
+
     for sys_name, system in systems.items():
         key = f"locomo/{sys_name}"
         partial_key = f"locomo/{sys_name}/__partial__"
@@ -255,11 +300,17 @@ def main() -> None:
             print(f"  [{sys_name}] already completed — skipping (delete {args.results} to re-run)")
             continue
 
+        # Reset token counter before starting this system
+        backend = _get_backend(system)
+        if backend is not None and hasattr(backend, "reset_token_count"):
+            backend.reset_token_count()
+
         preds_path = os.path.join(preds_dir, f"locomo_{sys_name}.jsonl")
         # Load any partial predictions from a previous interrupted run
         done_ids: set = set()
         preds_so_far: List[str] = []
         refs_so_far: List[str] = []
+        pair_bertscores: List[float] = []  # per-pair BERTScore F1
         if os.path.exists(preds_path):
             with open(preds_path, "r", encoding="utf-8") as fp:
                 for line in fp:
@@ -269,6 +320,8 @@ def main() -> None:
                         done_ids.add(rec["idx"])
                         preds_so_far.append(rec["pred"])
                         refs_so_far.append(rec["ref"])
+                        if "bertscore_f1" in rec:
+                            pair_bertscores.append(rec["bertscore_f1"])
             if done_ids:
                 print(f"  [{sys_name}] resuming from {len(done_ids)} saved predictions")
                 # Immediately publish partial metrics so the JSON is never stale
@@ -287,42 +340,82 @@ def main() -> None:
                 ref = str(item.get("answer", ""))
                 history = [str(h) for h in item.get("history", [])]
 
+                t0 = time.perf_counter()
                 try:
                     pred = system.answer(query, history)
                 except Exception as exc:
                     print(f"\n  [{sys_name}] ERROR on example {idx}: {exc}")
                     traceback.print_exc()
                     pred = ""
+                elapsed = time.perf_counter() - t0
 
                 preds_so_far.append(pred)
                 refs_so_far.append(ref)
 
+                # Per-pair BERTScore (batch of 1, cached for efficiency)
+                pair_bs_f1 = None
+                if _bertscore is not None and pred and ref:
+                    try:
+                        bs_out = _bertscore.compute(
+                            predictions=[pred], references=[ref], lang=eval_config.bertscore_lang
+                        )
+                        pair_bs_f1 = float(bs_out["f1"][0])
+                        pair_bertscores.append(pair_bs_f1)
+                    except Exception:
+                        pass
+
                 # Write prediction immediately so progress survives a crash
-                fp.write(json.dumps({
+                rec = {
                     "idx": idx,
                     "session_id": item.get("session_id", ""),
                     "query": query,
                     "pred": pred,
                     "ref": ref,
-                }) + "\n")
+                }
+                if pair_bs_f1 is not None:
+                    rec["bertscore_f1"] = pair_bs_f1
+                fp.write(json.dumps(rec) + "\n")
                 fp.flush()
 
-                print(f"  [{sys_name}] {idx + 1}/{len(val_data)}  pred={pred[:60]!r}", flush=True)
+                # --- Pretty-print gold vs pred ---
+                print(f"\n  [{sys_name}] #{idx + 1}/{len(val_data)}  ({elapsed:.1f}s)")
+                print(f"    GOLD : {ref[:120]}{'…' if len(ref) > 120 else ''}")
+                print(f"    PRED : {pred[:120]}{'…' if len(pred) > 120 else ''}")
+                if pair_bs_f1 is not None:
+                    print(f"    BERTScore F1: {pair_bs_f1:.4f}")
 
                 # Update partial metrics in the JSON every 10 predictions
                 if (idx + 1) % 10 == 0 or (idx + 1) == len(val_data):
                     partial_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
                     partial_metrics["__n__"] = len(preds_so_far)
                     partial_metrics["__total__"] = len(val_data)
+                    if pair_bertscores:
+                        partial_metrics["bertscore_f1_per_pair"] = (
+                            sum(pair_bertscores) / len(pair_bertscores)
+                        )
+                    # Token count so far
+                    if backend is not None and hasattr(backend, "token_count"):
+                        partial_metrics["__tokens__"] = backend.token_count
                     results[partial_key] = partial_metrics
                     _flush_results(results)
 
         # Final metrics — promote from partial to permanent and clean up partial key
         final_metrics = compute_metrics(preds_so_far, refs_so_far, eval_config)
+        if pair_bertscores:
+            final_metrics["bertscore_f1_per_pair"] = (
+                sum(pair_bertscores) / len(pair_bertscores)
+            )
+        if backend is not None and hasattr(backend, "token_count"):
+            final_metrics["total_tokens"] = backend.token_count
         results[key] = final_metrics
         results.pop(partial_key, None)
         _flush_results(results)
-        print(f"  [{sys_name}] metrics: {final_metrics}  (saved to {args.results})")
+
+        # Print final summary for this system
+        token_str = ""
+        if backend is not None and hasattr(backend, "token_count"):
+            token_str = f"  tokens={backend.token_count:,}"
+        print(f"\n  [{sys_name}] FINAL metrics: {final_metrics}{token_str}  (saved to {args.results})")
 
     # ------------------------------------------------------------------
     # Per-category breakdown (optional)
@@ -357,7 +450,23 @@ def main() -> None:
 
     header_metrics = args.metrics
     col_w = 14
+    # Build dynamic header — add extra columns if any system has them
+    has_bertscore_pair = any(
+        "bertscore_f1_per_pair" in metrics
+        for key, metrics in results.items()
+        if "/" in key and key.startswith("locomo/")
+    )
+    has_tokens = any(
+        "total_tokens" in metrics
+        for key, metrics in results.items()
+        if "/" in key and key.startswith("locomo/")
+    )
+
     header = f"{'System':<30}" + "".join(f"{m:>{col_w}}" for m in header_metrics)
+    if has_bertscore_pair:
+        header += f"{'bs_pair':>{col_w}}"
+    if has_tokens:
+        header += f"{'tokens':>12}"
     print(header)
     print("-" * len(header))
 
@@ -367,9 +476,17 @@ def main() -> None:
         dataset, sys_name = key.split("/", 1)
         if dataset != "locomo":
             continue
+        if "__partial__" in sys_name:
+            continue
         row = f"{sys_name:<30}" + "".join(
             f"{metrics.get(m, 0.0):>{col_w}.4f}" for m in header_metrics
         )
+        if has_bertscore_pair:
+            bs_pair = metrics.get("bertscore_f1_per_pair", 0.0)
+            row += f"{bs_pair:>{col_w}.4f}"
+        if has_tokens:
+            tok = metrics.get("total_tokens", 0)
+            row += f"{tok:>12,}"
         print(row)
 
     print(f"\nDone. Results written to: {args.results}")

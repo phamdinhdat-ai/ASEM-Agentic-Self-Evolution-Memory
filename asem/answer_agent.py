@@ -7,7 +7,10 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .note import Note
+
+_log = get_logger("S4.answer")
 
 
 @dataclass
@@ -20,6 +23,7 @@ class AnswerAgent:
 
     def distil_and_answer(self, query: str, candidates: List[Note]) -> Tuple[List[Note], str]:
         if not candidates:
+            _log.debug("No candidates, using baseline answer")
             return [], self._baseline_answer(query, [])
 
         prompt = self.prompt_template.format(
@@ -29,12 +33,15 @@ class AnswerAgent:
         raw = self.backend.generate(prompt)
         parsed = self._parse_response(raw)
         if parsed is None:
+            _log.warning("Distil JSON parse failed, falling back to all candidates")
             return candidates, self._baseline_answer(query, candidates)
 
         selected_ids, answer = parsed
         selected_notes = [n for n in candidates if n.id in selected_ids]
         if not selected_notes:
             selected_notes = candidates
+        _log.debug("Distilled | selected={}/{}  answer={!r}",
+                   len(selected_notes), len(candidates), answer[:60])
         return selected_notes, answer
 
     def _baseline_answer(self, query: str, candidates: List[Note]) -> str:

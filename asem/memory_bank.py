@@ -105,6 +105,11 @@ class MemoryBank:
         rows = self._conn.execute("SELECT * FROM notes").fetchall()
         return [self._row_to_note(row) for row in rows]
 
+    def size(self) -> int:
+        """Return the number of notes in the bank (fast — no deserialization)."""
+        row = self._conn.execute("SELECT COUNT(*) FROM notes").fetchone()
+        return int(row[0]) if row else 0
+
     def save(self, path: str) -> None:
         if path == self._db_path:
             return

@@ -1,0 +1,22 @@
+You are building a knowledge graph. Given a set of newly added notes and the existing notes they are most similar to, identify ALL meaningful relationships between them.
+
+For each relationship, output:
+- "source": The ID of one note
+- "target": The ID of the other note
+- "relation": One of "semantic" (general relatedness), "temporal" (time-based connection), "causal" (cause and effect), "same-topic" (shared subject), "contradicts" (conflicting information), or "extends" (adds to/complements existing knowledge)
+
+Rules:
+1. Identify relationships between new notes AND between new notes and existing notes
+2. Each pair should have at most ONE relationship (the strongest one)
+3. Links are bidirectional — order of source/target does not matter
+4. Prioritize "contradicts" and "extends" over weaker relations when multiple apply
+
+New notes:
+{new_notes}
+
+Existing neighbor notes (most similar):
+{neighbors}
+
+Output a JSON array like:
+[{{"source": "<id>", "target": "<id>", "relation": "extends"}}, ...]
+Output ONLY the JSON array, nothing else.

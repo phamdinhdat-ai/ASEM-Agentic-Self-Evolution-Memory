@@ -7,8 +7,11 @@ from datetime import datetime
 from typing import List, Optional
 
 from .backends.base import InferenceBackend
+from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .note import NoteConstructor
+
+_log = get_logger("S5.utility")
 
 
 @dataclass
@@ -30,8 +33,11 @@ class UtilityUpdater:
         answer: Optional[str] = None,
     ) -> None:
         for note in used_notes:
+            old_q = note.q
             new_q = note.q + self.alpha * (reward - note.q)
             memory_bank.update(note.id, {"q": new_q})
+            _log.debug("Q-update | id={}  q: {:.3f} -> {:.3f}  (reward={:.3f}, alpha={:.2f})",
+                       note.id[:8], old_q, new_q, reward, self.alpha)
 
         if query is None or answer is None or self.note_constructor is None:
             return
@@ -44,3 +50,5 @@ class UtilityUpdater:
         summary = self.backend.generate(prompt)
         new_note = self.note_constructor.build(summary, datetime.utcnow())
         memory_bank.add(new_note)
+        _log.info("Experience consolidated | new_note_id={}  summary={!r}",
+                  new_note.id[:8], summary[:60])

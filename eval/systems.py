@@ -49,6 +49,58 @@ class ASEMSystem:
         self.pipeline.memory_bank.clear()
 
 
+@dataclass
+class ASEMSystemV2:
+    """Two-phase ASEM system: pre-ingest once, then retrieval-only per QA.
+
+    **Phase 1 (offline)**: Call ``ingest_conversation(turns)`` once to build
+    the full knowledge graph from all dialogue turns.
+
+    **Phase 2 (online)**: Call ``answer(query)`` for each QA pair — NO
+    re-ingestion, retrieval-only.
+
+    This eliminates the deduplication bug in ASEMSystem v1 where the same
+    turns were re-ingested for every QA pair.
+    """
+
+    pipeline: ASEMPipeline
+    batch_ingestor: object  # BatchIngestor (lazy import to avoid circular deps)
+
+    # ---- private --------------------------------------------------------
+    _ingested: bool = False
+
+    def ingest_conversation(self, dialogue_turns: List[str]) -> int:
+        """Pre-ingest all dialogue turns ONCE before any QA queries.
+
+        Returns the number of notes created.
+        """
+        from asem.batch_ingestion import BatchIngestor
+        notes = self.batch_ingestor.ingest_conversation(
+            dialogue_turns, self.pipeline.memory_bank,
+        )
+        self._ingested = True
+        return len(notes)
+
+    def answer(self, query: str, history: List[str] = None) -> str:
+        """Retrieve + answer from the pre-built knowledge graph.
+
+        The ``history`` parameter is accepted for interface compatibility but
+        **ignored** — all turns must be ingested via ``ingest_conversation()``
+        before calling this method.
+        """
+        # If not yet ingested and history is provided, auto-ingest
+        if not self._ingested and history:
+            self.ingest_conversation(history)
+
+        _, answer = self.pipeline.read_path(query)
+        return answer
+
+    def reset(self) -> None:
+        """Clear the memory bank for the next conversation."""
+        self.pipeline.memory_bank.clear()
+        self._ingested = False
+
+
 # ---------------------------------------------------------------------------
 # Shared prompt templates (extracted once)
 # ---------------------------------------------------------------------------
@@ -199,6 +251,79 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     return ASEMSystem(pipeline=pipeline)
 
 
+def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
+    """Build the two-phase ASEM v2 pipeline with batch ingestion + enhanced retrieval."""
+    cfg = _load_config(config_path)
+    backend = build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    extract_prompt = _load_text("data/prompts/P4_batch_note_extraction.txt")
+    mem_ops_prompt = _load_text("data/prompts/P5_batch_memory_ops.txt")
+    batch_link_prompt = _load_text("data/prompts/P6_batch_link_generation.txt")
+
+    from asem.batch_ingestion import BatchIngestor
+    from asem.enhanced_retriever import EnhancedHybridRetriever
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=_MEMORY_MANAGER_PROMPT,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend,
+        link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt,
+        k=hp["k"],
+    )
+    retriever = EnhancedHybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=hp["k2"],
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+        max_hops=2, hop_decay=0.7, multi_hop_topn=5,
+        alpha=0.35, beta=0.25, gamma=0.40,
+        enable_global_semantics=True,
+        enable_intent_q=True,
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=_DISTIL_PROMPT,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend,
+        alpha=hp["alpha"], q0=hp["q0"],
+        summary_prompt_template=_SUMMARY_PROMPT,
+        note_constructor=note_constructor,
+    )
+    batch_ingestor = BatchIngestor(
+        backend=backend,
+        extraction_prompt=extract_prompt,
+        memory_ops_prompt=mem_ops_prompt,
+        link_prompt=batch_link_prompt,
+        q0=hp["q0"],
+        top_k_neighbors=hp.get("k", 5),
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "asem_v2")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+    )
+
+    return ASEMSystemV2(pipeline=pipeline, batch_ingestor=batch_ingestor)
+
+
 def build_baselines(
     config_path: str,
     db_dir: str,
@@ -304,4 +429,5 @@ def get_systems(
     """
     systems = build_baselines(config_path, db_dir)
     systems["ASEM"] = build_asem_system(config_path, db_dir)
+    systems["ASEMv2"] = build_asem_v2_system(config_path, db_dir)
     return systems

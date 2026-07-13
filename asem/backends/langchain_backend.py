@@ -13,11 +13,17 @@ class LangChainBackend(InferenceBackend):
     """LangChain inference backend using BaseChatModel and Embeddings."""
 
     def __init__(self, llm: Any, embedder: Any) -> None:
+        super().__init__()
         self._llm = llm
         self._embedder = embedder
 
     def generate(self, prompt: str, **kwargs) -> str:
         response = self._llm.invoke(prompt)
+        # Extract token usage from LangChain response metadata when available
+        if hasattr(response, "response_metadata"):
+            usage = response.response_metadata.get("token_usage", {})
+            if usage:
+                self._token_count += usage.get("total_tokens", 0)
         if hasattr(response, "content"):
             return str(response.content)
         return str(response)
@@ -36,19 +42,12 @@ class LangChainBackend(InferenceBackend):
         vector = await self._embedder.aembed_query(text)
         return np.asarray(vector, dtype=float)
     
-    async def  stream(self, prompt: str, **kwargs) -> Any:
-        async for response in self._llm.astream(prompt):
-            if hasattr(response, "content"):
-                yield str(response.content)
-            else:
-                yield str(response)
     async def astream(self, prompt: str, **kwargs) -> Any:
         async for response in self._llm.astream(prompt):
             if hasattr(response, "content"):
                 yield str(response.content)
             else:
                 yield str(response)
-    
 
 
     @classmethod
