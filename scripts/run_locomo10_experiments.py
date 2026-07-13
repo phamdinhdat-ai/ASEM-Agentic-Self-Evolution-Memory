@@ -50,8 +50,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 
-os.environ["OPENAI_BASE_URL"] = "http://localhost:8000/v1"
-os.environ["OPENAI_API_KEY"] = "sk-datpd5"
+# os.environ["OPENAI_BASE_URL"] = "https://api.deepseek.com"
+# os.environ["OPENAI_API_KEY"] = "sk-datpd5"
 # Ensure project root is on sys.path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
@@ -71,6 +71,10 @@ if os.path.exists(_dotenv_path):
                     _k, _, _v = _line.partition("=")
                     _v = _v.strip().strip('"').strip("'")
                     os.environ.setdefault(_k.strip(), _v)
+
+# Configure logging early
+from asem.logging_utils import setup_logging  # noqa: E402
+setup_logging(level=os.environ.get("LOG_LEVEL", "INFO"))
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +246,7 @@ def convert_locomo10_to_eval(
 
             eval_items.append({
                 "query": enriched_query,
+                "raw_question": question,  # original question without enrichment
                 "answer": gold_answer,
                 "history": history,
                 "category": category,
@@ -250,6 +255,8 @@ def convert_locomo10_to_eval(
                 "evidence": evidence,
                 "speaker_a": speaker_a,
                 "speaker_b": speaker_b,
+                # Store session batches for pre-ingestion (populated later)
+                "_session_batches": [],
             })
 
     print(f"  {len(eval_items)} QA pairs converted  (skipped {skipped} empty)")
@@ -287,6 +294,102 @@ def group_by_conversation(
         groups.append(current_group)
 
     return groups
+
+
+def _extract_session_batches(
+    conversation: Dict[str, Any],
+) -> List[Tuple[str, List[str]]]:
+    """Extract per-session turn batches from a conversation object.
+
+    Returns:
+        List of (session_label, turns) where session_label includes the
+        date_time (e.g., 'session_1 — 1:56 pm on 8 May, 2023') and turns
+        is a list of formatted dialogue strings.
+    """
+    batches: List[Tuple[str, List[str]]] = []
+
+    # Find all session keys (session_1, session_2, ...)
+    session_keys = sorted(
+        [k for k in conversation if k.startswith("session_") and not k.endswith("_date_time")],
+        key=lambda k: int(k.split("_")[1]) if k.split("_")[1].isdigit() else 999,
+    )
+
+    for key in session_keys:
+        turns_data = conversation.get(key, [])
+        if not isinstance(turns_data, list) or not turns_data:
+            continue
+
+        # Build session label with date if available
+        date_key = f"{key}_date_time"
+        date_str = conversation.get(date_key, "")
+        label = key.replace("_", " ").title()  # e.g., "Session 1"
+        if date_str:
+            label = f"{label} — {date_str}"
+
+        # Format each turn as '[Speaker] text (image: blip_caption)'
+        turns: List[str] = []
+        for turn in turns_data:
+            text = _turn_to_text(turn)
+            turns.append(text)
+
+        batches.append((label, turns))
+
+    return batches
+
+
+def _build_conversation_index(
+    dataset: List[Dict[str, Any]],
+) -> Dict[str, List[Tuple[str, List[str]]]]:
+    """Build a mapping from session_id to session batches for pre-ingestion.
+
+    Returns:
+        Dict[session_id] -> List[(session_label, turns)]
+    """
+    index: Dict[str, List[Tuple[str, List[str]]]] = {}
+    for idx, record in enumerate(dataset):
+        conversation = record.get("conversation", {})
+        session_id = f"locomo_{idx:04d}"
+        batches = _extract_session_batches(conversation)
+        if batches:
+            index[session_id] = batches
+    return index
+
+
+def _max_evidence_session(items: List[Dict[str, Any]]) -> int:
+    """Compute the maximum session number referenced by evidence in a group of eval items.
+
+    Returns 0 if no evidence could be parsed (meaning: ingest all).
+    """
+    max_sess = 0
+    for item in items:
+        evidence = item.get("evidence", [])
+        for eid in evidence:
+            sess, _ = _parse_dia_id(str(eid))
+            if sess > max_sess:
+                max_sess = sess
+    return max_sess
+
+
+def _filter_batches_by_session(
+    batches: List[Tuple[str, List[str]]],
+    max_session: int,
+) -> List[Tuple[str, List[str]]]:
+    """Filter session batches to only include sessions up to max_session.
+
+    Session labels are expected to contain 'session_N' or 'Session N' patterns.
+    """
+    import re as _re
+    filtered: List[Tuple[str, List[str]]] = []
+    for label, turns in batches:
+        m = _re.search(r"[Ss]ession\s*(\d+)", label)
+        if m:
+            sess_num = int(m.group(1))
+            if sess_num <= max_session:
+                filtered.append((label, turns))
+        else:
+            # Can't parse session number — include as a fallback
+            filtered.append((label, turns))
+    return filtered
 
 
 def split_by_category(
@@ -401,15 +504,24 @@ def evaluate_system(
     results: Dict[str, Any],
     results_path: str,
     flush_fn: callable,
-) -> Tuple[List[str], List[str]]:
-    """Evaluate a single system on all eval items, conversation by conversation.
+    conv_batches: Optional[Dict[str, List[Tuple[str, List[str]]]]] = None,
+) -> Tuple[List[str], List[str], List[Dict[str, Any]]]:
+    """Evaluate a single system with batch pre-ingestion per conversation.
 
-    Returns (predictions, references).
+    For memory-based systems, sessions are pre-ingested in batches before
+    answering questions. Non-memory systems (NoMemory, FullContext) fall
+    back to per-question history replay.
+
+    Returns:
+        (predictions, references, enriched_predictions)
+        enriched_predictions includes conversation_id, question_type,
+        category, question, expected_answer, ai_response, evidence, etc.
     """
     preds_path = os.path.join(preds_dir, f"locomo10_{sys_name}.jsonl")
     done_ids: Set[int] = set()
     preds_so_far: List[str] = []
     refs_so_far: List[str] = []
+    enriched_preds: List[Dict[str, Any]] = []
 
     # Resume from partial predictions
     if os.path.exists(preds_path):
@@ -421,6 +533,7 @@ def evaluate_system(
                     done_ids.add(rec["idx"])
                     preds_so_far.append(rec["pred"])
                     refs_so_far.append(rec["ref"])
+                    enriched_preds.append(rec)
         if done_ids:
             print(f"    Resuming from {len(done_ids)} saved predictions")
             partial_key = f"locomo10/{sys_name}/__partial__"
@@ -430,12 +543,53 @@ def evaluate_system(
             results[partial_key] = partial_metrics
             flush_fn(results)
 
+    # Determine if runner supports batch pre-ingestion
+    has_ingest_conversation = hasattr(runner, 'ingest_conversation')
+    has_ingest_session = hasattr(runner, 'ingest_session')
+    has_finalize = hasattr(runner, 'finalize_conversation')
+
     # Evaluate conversation by conversation
     with open(preds_path, "a", encoding="utf-8") as fp:
         for group in conversation_groups:
             # Reset runner at each conversation boundary
             if hasattr(runner, 'reset'):
                 runner.reset()
+
+            # Pre-ingest ALL sessions of this conversation in ONE call
+            sid = group[0].get("session_id", "")
+            if conv_batches and sid in conv_batches:
+                batches = conv_batches[sid]
+
+                # Compute max evidence session to filter irrelevant sessions
+                max_evidence_session = _max_evidence_session(group)
+                if max_evidence_session > 0:
+                    batches = _filter_batches_by_session(batches, max_evidence_session)
+
+                if not batches:
+                    continue
+
+                total_turns = sum(len(t) for _, t in batches)
+                skipped = len(conv_batches.get(sid, [])) - len(batches)
+
+                if has_ingest_conversation:
+                    if skipped > 0:
+                        print(f"    [{sys_name}] Ingesting conversation {sid}: "
+                              f"{len(batches)} sessions, {total_turns} turns "
+                              f"(skipped {skipped} future sessions)", flush=True)
+                    else:
+                        print(f"    [{sys_name}] Ingesting conversation {sid}: "
+                              f"{len(batches)} sessions, {total_turns} turns", flush=True)
+                    runner.ingest_conversation(batches)
+                elif has_ingest_session:
+                    print(f"    [{sys_name}] Ingesting {len(batches)} sessions for {sid} "
+                          f"({total_turns} turns) ...", flush=True)
+                    for label, turns in batches:
+                        runner.ingest_session(turns, label)
+
+                # Cross-chunk link evolution after ingestion
+                if has_finalize:
+                    new_edges = runner.finalize_conversation()
+                    print(f"    [{sys_name}] Final linking: {new_edges} new edges", flush=True)
 
             for item in group:
                 idx = item.get("_idx", -1)
@@ -456,15 +610,25 @@ def evaluate_system(
                 preds_so_far.append(pred)
                 refs_so_far.append(ref)
 
-                fp.write(json.dumps({
+                # Structured output with all required fields
+                enriched_rec = {
                     "idx": idx,
-                    "session_id": item.get("session_id", ""),
+                    "conversation_id": item.get("session_id", ""),
+                    "question_type": item.get("category_name", ""),
                     "category": item.get("category", 0),
-                    "category_name": item.get("category_name", ""),
+                    "question": item.get("raw_question", query),
+                    "expected_answer": ref,
+                    "ai_response": pred,
+                    "evidence": item.get("evidence", []),
+                    "session_id": item.get("session_id", ""),
                     "query": query,
                     "pred": pred,
                     "ref": ref,
-                }) + "\n")
+                    "category_name": item.get("category_name", ""),
+                }
+                enriched_preds.append(enriched_rec)
+
+                fp.write(json.dumps(enriched_rec) + "\n")
                 fp.flush()
 
                 n_done = len(done_ids) + len(preds_so_far)
@@ -484,7 +648,7 @@ def evaluate_system(
                     results[partial_key] = partial_metrics
                     flush_fn(results)
 
-    return preds_so_far, refs_so_far
+    return preds_so_far, refs_so_far, enriched_preds
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +665,7 @@ def run_lambda_ablation(
     results: Dict[str, Any],
     results_path: str,
     preds_dir: str,
+    conv_batches: Optional[Dict[str, List[Tuple[str, List[str]]]]] = None,
 ):
     """Sweep lambda values for ASEM only."""
     import yaml
@@ -533,9 +698,10 @@ def run_lambda_ablation(
             yaml.dump(cfg, fh)
 
         runner = build_asem_system(tmp_config, db_dir)
-        preds, refs = evaluate_system(
+        preds, refs, _ = evaluate_system(
             runner, eval_items, conversation_groups, metric_names,
             preds_dir, sys_name, results, results_path, _flush,
+            conv_batches=conv_batches,
         )
         results[key] = compute_metrics(preds, refs, metric_names)
         results.pop(f"locomo10/{sys_name}/__partial__", None)
@@ -554,6 +720,7 @@ def run_component_ablation(
     results: Dict[str, Any],
     results_path: str,
     preds_dir: str,
+    conv_batches: Optional[Dict[str, List[Tuple[str, List[str]]]]] = None,
 ):
     """Run ASEM with individual components disabled."""
     import yaml
@@ -665,9 +832,10 @@ def run_component_ablation(
             pipeline.link_evolver = _NoOpLinkEvolver()
 
         runner = ASEMSystem(pipeline=pipeline)
-        preds, refs = evaluate_system(
+        preds, refs, _ = evaluate_system(
             runner, eval_items, conversation_groups, metric_names,
             preds_dir, sys_name, results, results_path, _flush,
+            conv_batches=conv_batches,
         )
         results[key] = compute_metrics(preds, refs, metric_names)
         results.pop(f"locomo10/{sys_name}/__partial__", None)
@@ -695,6 +863,13 @@ def print_summary_table(
     """Print a formatted summary table of results."""
     col_w = 16
     header = f"{'System':<30}" + "".join(f"{m:>{col_w}}" for m in metric_names)
+    # Check if judge metrics are present
+    has_judge = any(
+        k.endswith("/judge") and "cat_" not in k
+        for k in results
+    )
+    if has_judge:
+        header += f"{'Judge':>{col_w}}{'Judge%Perfect':>{col_w}}"
     print(header)
     print("-" * len(header))
 
@@ -704,11 +879,16 @@ def print_summary_table(
         row = f"{sys_name:<30}" + "".join(
             f"{metrics.get(m, 0.0):>{col_w}.4f}" for m in metric_names
         )
+        if has_judge:
+            judge_key = f"locomo10/{sys_name}/judge"
+            jm = results.get(judge_key, {})
+            row += f"{jm.get('judge_mean', 0.0):>{col_w}.4f}"
+            row += f"{jm.get('judge_pct_perfect', 0.0):>{col_w}.1f}%"
         print(row)
 
     # Also print any ablation keys
     ablation_keys = sorted(
-        [k for k in results if k.startswith("locomo10/ASEM_")],
+        [k for k in results if k.startswith("locomo10/ASEM_") and "/judge" not in k],
     )
     if ablation_keys:
         print()
@@ -721,6 +901,11 @@ def print_summary_table(
             row = f"{name:<30}" + "".join(
                 f"{metrics.get(m, 0.0):>{col_w}.4f}" for m in metric_names
             )
+            if has_judge:
+                judge_key = key + "/judge"
+                jm = results.get(judge_key, {})
+                row += f"{jm.get('judge_mean', 0.0):>{col_w}.4f}"
+                row += f"{jm.get('judge_pct_perfect', 0.0):>{col_w}.1f}%"
             print(row)
 
     if per_category and by_cat:
@@ -732,6 +917,8 @@ def print_summary_table(
             cat_header = f"  {'System':<28}" + "".join(
                 f"{m:>{col_w}}" for m in metric_names
             )
+            if has_judge:
+                cat_header += f"{'Judge':>{col_w}}"
             print(cat_header)
             print("  " + "-" * (len(cat_header) - 2))
             for sys_name in system_names:
@@ -741,7 +928,96 @@ def print_summary_table(
                     row = f"  {sys_name:<28}" + "".join(
                         f"{m.get(met, 0.0):>{col_w}.4f}" for met in metric_names
                     )
+                    if has_judge:
+                        judge_key = cat_key + "/judge"
+                        jm = results.get(judge_key, {})
+                        row += f"{jm.get('judge_mean', 0.0):>{col_w}.4f}"
                     print(row)
+
+
+# ---------------------------------------------------------------------------
+# LLM-as-a-Judge integration
+# ---------------------------------------------------------------------------
+
+def _run_judge_evaluation(
+    all_enriched_preds: Dict[str, List[Dict[str, Any]]],
+    config_path: str,
+    results: Dict[str, Any],
+    preds_dir: str,
+    results_path: str,
+    flush_fn: callable,
+) -> None:
+    """Run LLM judge on all system predictions and merge metrics into results."""
+    import yaml as _yaml
+    from asem.backends import build_backend as _build_backend
+    from eval.llm_as_a_judge import (
+        LLMJudge,
+        compute_judge_metrics,
+        verdicts_to_list,
+        JudgeVerdict,
+    )
+
+    # Build judge backend from same config
+    with open(config_path, "r", encoding="utf-8") as fh:
+        cfg = _yaml.safe_load(fh)
+    judge_backend = _build_backend(cfg["inference"])
+    judge = LLMJudge(backend=judge_backend)
+
+    for sys_name, enriched_preds in all_enriched_preds.items():
+        judge_key = f"locomo10/{sys_name}/judge"
+        if judge_key in results:
+            print(f"  [{sys_name}] judge already completed — skipping")
+            continue
+
+        print(f"\n  [{sys_name}] Judging {len(enriched_preds)} predictions ...")
+
+        # Collect questions, expected answers, AI responses
+        questions = [p.get("question", p.get("query", "")) for p in enriched_preds]
+        expected = [p.get("expected_answer", p.get("ref", "")) for p in enriched_preds]
+        ai_responses = [p.get("ai_response", p.get("pred", "")) for p in enriched_preds]
+        conv_ids = [p.get("conversation_id", p.get("session_id", "")) for p in enriched_preds]
+        qtypes = [p.get("question_type", p.get("category_name", "")) for p in enriched_preds]
+        cats = [p.get("category", 0) for p in enriched_preds]
+
+        verdicts = judge.judge_batch(
+            questions=questions,
+            expected_answers=expected,
+            ai_responses=ai_responses,
+            conversation_ids=conv_ids,
+            question_types=qtypes,
+            categories=cats,
+        )
+
+        # Compute aggregate judge metrics
+        judge_metrics = compute_judge_metrics(verdicts, per_category=True)
+
+        # Merge judge metrics into results
+        results[judge_key] = {
+            "judge_mean": judge_metrics.judge_mean,
+            "judge_pct_perfect": judge_metrics.judge_pct_perfect,
+            "judge_pct_acceptable": judge_metrics.judge_pct_acceptable,
+            "total": judge_metrics.total,
+            "correct": judge_metrics.correct,
+            "perfect": judge_metrics.perfect,
+        }
+
+        # Add per-category judge breakdown
+        for cat_name, cat_metrics in judge_metrics.by_category.items():
+            cat_judge_key = f"locomo10_cat_{cat_name}/{sys_name}/judge"
+            results[cat_judge_key] = cat_metrics
+
+        # Save detailed verdicts
+        verdicts_path = os.path.join(preds_dir, f"locomo10_{sys_name}_judge.jsonl")
+        with open(verdicts_path, "w", encoding="utf-8") as vf:
+            for vdict in verdicts_to_list(verdicts):
+                vf.write(json.dumps(vdict) + "\n")
+
+        flush_fn(results)
+        print(f"    [{sys_name}] Judge: mean={judge_metrics.judge_mean:.4f} "
+              f"perfect={judge_metrics.judge_pct_perfect:.1f}% "
+              f"({judge_metrics.correct}/{judge_metrics.total} correct)")
+
+    print(f"\n  Judge verdicts saved to: {preds_dir}/")
 
 
 # ---------------------------------------------------------------------------
@@ -845,7 +1121,22 @@ Examples:
         action="store_true",
         help="Force-clean all previous results, predictions, and databases before running.",
     )
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Run LLM-as-a-Judge evaluation on all predictions after answering.",
+    )
     args = parser.parse_args()
+
+    # Load config early and apply logging settings from it
+    import yaml as _yaml  # noqa: E402
+    from asem.logging_utils import setup_logging_from_config  # noqa: E402
+    try:
+        with open(args.config, "r", encoding="utf-8") as _fh:
+            _cfg = _yaml.safe_load(_fh)
+        setup_logging_from_config(_cfg)
+    except Exception:
+        pass  # fall back to LOG_LEVEL env var / defaults
 
     # Use timestamped db-dir to avoid stale SQLite file locks
     db_dir = os.path.join(args.db_dir, datetime.now().strftime("%Y%m%d_%H%M%S"))
@@ -864,6 +1155,18 @@ Examples:
     conversation_groups = group_by_conversation(eval_data)
     print(f"  {len(conversation_groups)} conversations")
     print(f"  avg {len(eval_data) / len(conversation_groups):.1f} QA pairs per conversation")
+
+    # Build session batch index for pre-ingestion
+    conv_batches: Dict[str, List[Tuple[str, List[str]]]] = {}
+    with open(args.input, "r", encoding="utf-8") as f:
+        raw_dataset = json.load(f)
+    conv_batches = _build_conversation_index(raw_dataset)
+    total_sessions = sum(len(batches) for batches in conv_batches.values())
+    total_turns = sum(
+        sum(len(turns) for _, turns in batches)
+        for batches in conv_batches.values()
+    )
+    print(f"  Session batches: {total_sessions} sessions, {total_turns} total turns")
 
     # Category distribution
     by_cat = split_by_category(eval_data)
@@ -941,6 +1244,7 @@ Examples:
             results=results,
             results_path=args.results,
             preds_dir=preds_dir,
+            conv_batches=conv_batches,
         )
 
     elif args.ablate == "components":
@@ -955,10 +1259,13 @@ Examples:
             results=results,
             results_path=args.results,
             preds_dir=preds_dir,
+            conv_batches=conv_batches,
         )
 
     else:
         # --- Standard evaluation path ---
+        all_enriched_preds: Dict[str, List[Dict[str, Any]]] = {}
+
         for sys_name, runner in runners.items():
             key = f"locomo10/{sys_name}"
 
@@ -968,7 +1275,7 @@ Examples:
 
             print(f"\n  [{sys_name}] running on {len(eval_data)} examples ...")
 
-            preds, refs = evaluate_system(
+            preds, refs, enriched_preds = evaluate_system(
                 runner=runner,
                 eval_items=eval_data,
                 conversation_groups=conversation_groups,
@@ -978,7 +1285,10 @@ Examples:
                 results=results,
                 results_path=args.results,
                 flush_fn=_flush_results,
+                conv_batches=conv_batches,
             )
+
+            all_enriched_preds[sys_name] = enriched_preds
 
             # Final metrics
             final_metrics = compute_metrics(preds, refs, args.metrics)
@@ -986,6 +1296,20 @@ Examples:
             results.pop(f"locomo10/{sys_name}/__partial__", None)
             _flush_results(results)
             print(f"    [{sys_name}] FINAL: {final_metrics}")
+
+        # --- Judge evaluation (if enabled) ---
+        if args.judge:
+            print(f"\n{'='*60}")
+            print("JUDGE: Running LLM-as-a-Judge evaluation")
+            print(f"{'='*60}")
+            _run_judge_evaluation(
+                all_enriched_preds=all_enriched_preds,
+                config_path=args.config,
+                results=results,
+                preds_dir=preds_dir,
+                results_path=args.results,
+                flush_fn=_flush_results,
+            )
 
     # ------------------------------------------------------------------
     # Step 4: Per-category breakdown (optional)
@@ -1019,7 +1343,7 @@ Examples:
                     continue
                 cat_runner = fresh_runners[sys_name]
 
-                cat_preds, _ = evaluate_system(
+                cat_preds, _, _ = evaluate_system(
                     runner=cat_runner,
                     eval_items=cat_examples,
                     conversation_groups=cat_groups,
@@ -1029,6 +1353,7 @@ Examples:
                     results=results,
                     results_path=args.results,
                     flush_fn=_flush_results,
+                    conv_batches=conv_batches,
                 )
 
                 metrics = compute_metrics(cat_preds, cat_refs, args.metrics)

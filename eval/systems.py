@@ -9,16 +9,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import yaml
 
 from asem.answer_agent import AnswerAgent
 from asem.backends import build_backend
 from asem.link_evolver import LinkEvolver
+from asem.logging_utils import get_logger
 from asem.memory_bank import MemoryBank
 from asem.memory_manager import MemoryManager
-from asem.note import NoteConstructor
+from asem.note import Note, NoteConstructor
 from asem.pipeline import ASEMPipeline
 from asem.retriever import HybridRetriever
 from asem.utility_updater import UtilityUpdater
@@ -37,15 +38,128 @@ class ASEMSystem:
     """Wrapper that exposes the ASEM pipeline as a baseline-style interface."""
 
     pipeline: ASEMPipeline
+    _logger = get_logger(__name__)
+
+    # Track whether this conversation has been pre-ingested
+    _pre_ingested: bool = False
+
+    def ingest(self, content: str) -> None:
+        """Write a single turn into the memory bank without answering.
+
+        Used for session-aware pre-ingestion: all conversation turns for a
+        session are ingested first, then queries are answered.
+        """
+        self._logger.debug("ASEMSystem.ingest | content={!r}", content[:120])
+        try:
+            self.pipeline.write_path(content, datetime.utcnow())
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.ingest | write_path failed | content={!r}", content[:80])
+            raise
+
+    def ingest_session(self, turns: List[str], session_label: str) -> List[Note]:
+        """Ingest all turns from one session as a batch through S1→S2→S3.
+
+        Args:
+            turns: List of dialogue turn texts (e.g., '[Caroline] Hey! ...')
+            session_label: Session identifier with date (e.g.,
+                'session_1 — 1:56 pm on 8 May, 2023')
+
+        Returns:
+            List of notes created or updated during ingestion.
+        """
+        self._logger.info("ASEMSystem.ingest_session | session={!r} | turns={} | bank_size={}",
+                         session_label, len(turns), self.bank_size)
+        try:
+            notes = self.pipeline.write_batch(turns, session_label, datetime.utcnow())
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.ingest_session | write_batch failed | session={!r}", session_label)
+            raise
+        self._pre_ingested = True
+        return notes
+
+    def ingest_conversation(
+        self, session_batches: List[Tuple[str, List[str]]]
+    ) -> List[Note]:
+        """Ingest a conversation session-by-session, each session fully batched.
+
+        Each session gets 3 LLM calls (S1 batch + S2 batch + S3 global).
+        Cross-chunk link evolution runs once at the end.
+
+        Args:
+            session_batches: List of (session_label, turns) for all sessions.
+
+        Returns:
+            List of all notes created or updated.
+        """
+        total_turns = sum(len(t) for _, t in session_batches)
+        self._logger.info("ASEMSystem.ingest_conversation | sessions={} | total_turns={} | bank_size={}",
+                         len(session_batches), total_turns, self.bank_size)
+
+        all_notes: List[Note] = []
+        for i, (label, turns) in enumerate(session_batches):
+            self._logger.info("ingest_conversation | session {}/{}: {!r} ({} turns)",
+                            i + 1, len(session_batches), label, len(turns))
+            notes = self.pipeline.write_batch(turns, label, datetime.utcnow())
+            all_notes.extend(notes)
+            self._logger.info("ingest_conversation | session {}/{} done | bank_size={}",
+                            i + 1, len(session_batches), self.bank_size)
+
+        self._pre_ingested = True
+        return all_notes
+
+    def finalize_conversation(self) -> int:
+        """Run cross-chunk link evolution after all sessions are ingested.
+
+        Returns:
+            Number of new edges created across chunks.
+        """
+        self._logger.info("ASEMSystem.finalize_conversation | bank_size={}", self.bank_size)
+        try:
+            new_edges = self.pipeline.cross_chunk_link_evolve()
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.finalize_conversation | cross_chunk_link_evolve failed")
+            raise
+        stats = self.pipeline.get_stats()
+        self._logger.info("ASEMSystem.finalize_conversation | stats={}", stats)
+        return new_edges
+
+    @property
+    def bank_size(self) -> int:
+        """Return the number of notes currently in the memory bank."""
+        return len(self.pipeline.memory_bank.list_notes())
 
     def answer(self, query: str, history: List[str]) -> str:
-        for item in history:
-            self.pipeline.write_path(item, datetime.utcnow())
-        _, answer = self.pipeline.read_path(query)
+        self._logger.debug("ASEMSystem.answer | query={!r} | history_turns={} | bank_size={} | pre_ingested={}",
+                          query[:120], len(history), self.bank_size, self._pre_ingested)
+
+        # If pre-ingested, skip history replay and go straight to retrieval
+        if not self._pre_ingested:
+            for i, item in enumerate(history):
+                try:
+                    self.pipeline.write_path(item, datetime.utcnow())
+                except Exception as exc:
+                    self._logger.opt(exception=exc).error(
+                        "ASEMSystem.answer | write_path failed at turn {} | content={!r}",
+                        i, item[:80])
+                    raise
+
+        try:
+            used_notes, answer = self.pipeline.read_path(query)
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.answer | read_path failed for query={!r}", query[:120])
+            raise
+
+        self._logger.info("ASEMSystem.answer → answer={!r} | used_notes={} | bank_size={}",
+                         answer[:150], [n.id for n in used_notes], self.bank_size)
         return answer
 
     def reset(self) -> None:
         """Clear the pipeline's memory bank between conversations."""
+        self._pre_ingested = False
         self.pipeline.memory_bank.clear()
 
 
@@ -199,6 +313,7 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
 def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     """Build the full ASEM pipeline wrapped as an eval system."""
     cfg = _load_config(config_path)
+
     backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 

@@ -20,13 +20,13 @@ from asem.answer_agent import AnswerAgent
 from asem.backends import build_backend
 from asem.backends.base import InferenceBackend
 from asem.link_evolver import LinkEvolver
+from asem.logging_utils import setup_logging
 from asem.memory_bank import MemoryBank
 from asem.memory_manager import MemoryManager, Op
 from asem.note import Note, NoteConstructor
 from asem.pipeline import ASEMPipeline
 from asem.retriever import HybridRetriever
 from asem.utility_updater import UtilityUpdater
-
 
 NOTE_PROMPT = "ASEM_STAGE=NOTE\nCONTENT:{content}"
 WRITE_PROMPT = "ASEM_STAGE=WRITE_OP\nCONTENT:{content}\nMEMORY:{memory}"

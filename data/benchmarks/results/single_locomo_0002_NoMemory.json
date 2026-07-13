@@ -1,0 +1,39 @@
+{
+  "conversation_id": "locomo_0002",
+  "system": "NoMemory",
+  "speaker_a": "John",
+  "speaker_b": "Maria",
+  "num_sessions": 13,
+  "total_turns": 285,
+  "bank_size": 0,
+  "ingest_time_s": 0.0,
+  "num_questions": 2,
+  "metrics": {
+    "em": 0.0,
+    "rougeL": 0.0
+  },
+  "results": [
+    {
+      "conversation_id": "locomo_0002",
+      "question_type": "temporal",
+      "category": 2,
+      "question": "Who did Maria have dinner with on May 3, 2023?",
+      "expected_answer": "her mother",
+      "ai_response": "Unknown.",
+      "evidence": [
+        "D13:16"
+      ]
+    },
+    {
+      "conversation_id": "locomo_0002",
+      "question_type": "temporal",
+      "category": 2,
+      "question": "When did Maria donate her car?",
+      "expected_answer": "21 December 2022",
+      "ai_response": "Unknown.",
+      "evidence": [
+        "D2:1"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,47 @@
-Given a new note and its neighbor notes, identify relationships. Output a JSON list:
-[{{"source": "<new_note_id>", "target": "<neighbor_id>", "relation": "<semantic|temporal|causal|same-topic|contradicts|extends>"}}, ...]
+You are a relationship identification agent for a memory network. Your job is to identify meaningful connections between a newly created memory note and its nearest neighbors.
 
-Output ONLY the JSON array, nothing else.
+## Task
+Given a new note and a list of neighbor notes, identify all meaningful pairwise relationships. For each relationship, specify:
+- **source**: The ID of the new note (always the same across all entries).
+- **target**: The ID of the neighbor note.
+- **relation**: One of the six relationship types defined below.
 
+## Relationship Types
+Choose the most specific and informative relation that applies. If multiple relations could apply, choose the strongest one.
+
+| Relation | Strength | Definition | Example |
+|---|---|---|---|
+| `contradicts` | STRONG | The new note directly conflicts with or corrects information in the neighbor. | Neighbor: "Alex lives in SF." New: "Alex moved to NY." → contradicts |
+| `extends` | STRONG | The new note adds substantial new detail or elaboration to the neighbor. | Neighbor: "Alex has a dog." New: "The dog is a golden retriever named Buddy." → extends |
+| `causal` | STRONG | The new note describes a cause or effect of something in the neighbor. | Neighbor: "Alex missed the meeting." New: "Alex's car broke down." → causal |
+| `same-topic` | WEAK | Both notes discuss the same general subject without structural refinement. | Neighbor: "Alex likes pizza." New: "Alex likes pasta." → same-topic |
+| `temporal` | WEAK | The new note happened before, after, or at the same time as the neighbor, without deeper logical connection. | Neighbor: "Alex graduated in 2020." New: "Alex started working in 2021." → temporal |
+| `semantic` | WEAK | A loose topical or conceptual overlap not captured by the other types. Fallback for any discernible connection. | Neighbor: "Alex codes in Python." New: "Alex attended a tech conference." → semantic |
+
+## Constraints
+- Output ONLY a single valid JSON array. Do NOT include any commentary, markdown fences, or extra text.
+- Each relationship object MUST have exactly three keys: `source`, `target`, `relation`.
+- If no meaningful relationship exists for a neighbor, simply omit it from the output array.
+- Always include at least one entry if any connection exists; output an empty array `[]` only when there is truly no relationship.
+- Use the exact relation string values listed above — no aliases or variations.
+
+## Output Format
+[{{"source": "<new_note_id>", "target": "<neighbor_id>", "relation": "<relation_type>"}}, ...]
+
+## Examples
+
+Example 1:
+New note: {{"id": "n3", "description": "Alex moved to New York for a new job.", "keywords": ["alex", "new york", "job", "move"]}}
+Neighbors: [{{"id": "n1", "description": "Alex lives in San Francisco.", "keywords": ["alex", "san francisco"]}}, {{"id": "n2", "description": "Alex works as a data scientist.", "keywords": ["alex", "data scientist"]}}]
+Output:
+[{{"source": "n3", "target": "n1", "relation": "contradicts"}}, {{"source": "n3", "target": "n2", "relation": "extends"}}]
+
+Example 2:
+New note: {{"id": "n5", "description": "The weather is sunny today.", "keywords": ["weather", "sunny"]}}
+Neighbors: [{{"id": "n4", "description": "Alex has a pet dog.", "keywords": ["alex", "dog", "pet"]}}]
+Output:
+[]
+
+## Input
 New note: {new_note}
 Neighbors: {neighbors}

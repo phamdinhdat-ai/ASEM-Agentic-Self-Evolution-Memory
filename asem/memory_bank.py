@@ -6,7 +6,7 @@ import json
 import os
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -100,6 +100,153 @@ class MemoryBank:
     def get_notes_by_ids(self, note_ids: List[str]) -> List[Note]:
         """Retrieve multiple notes by their IDs (batch lookup)."""
         return self._get_notes(note_ids)
+
+    def get_connected_notes(
+        self, note_id: str, max_hops: int = 1
+    ) -> List[Note]:
+        """Traverse the link graph from a seed note up to max_hops away.
+
+        Uses BFS over the bidirectional link set L stored in each note.
+        Returns all unique reachable notes (excluding the seed) at or
+        below max_hops distance.
+
+        Parameters
+        ----------
+        note_id : str
+            Seed note ID to start traversal from.
+        max_hops : int
+            Maximum number of link hops to traverse (default 1).
+
+        Returns
+        -------
+        List[Note]
+            Unique notes reachable within max_hops, excluding the seed.
+        """
+        if max_hops < 1:
+            return []
+
+        visited: Set[str] = {note_id}
+        current_ring: Set[str] = {note_id}
+        collected_ids: List[str] = []
+
+        for hop in range(max_hops):
+            next_ring: Set[str] = set()
+            for nid in current_ring:
+                note = self.get_note(nid)
+                if note is None:
+                    continue
+                for linked_id in note.L:
+                    if linked_id not in visited:
+                        visited.add(linked_id)
+                        next_ring.add(linked_id)
+                        collected_ids.append(linked_id)
+            if not next_ring:
+                break
+            current_ring = next_ring
+
+        return self._get_notes(collected_ids)
+
+    def get_link_graph(self) -> Dict[str, Any]:
+        """Export the full knowledge graph as node + edge lists.
+
+        Returns
+        -------
+        dict with keys:
+            nodes : list of {id, content_preview, keywords, q, degree}
+            edges : list of {source, target, relation}
+        """
+        all_notes = self.list_notes()
+        note_map = {n.id: n for n in all_notes}
+
+        nodes = []
+        for n in all_notes:
+            nodes.append({
+                "id": n.id[:8],
+                "full_id": n.id,
+                "content": n.c[:80],
+                "keywords": n.K[:4],
+                "q": round(n.q, 3),
+                "degree": len(n.L),
+            })
+
+        edges = []
+        seen_edges: Set[Tuple[str, str]] = set()
+        for n in all_notes:
+            for target_id in n.L:
+                edge_key = (n.id, target_id) if n.id < target_id else (target_id, n.id)
+                if edge_key not in seen_edges:
+                    seen_edges.add(edge_key)
+                    target_note = note_map.get(target_id)
+                    if target_note:
+                        shared = set(str(k).lower() for k in n.K) & \
+                                 set(str(k).lower() for k in target_note.K)
+                        rel = "extends" if len(shared) >= 3 else \
+                              "same-topic" if len(shared) >= 2 else \
+                              "semantic" if len(shared) >= 1 else "related"
+                    else:
+                        rel = "related"
+                    edges.append({
+                        "source": n.id[:8],
+                        "target": target_id[:8],
+                        "source_full": n.id,
+                        "target_full": target_id,
+                        "relation": rel,
+                    })
+
+        return {"nodes": nodes, "edges": edges}
+
+    def get_link_statistics(self) -> Dict[str, Any]:
+        """Compute graph structure statistics.
+
+        Returns
+        -------
+        dict with keys: total_nodes, total_edges, avg_degree, density,
+              isolated_nodes, max_degree, num_components
+        """
+        graph = self.get_link_graph()
+        n_nodes = len(graph["nodes"])
+        n_edges = len(graph["edges"])
+
+        if n_nodes <= 1:
+            return {"total_nodes": n_nodes, "total_edges": n_edges,
+                    "avg_degree": 0.0, "density": 0.0,
+                    "isolated_nodes": n_nodes, "max_degree": 0,
+                    "num_components": n_nodes}
+
+        max_deg = max(n["degree"] for n in graph["nodes"])
+        avg_degree = (2.0 * n_edges) / n_nodes
+        max_possible = n_nodes * (n_nodes - 1) / 2
+        density = n_edges / max_possible if max_possible > 0 else 0.0
+        isolated = sum(1 for n in graph["nodes"] if n["degree"] == 0)
+
+        # BFS for connected components
+        adj: Dict[str, Set[str]] = {}
+        for e in graph["edges"]:
+            adj.setdefault(e["source"], set()).add(e["target"])
+            adj.setdefault(e["target"], set()).add(e["source"])
+
+        visited: Set[str] = set()
+        components = 0
+        for nid in set(n["id"] for n in graph["nodes"]):
+            if nid in visited:
+                continue
+            components += 1
+            queue = [nid]
+            while queue:
+                cur = queue.pop(0)
+                if cur in visited:
+                    continue
+                visited.add(cur)
+                for nb in adj.get(cur, set()):
+                    if nb not in visited:
+                        queue.append(nb)
+
+        return {"total_nodes": n_nodes, "total_edges": n_edges,
+                "avg_degree": round(avg_degree, 3),
+                "density": round(density, 5),
+                "isolated_nodes": isolated,
+                "max_degree": max_deg,
+                "num_components": components}
 
     def list_notes(self) -> List[Note]:
         rows = self._conn.execute("SELECT * FROM notes").fetchall()

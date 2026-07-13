@@ -1,0 +1,33 @@
+# HuggingFace local model config for single-conversation evaluation
+# Uses Qwen2.5-0.5B for fast local inference (no API needed)
+# Swap model_name_or_path for larger models if you have GPU memory
+inference:
+  backend: "huggingface"
+  huggingface:
+    # ── Model ──────────────────────────────────────────────────
+    # Small & fast: Qwen/Qwen2.5-0.5B-Instruct   (~1 GB VRAM)
+    # Medium:        Qwen/Qwen2.5-1.5B-Instruct  (~3 GB VRAM)
+    # Good quality:  Qwen/Qwen2.5-7B-Instruct    (~14 GB VRAM, needs 4-bit)
+    model_name_or_path: "Qwen/Qwen2.5-0.5B-Instruct"
+
+    device_map: "auto"            # "auto" | "cpu" | "cuda:0"
+    load_in_4bit: false           # set true for 7B+ models on limited GPU
+    pipeline_task: "text-generation"
+    max_new_tokens: 256
+    temperature: 0.0
+
+    # ── Embedder ───────────────────────────────────────────────
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+hyperparameters:
+  k1: 20
+  k2: 5
+  k: 5
+  delta: 0.30
+  lambda: 0.40
+  alpha: 0.10
+  q0: 0.50
+
+logging:
+  level: "INFO"
+  log_file: null
