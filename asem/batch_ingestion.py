@@ -94,30 +94,65 @@ class BatchIngestor:
         raw_notes = self._embed_notes(extracted)
         _log.info("Extracted {} raw notes", len(raw_notes))
 
+        # --- Detailed note listing ---
+        for i, n in enumerate(raw_notes):
+            _log.debug(
+                "  note[{}] | K=[{}]  G=[{}]  X={!r}",
+                i,
+                ", ".join(n.K[:5]) if n.K else "—",
+                ", ".join(n.G[:3]) if n.G else "—",
+                n.X[:100],
+            )
+
         # Step 3 — Batch memory operations
+        bank_size_before = memory_bank.size()
         ops = self._batch_memory_ops(raw_notes, memory_bank)
-        _log.info("Memory ops decided | adds={}  updates={}  deletes={}  noops={}",
-                  sum(1 for o in ops if o["op"] == "ADD"),
-                  sum(1 for o in ops if o["op"] == "UPDATE"),
-                  sum(1 for o in ops if o["op"] == "DELETE"),
-                  sum(1 for o in ops if o["op"] == "NOOP"))
+        n_add = sum(1 for o in ops if o["op"] == "ADD")
+        n_update = sum(1 for o in ops if o["op"] == "UPDATE")
+        n_delete = sum(1 for o in ops if o["op"] == "DELETE")
+        n_noop = sum(1 for o in ops if o["op"] == "NOOP")
+        _log.info("Memory ops | adds={}  updates={}  deletes={}  noops={}  "
+                  "bank_before={}",
+                  n_add, n_update, n_delete, n_noop, bank_size_before)
 
         # Step 4 — Execute operations (track which notes actually get added)
         added_notes = self._execute_ops(raw_notes, ops, memory_bank)
 
-        # Step 5 — Batch link generation
+        # Step 5 — Batch link generation (cross-session aware)
+        link_count = 0
+        cross_session_links = 0
         if added_notes:
-            self._batch_link(added_notes, memory_bank)
+            link_count, cross_session_links = self._batch_link(added_notes, memory_bank)
 
-        # Step 6 — Rebuild FAISS once
-        if added_notes or any(o["op"] in ("UPDATE", "DELETE") for o in ops):
+        # Step 6 — Rebuild FAISS once (fast for small banks)
+        if added_notes or n_update > 0 or n_delete > 0:
             memory_bank._rebuild_index()
 
+        # --- Per-note summary ---
+        for i, n in enumerate(raw_notes):
+            op_label = ops[i]["op"] if i < len(ops) else "?"
+            marker = ""
+            if op_label == "ADD":
+                marker = "+"
+            elif op_label == "UPDATE":
+                marker = "~"
+            elif op_label == "DELETE":
+                marker = "-"
+            elif op_label == "NOOP":
+                marker = "."
+            kw_str = ", ".join(n.K[:4]) if n.K else "—"
+            _log.info(
+                "  {} [{}] {} | {} links | K=[{}]",
+                marker, op_label, n.X[:80],
+                len(n.L), kw_str,
+            )
+
         _log.success(
-            "Batch ingestion complete | extracted={}  added={}  bank_size={}",
-            len(raw_notes),
-            len(added_notes),
-            memory_bank.size(),
+            "Session ingest done | extracted={}  added={}  links={}  "
+            "cross_session_links={}  bank: {} -> {}",
+            len(raw_notes), len(added_notes),
+            link_count, cross_session_links,
+            bank_size_before, memory_bank.size(),
         )
         return added_notes
 
@@ -303,21 +338,29 @@ class BatchIngestor:
         self,
         added_notes: List[Note],
         memory_bank: MemoryBank,
-    ) -> None:
-        """Generate all pairwise links in one LLM call."""
+    ) -> Tuple[int, int]:
+        """Generate all pairwise links in one LLM call.
+
+        Returns:
+            ``(total_links, cross_session_links)`` where *cross_session_links*
+            are links between a new note and a pre-existing note (from an
+            earlier session).
+        """
         if not added_notes:
-            return
+            return 0, 0
+
+        # Track IDs: which notes are new vs pre-existing
+        new_ids = {n.id for n in added_notes}
 
         # Find the most similar existing notes for context
         all_existing = memory_bank.list_notes()
-        all_existing_ids = {n.id for n in all_existing}
 
         # Get neighbors for each added note via ANN
         neighbor_set: set[str] = set()
         for note in added_notes:
             neighbors = memory_bank.ann_search(note.e, k=self._top_k_neighbors)
             for n in neighbors:
-                if n.id not in {a.id for a in added_notes}:
+                if n.id not in new_ids:
                     neighbor_set.add(n.id)
 
         neighbor_notes = [n for n in all_existing if n.id in neighbor_set]
@@ -341,27 +384,36 @@ class BatchIngestor:
             relations = json.loads(raw)
         except json.JSONDecodeError:
             _log.warning("Failed to parse batch link generation — no links created")
-            return
+            return 0, 0
 
         if not isinstance(relations, list):
-            return
+            return 0, 0
 
-        # Apply bidirectional links
+        # Apply bidirectional links, tracking cross-session
         all_note_map = {n.id: n for n in all_existing}
         for n in added_notes:
             all_note_map[n.id] = n
+
+        link_count = 0
+        cross_session = 0
 
         for rel in relations:
             if not isinstance(rel, dict):
                 continue
             source = str(rel.get("source", ""))
             target = str(rel.get("target", ""))
+            relation_type = str(rel.get("relation", "linked"))
             if source not in all_note_map or target not in all_note_map:
                 continue
             if source == target:
                 continue
 
-            # Add bidirectional links (match LinkEvolver._apply_links behaviour)
+            # Determine if this is a cross-session link
+            src_is_new = source in new_ids
+            tgt_is_new = target in new_ids
+            is_cross = src_is_new != tgt_is_new  # XOR: one new, one old
+
+            # Add bidirectional links
             src_note = all_note_map[source]
             tgt_note = all_note_map[target]
             if target not in src_note.L:
@@ -373,6 +425,18 @@ class BatchIngestor:
             memory_bank.update(source, {"L": src_note.L})
             memory_bank.update(target, {"L": tgt_note.L})
 
-        _log.info("Batch links created | relations={}  edges={}",
-                  len(relations),
-                  sum(1 for r in relations if isinstance(r, dict)))
+            link_count += 1
+            if is_cross:
+                cross_session += 1
+
+            _log.debug(
+                "  link | {} --[{}]--> {}  {}",
+                source[:8], relation_type, target[:8],
+                "(cross-session)" if is_cross else "(intra-session)",
+            )
+
+        _log.info(
+            "Links created | total={}  cross_session={}  intra_session={}",
+            link_count, cross_session, link_count - cross_session,
+        )
+        return link_count, cross_session
