@@ -102,3 +102,5 @@ def test_pipeline_five_turns() -> None:
 
         assert len(bank.list_notes()) == 10
         assert backend.calls[:5] == ["NC", "MM", "AA", "SUM", "NC"]
+
+        bank.close()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from .backends.base import InferenceBackend
@@ -48,7 +48,7 @@ class UtilityUpdater:
             reward=reward,
         )
         summary = self.backend.generate(prompt)
-        new_note = self.note_constructor.build(summary, datetime.utcnow())
+        new_note = self.note_constructor.build(summary, datetime.now(timezone.utc))
         memory_bank.add(new_note)
         _log.info("Experience consolidated | new_note_id={}  summary={!r}",
                   new_note.id[:8], summary[:60])

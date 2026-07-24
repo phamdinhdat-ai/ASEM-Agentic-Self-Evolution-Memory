@@ -173,6 +173,37 @@ class NoteConstructor:
         _logger.info("NoteConstructor.build_batch → {} notes", len(notes))
         return notes
 
+    def _parse_note_fields(self, raw: str) -> Tuple[List[str], List[str], str]:
+        """Parse K, G, X from a single-note JSON LLM output."""
+        cleaned = raw.strip()
+        # Strip markdown fences if present
+        if "```json" in cleaned:
+            start = cleaned.find("```json") + 7
+            end = cleaned.find("```", start)
+            if end > start:
+                cleaned = cleaned[start:end].strip()
+        elif cleaned.startswith("```"):
+            # Remove leading/trailing ``` fences
+            cleaned = cleaned.strip("`").strip()
+
+        # Find outermost JSON object
+        brace_start = cleaned.find("{")
+        brace_end = cleaned.rfind("}")
+        if brace_start >= 0 and brace_end > brace_start:
+            cleaned = cleaned[brace_start:brace_end + 1]
+
+        try:
+            data = json.loads(cleaned)
+        except json.JSONDecodeError:
+            _logger.warning("NoteConstructor._parse_note_fields | JSON parse failed, raw={!r}",
+                           raw[:200])
+            return ([], [], "")
+
+        K = list(data.get("keywords", []))
+        G = list(data.get("tags", []))
+        X = str(data.get("description", ""))
+        return (K, G, X)
+
     def _parse_batch_result(
         self, raw: str, expected_count: int
     ) -> List[Tuple[List[str], List[str], str]]:

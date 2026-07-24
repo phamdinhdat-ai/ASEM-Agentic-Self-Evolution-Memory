@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+import gc
 import tempfile
+import time
 
 import numpy as np
 import pytest
@@ -66,3 +68,8 @@ def test_memory_bank_save_load() -> None:
 
         bank.delete(note.id)
         assert bank.ann_search(note.e, k=1) == []
+
+        restored.close()
+        bank.close()
+        gc.collect()
+        time.sleep(0.05)  # allow Windows to release file handles

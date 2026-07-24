@@ -44,11 +44,15 @@ def _note(note_id: str, desc: str) -> Note:
 def test_link_and_evolve() -> None:
     pytest.importorskip("faiss")
 
+    # The current code uses batch evolution with a hardcoded template
+    # and gates evolution on strong relations (extends, contradicts, causal).
+    # The batch evolution template expects JSON with notes containing "id", "keywords",
+    # "tags", "description".
     responses = [
-        # link generation response
-        '[{"source": "new", "target": "n1", "relation": "related"}]',
-        # evolution response for neighbor
-        '{"keywords": ["updated"], "tags": ["tag"], "description": "Updated."}',
+        # link generation response — use "extends" (strong relation) to trigger evolution
+        '[{"source": "new", "target": "n1", "relation": "extends"}]',
+        # batch evolution response for neighbor (matches _EVOLVE_BATCH_TEMPLATE format)
+        '[{"id": "n1", "keywords": ["updated"], "tags": ["tag"], "description": "Updated."}]',
     ]
     backend = _QueueBackend(responses)
 
@@ -71,10 +75,14 @@ def test_link_and_evolve() -> None:
 
         evolver.link_and_evolve(new_note, bank)
 
-        updated_neighbor = bank.ann_search(new_note.e, k=1)[0]
+        updated_neighbor = bank.get_note("n1")
+        assert updated_neighbor is not None
         assert "new" in updated_neighbor.L
         assert updated_neighbor.K == ["updated"]
         assert updated_neighbor.X == "Updated."
 
-        updated_new = bank.ann_search(new_note.e, k=2)[0]
-        assert "n1" in updated_new.L or "new" in updated_new.L
+        updated_new = bank.get_note("new")
+        assert updated_new is not None
+        assert "n1" in updated_new.L
+
+        bank.close()

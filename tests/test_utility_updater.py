@@ -62,3 +62,5 @@ def test_ema_update_converges() -> None:
         updated = bank.list_notes()[0]
         expected = 1.0 - (1.0 - 0.0) * (1 - 0.1) ** 10
         assert abs(updated.q - expected) < 1e-6
+
+        bank.close()

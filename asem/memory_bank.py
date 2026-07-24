@@ -34,6 +34,21 @@ class MemoryBank:
         self._id_map: List[str] = []
         self._rebuild_index()
 
+    def close(self) -> None:
+        """Close the SQLite connection and release file handles.
+
+        Must be called before deleting the database file on Windows.
+        """
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
     def add(self, note: Note) -> None:
         self._set_dim_if_missing(note.e)
         payload = self._note_to_row(note)

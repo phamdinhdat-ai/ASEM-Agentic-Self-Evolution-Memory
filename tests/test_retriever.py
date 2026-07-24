@@ -58,6 +58,8 @@ def test_phase_a_threshold() -> None:
         assert len(results) == 1
         assert results[0].id == "n1"
 
+        bank.close()
+
 
 def test_phase_b_rerank() -> None:
     pytest.importorskip("faiss")
@@ -72,8 +74,13 @@ def test_phase_b_rerank() -> None:
         bank.add(n2)
 
         backend = _EmbedBackend(np.asarray([1.0, 0.0], dtype=float))
-        retriever = HybridRetriever(backend=backend, k1=2, k2=1, delta=0.0, lambda_weight=0.7)
+        retriever = HybridRetriever(
+            backend=backend, k1=2, k2=1, delta=0.0, lambda_weight=0.7,
+            enable_adaptive_lambda=False,  # disable adaptive lambda to use the explicit weight
+        )
 
         results = retriever.retrieve("query", bank)
         assert len(results) == 1
         assert results[0].id == "n2"
+
+        bank.close()

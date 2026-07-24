@@ -56,12 +56,12 @@ def test_huggingface_backend_contract() -> None:
     _skip_if_missing_deps()
 
     cfg = {
-        "model_name_or_path": "gemma3:1b",
+        "model_name_or_path": "sshleifer/tiny-gpt2",
         "pipeline_task": "text-generation",
         "max_new_tokens": 8,
         "temperature": 0.0,
         "device_map": "cpu",
-        "embedder_name": "granite-embedding:latest",
+        "embedder_name": "sentence-transformers/paraphrase-MiniLM-L3-v2",
     }
     backend = HuggingFaceBackend.from_config(cfg)
 
