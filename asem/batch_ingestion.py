@@ -15,7 +15,9 @@ This reduces ingestion from O(turns) to O(1) LLM calls per session.
 
 from __future__ import annotations
 
+import ast
 import json
+import re
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -29,6 +31,65 @@ from .memory_manager import Op
 from .note import Note
 
 _log = get_logger("batch_ingest")
+
+
+def _extract_json(raw: str, expect_array: bool = True) -> Any:
+    """Robust JSON extraction from LLM output.
+
+    Handles common LLM artifacts: markdown fences, leading/trailing text,
+    nested JSON in objects, and malformed quotes.
+
+    Args:
+        raw: Raw LLM output string.
+        expect_array: If True, searches for ``[...]``; else expects ``{...}``.
+
+    Returns:
+        Parsed Python object, or None if parsing fails.
+    """
+    cleaned = raw.strip()
+
+    # 1. Strip markdown fences
+    #    Handles: ```json ... ```, ``` ... ```, and leading/trailing backticks
+    fence_patterns = [
+        (r"```json\s*", r"\s*```"),
+        (r"```\s*", r"\s*```"),
+    ]
+    for open_pat, close_pat in fence_patterns:
+        cleaned = re.sub(rf"^{open_pat}", "", cleaned)
+        cleaned = re.sub(rf"{close_pat}$", "", cleaned)
+
+    # 2. Find the outermost bracket pair
+    open_br = "[" if expect_array else "{"
+    close_br = "]" if expect_array else "}"
+
+    start = cleaned.find(open_br)
+    end = cleaned.rfind(close_br)
+    if start >= 0 and end > start:
+        cleaned = cleaned[start:end + 1]
+
+    # 3. Try direct JSON parse
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # 4. Try ast.literal_eval (handles single-quoted JSON-like structures)
+    try:
+        return ast.literal_eval(cleaned)
+    except (ValueError, SyntaxError):
+        pass
+
+    # 5. Try naive fix: replace single quotes with double quotes
+    #    (only if the content looks like it uses single quotes)
+    if expect_array and cleaned.count("'") > cleaned.count('"'):
+        try:
+            # Replace single quotes only outside of strings (heuristic)
+            fixed = cleaned.replace("'", '"')
+            return json.loads(fixed)
+        except json.JSONDecodeError:
+            pass
+
+    return None
 
 
 class BatchIngestor:
@@ -164,15 +225,25 @@ class BatchIngestor:
         """Extract all atomic facts from the full dialogue in one LLM call."""
         prompt = self._extraction_prompt.format(dialogue=dialogue_text)
         raw = self._backend.generate(prompt)
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            _log.warning("Failed to parse batch extraction JSON — trying fallback")
-            data = self._fallback_extract(dialogue_text)
+        data = _extract_json(raw, expect_array=True)
 
         if isinstance(data, list):
-            return [item for item in data if isinstance(item, dict)]
-        return []
+            filtered = [item for item in data if isinstance(item, dict)]
+            if filtered:
+                return filtered
+
+        # If the LLM returned a dict with a key containing the array, try that
+        if isinstance(data, dict):
+            for key in ("notes", "facts", "results", "data", "items"):
+                if isinstance(data.get(key), list):
+                    return [item for item in data[key] if isinstance(item, dict)]
+
+        _log.warning(
+            "Failed to parse batch extraction JSON — trying fallback\n"
+            "  raw[:500] = {!r}",
+            raw[:500],
+        )
+        return self._fallback_extract(dialogue_text)
 
     def _fallback_extract(self, dialogue_text: str) -> List[Dict[str, Any]]:
         """Fallback: extract per-line when batch JSON parsing fails."""
@@ -251,31 +322,36 @@ class BatchIngestor:
             existing_memory=json.dumps(existing_payloads) if existing_payloads else "[]",
         )
         raw = self._backend.generate(prompt)
-        try:
-            decisions = json.loads(raw)
-        except json.JSONDecodeError:
-            _log.warning("Failed to parse batch memory ops — defaulting to ADD all")
-            return [{"index": i, "op": "ADD", "target_id": None}
-                    for i in range(len(new_notes))]
+        decisions = _extract_json(raw, expect_array=True)
 
-        if not isinstance(decisions, list):
-            return [{"index": i, "op": "ADD", "target_id": None}
-                    for i in range(len(new_notes))]
+        if isinstance(decisions, list) and decisions:
+            # Normalize: ensure each decision has "index", "op", "target_id"
+            normalized = []
+            for d in decisions:
+                if isinstance(d, dict):
+                    normalized.append({
+                        "index": d.get("index", len(normalized)),
+                        "op": str(d.get("op", "ADD")).upper(),
+                        "target_id": d.get("target_id"),
+                    })
+            if normalized:
+                # Build complete decision list, filling gaps
+                decided = {d["index"]: d for d in normalized}
+                result = []
+                for i in range(len(new_notes)):
+                    if i in decided:
+                        result.append(decided[i])
+                    else:
+                        result.append({"index": i, "op": "ADD", "target_id": None})
+                return result
 
-        # Build complete decision list, filling gaps
-        decided = {d.get("index", -1): d for d in decisions if isinstance(d, dict)}
-        result = []
-        for i in range(len(new_notes)):
-            if i in decided:
-                d = decided[i]
-                result.append({
-                    "index": i,
-                    "op": str(d.get("op", "ADD")).upper(),
-                    "target_id": d.get("target_id"),
-                })
-            else:
-                result.append({"index": i, "op": "ADD", "target_id": None})
-        return result
+        _log.warning(
+            "Failed to parse batch memory ops — defaulting to ADD all\n"
+            "  raw[:500] = {!r}",
+            raw[:500],
+        )
+        return [{"index": i, "op": "ADD", "target_id": None}
+                for i in range(len(new_notes))]
 
     # ------------------------------------------------------------------
     # Step 4 — Execute operations
@@ -380,13 +456,21 @@ class BatchIngestor:
             neighbors=json.dumps(neighbor_payloads) if neighbor_payloads else "[]",
         )
         raw = self._backend.generate(prompt)
-        try:
-            relations = json.loads(raw)
-        except json.JSONDecodeError:
-            _log.warning("Failed to parse batch link generation — no links created")
-            return 0, 0
+        relations = _extract_json(raw, expect_array=True)
 
-        if not isinstance(relations, list):
+        if isinstance(relations, dict) and not isinstance(relations, list):
+            # Some models wrap the array in an object: {"relations": [...]}
+            for key in ("relations", "links", "edges", "results", "data"):
+                if isinstance(relations.get(key), list):
+                    relations = relations[key]
+                    break
+
+        if not isinstance(relations, list) or not relations:
+            _log.warning(
+                "Failed to parse batch link generation — no links created\n"
+                "  raw[:500] = {!r}",
+                raw[:500],
+            )
             return 0, 0
 
         # Apply bidirectional links, tracking cross-session

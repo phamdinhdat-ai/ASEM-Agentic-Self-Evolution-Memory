@@ -9,7 +9,7 @@ from typing import List, Optional, Tuple
 
 from .backends.base import InferenceBackend
 from .logging_utils import get_logger
-from .note import Note
+from .note import Note, _try_extract_json
 
 _log = get_logger("S2.manager")
 
@@ -60,9 +60,8 @@ class MemoryManager:
         return self.prompt_template.format(content=x, memory=json.dumps(context))
 
     def _parse_decision(self, raw: str) -> Tuple[Optional[Op], Optional[str]]:
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
+        data = _try_extract_json(raw, expect_array=False)
+        if not isinstance(data, dict):
             return None, None
 
         op_value = str(data.get("op", "")).upper()

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 import json
@@ -14,6 +16,48 @@ from .backends.base import InferenceBackend
 from .logging_utils import get_logger
 
 _logger = get_logger(__name__)
+
+
+def _try_extract_json(raw: str, expect_array: bool = True) -> Any:
+    """Robust JSON extraction from LLM output.
+
+    Handles markdown fences, leading/trailing text, and single-quoted JSON.
+    """
+    cleaned = raw.strip()
+
+    # 1. Strip markdown fences
+    for open_pat, close_pat in [(r"```json\s*", r"\s*```"), (r"```\s*", r"\s*```")]:
+        cleaned = re.sub(rf"^{open_pat}", "", cleaned)
+        cleaned = re.sub(rf"{close_pat}$", "", cleaned)
+
+    # 2. Find outermost bracket pair
+    open_br = "[" if expect_array else "{"
+    close_br = "]" if expect_array else "}"
+    start = cleaned.find(open_br)
+    end = cleaned.rfind(close_br)
+    if start >= 0 and end > start:
+        cleaned = cleaned[start:end + 1]
+
+    # 3. Try direct JSON parse
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # 4. Try ast.literal_eval
+    try:
+        return ast.literal_eval(cleaned)
+    except (ValueError, SyntaxError):
+        pass
+
+    # 5. Try replacing single quotes with double quotes
+    if cleaned.count("'") > cleaned.count('"'):
+        try:
+            return json.loads(cleaned.replace("'", '"'))
+        except json.JSONDecodeError:
+            pass
+
+    return None
 
 
 @dataclass
@@ -175,26 +219,8 @@ class NoteConstructor:
 
     def _parse_note_fields(self, raw: str) -> Tuple[List[str], List[str], str]:
         """Parse K, G, X from a single-note JSON LLM output."""
-        cleaned = raw.strip()
-        # Strip markdown fences if present
-        if "```json" in cleaned:
-            start = cleaned.find("```json") + 7
-            end = cleaned.find("```", start)
-            if end > start:
-                cleaned = cleaned[start:end].strip()
-        elif cleaned.startswith("```"):
-            # Remove leading/trailing ``` fences
-            cleaned = cleaned.strip("`").strip()
-
-        # Find outermost JSON object
-        brace_start = cleaned.find("{")
-        brace_end = cleaned.rfind("}")
-        if brace_start >= 0 and brace_end > brace_start:
-            cleaned = cleaned[brace_start:brace_end + 1]
-
-        try:
-            data = json.loads(cleaned)
-        except json.JSONDecodeError:
+        data = _try_extract_json(raw, expect_array=False)
+        if not isinstance(data, dict):
             _logger.warning("NoteConstructor._parse_note_fields | JSON parse failed, raw={!r}",
                            raw[:200])
             return ([], [], "")
@@ -209,35 +235,13 @@ class NoteConstructor:
     ) -> List[Tuple[List[str], List[str], str]]:
         """Parse a JSON array of note field dicts from batch LLM output.
 
-        Falls back to empty fields for missing/parseable items.
+        Falls back to empty fields for missing/unparseable items.
         """
-        # Strip markdown fences if present
-        cleaned = raw.strip()
-        if "```json" in cleaned:
-            start = cleaned.find("```json") + 7
-            end = cleaned.find("```", start)
-            if end > start:
-                cleaned = cleaned[start:end].strip()
-        elif "```" in cleaned:
-            start = cleaned.find("```") + 3
-            end = cleaned.find("```", start)
-            if end > start:
-                cleaned = cleaned[start:end].strip()
-
-        # Find array brackets
-        bracket_start = cleaned.find("[")
-        bracket_end = cleaned.rfind("]")
-        if bracket_start >= 0 and bracket_end > bracket_start:
-            cleaned = cleaned[bracket_start:bracket_end + 1]
-
-        try:
-            data = json.loads(cleaned)
-        except json.JSONDecodeError:
-            _logger.warning("NoteConstructor._parse_batch_result | JSON parse failed, raw={!r}",
-                           raw[:200])
-            return [([], [], "")] * expected_count
+        data = _try_extract_json(raw, expect_array=True)
 
         if not isinstance(data, list):
+            _logger.warning("NoteConstructor._parse_batch_result | JSON parse failed, raw={!r}",
+                           raw[:200])
             return [([], [], "")] * expected_count
 
         results: List[Tuple[List[str], List[str], str]] = []

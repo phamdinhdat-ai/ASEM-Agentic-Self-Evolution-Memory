@@ -9,7 +9,7 @@ from typing import List, Set
 from .backends.base import InferenceBackend
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
-from .note import Note
+from .note import Note, _try_extract_json  # robust JSON parser for LLM output
 
 _log = get_logger("S3.linker")
 
@@ -109,10 +109,7 @@ class LinkEvolver:
             neighbors=json.dumps([self._note_payload(n) for n in neighbors]),
         )
         raw = self.backend.generate(prompt)
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return []
+        data = _try_extract_json(raw, expect_array=True)
         if isinstance(data, list):
             return [item for item in data if isinstance(item, dict)]
         return []
@@ -158,10 +155,7 @@ class LinkEvolver:
             new_note=json.dumps(self._note_payload(m_new)),
         )
         raw = self.backend.generate(prompt)
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return []
+        data = _try_extract_json(raw, expect_array=True)
 
         if not isinstance(data, list):
             return []
@@ -207,9 +201,8 @@ class LinkEvolver:
             new_note=self._note_payload(m_new),
         )
         raw = self.backend.generate(prompt)
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
+        data = _try_extract_json(raw, expect_array=False)
+        if not isinstance(data, dict):
             return None
 
         keywords = list(data.get("keywords", note.K))

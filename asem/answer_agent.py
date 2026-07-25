@@ -8,7 +8,7 @@ from typing import List, Tuple
 
 from .backends.base import InferenceBackend
 from .logging_utils import get_logger
-from .note import Note
+from .note import Note, _try_extract_json
 
 _log = get_logger("S4.answer")
 
@@ -52,9 +52,8 @@ class AnswerAgent:
         return self.backend.generate(prompt)
 
     def _parse_response(self, raw: str) -> Tuple[List[str], str] | None:
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
+        data = _try_extract_json(raw, expect_array=False)
+        if not isinstance(data, dict):
             return None
 
         selected_ids = data.get("selected_ids")
