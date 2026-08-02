@@ -6,6 +6,8 @@ import json
 from dataclasses import dataclass
 from typing import List, Set
 
+import numpy as np
+
 from .backends.base import InferenceBackend
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
@@ -46,12 +48,33 @@ class LinkEvolver:
     link_prompt_template: str
     evolve_prompt_template: str
     k: int = 5
+    link_tau: float = 0.35  # only feed the S3 link LLM neighbors at/above this cosine
 
     def link_and_evolve(self, m_new: Note, M: MemoryBank) -> None:
         neighbors = M.ann_search(m_new.e, k=self.k)
         if not neighbors:
             _log.debug("No neighbors found for linking")
             return
+
+        # A note must never be its own neighbor — drop the just-added note
+        # from the candidate set (it scores 1.0 against itself and would
+        # otherwise consume a neighbor slot / self-link).
+        neighbors = [n for n in neighbors if n.id != m_new.id]
+        if not neighbors:
+            _log.debug("No neighbors after self-exclusion for linking")
+            return
+
+        # NGMC Tier 1 — retrieval-proposed linking: only feed the link LLM
+        # neighbors that are genuinely related (cosine >= link_tau). This cuts
+        # the S3 prompt size and focuses generation on real relations.
+        if self.link_tau > 0.0:
+            neighbors = [
+                n for n in neighbors
+                if self._cosine(m_new.e, n.e) >= self.link_tau
+            ]
+            if not neighbors:
+                _log.debug("No neighbors above link_tau={} for linking", self.link_tau)
+                return
 
         relations = self._generate_links(m_new, neighbors)
         self._apply_links(m_new, neighbors, relations, M)
@@ -234,6 +257,15 @@ class LinkEvolver:
             "tags": note.G,
             "description": note.X,
         }
+
+    @staticmethod
+    def _cosine(a: np.ndarray, b: np.ndarray) -> float:
+        a = np.asarray(a, dtype=float)
+        b = np.asarray(b, dtype=float)
+        denom = np.linalg.norm(a) * np.linalg.norm(b)
+        if denom == 0:
+            return 0.0
+        return float(np.dot(a, b) / denom)
 
     @staticmethod
     def _add_link(note: Note, target_id: str) -> None:

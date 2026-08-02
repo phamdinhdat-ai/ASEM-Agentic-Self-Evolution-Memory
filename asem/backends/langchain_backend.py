@@ -34,7 +34,7 @@ class LangChainBackend(InferenceBackend):
             return str(response.content)
         return str(response)
 
-    def embed(self, text: str) -> np.ndarray:
+    def _embed(self, text: str) -> np.ndarray:
         vector = self._embedder.embed_query(text)
         return np.asarray(vector, dtype=float)
 

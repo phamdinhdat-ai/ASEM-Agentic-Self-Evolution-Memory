@@ -15,6 +15,7 @@ from asem.note import NoteConstructor
 from asem.pipeline import ASEMPipeline
 from asem.retriever import HybridRetriever
 from asem.utility_updater import UtilityUpdater
+from asem.write_gate import WriteGate
 
 
 class _TaggedBackend:
@@ -89,6 +90,11 @@ def test_pipeline_five_turns() -> None:
             retriever=retriever,
             answer_agent=answer_agent,
             utility_updater=updater,
+            # The write gate is disabled here: _TaggedBackend returns the same
+            # embedding for every text, which the novelty gate would (correctly)
+            # classify as a near-duplicate and never write. The gate itself is
+            # covered by tests/test_write_gate.py.
+            write_gate=WriteGate(enabled=False),
         )
 
         for i in range(5):

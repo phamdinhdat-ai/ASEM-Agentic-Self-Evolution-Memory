@@ -5067,3 +5067,4 @@
 2026-07-03 07:00:26.587 | DEBUG    | note                     | asem.note:build:106 | NoteConstructor.build → note cb4fd2cd-8a69-486c-a952-2c4bd3a5ade4 | K=['caroline', 'inclusivity', 'support'] G=['personal', 'event', 'question'] X='Melanie expressed appreciation for inclusivity and support and asked Caroline wh'
 2026-07-03 07:00:26.758 | DEBUG    | note                     | asem.note:build:80 | NoteConstructor.build | content="[Session 2 — 1:14 pm on 25 May, 2023] [Caroline] I'm thrilled to make a family for kids who need one. It'll be tough as "
 2026-07-03 07:00:26.758 | DEBUG    | langchain_backend        | asem.backends.langchain_backend:generate:25 | LLM generate | prompt_len=2593 | prompt_preview='You are a precise memory extraction agent. Your job is to distill the key information from a single dialogue turn or tex'
+2026-08-02 10:44:49.492 | INFO     | asem.note    | NoteConstructor.build_batch | turns=18

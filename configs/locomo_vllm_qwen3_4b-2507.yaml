@@ -15,3 +15,10 @@ hyperparameters:
   lambda: 0.40
   alpha: 0.10
   q0: 0.50
+
+# NGMC write gate — skip the S2 LLM for clearly-novel (ADD) / near-duplicate (NOOP) turns
+write_gate:
+  enabled: true
+  tau_high: 0.45      # novelty = 1 - max_sim; ADD when novelty >= tau_high
+  tau_redund: 0.92    # NOOP when max_sim >= tau_redund (near-duplicate)
+link_tau: 0.35        # only feed the S3 link LLM neighbors at/above this cosine

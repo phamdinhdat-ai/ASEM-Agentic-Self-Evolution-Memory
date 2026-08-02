@@ -20,10 +20,24 @@ set -euo pipefail
 # ------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------
+export PYTHONPATH="${PYTHONPATH:-.}"
 
+# Load credentials from .env if present (OPENAI_API_KEY, OPENAI_BASE_URL, ...)
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+fi
+
+API_KEY="${OPENAI_API_KEY:-}"
+BASE_URL="${OPENAI_BASE_URL:-https://api.deepseek.com}"
+CONFIG="${CONFIG:-configs/locomo_openai.yaml}"
+RESULTS_DIR="data/benchmarks/results"
+DB_DIR="data/benchmarks/eval_banks_locomo10"
 
 mkdir -p "${RESULTS_DIR}" "${DB_DIR}"
-ss
+
 MODE="${1:-help}"
 
 case "${MODE}" in

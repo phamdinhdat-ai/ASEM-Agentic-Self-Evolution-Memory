@@ -46,6 +46,7 @@ import re
 import sys
 import traceback
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -651,6 +652,46 @@ def evaluate_system(
     return preds_so_far, refs_so_far, enriched_preds
 
 
+def _eval_system_worker(
+    sys_name: str,
+    config_path: str,
+    db_dir: str,
+    eval_items: List[Dict[str, Any]],
+    conversation_groups: List[List[Dict[str, Any]]],
+    metric_names: List[str],
+    preds_dir: str,
+    conv_batches: Optional[Dict[str, List[Tuple[str, List[str]]]]] = None,
+) -> Tuple[List[str], List[str], List[Dict[str, Any]]]:
+    """Evaluate a single system in a worker process (for ``--parallel``).
+
+    Builds a fresh runner (isolated MemoryBank + backend) inside the worker
+    and returns ``(preds, refs, enriched)`` so the parent can merge results
+    into the shared results JSON without concurrent writes.
+    """
+    runners = build_runners_from_systems_module(
+        config_path=config_path,
+        db_dir=db_dir,
+        systems=[sys_name],
+    )
+    runner = runners.get(sys_name)
+    if runner is None:
+        raise RuntimeError(f"Unknown system in worker: {sys_name}")
+
+    preds, refs, enriched = evaluate_system(
+        runner=runner,
+        eval_items=eval_items,
+        conversation_groups=conversation_groups,
+        metric_names=metric_names,
+        preds_dir=preds_dir,
+        sys_name=sys_name,
+        results={},
+        results_path="",
+        flush_fn=lambda _r: None,
+        conv_batches=conv_batches,
+    )
+    return preds, refs, enriched
+
+
 # ---------------------------------------------------------------------------
 # Ablation support
 # ---------------------------------------------------------------------------
@@ -1126,15 +1167,23 @@ Examples:
         action="store_true",
         help="Run LLM-as-a-Judge evaluation on all predictions after answering.",
     )
+    parser.add_argument(
+        "--parallel",
+        type=int,
+        default=0,
+        help="Run systems concurrently with N worker processes (0 = sequential). "
+             "Speeds up multi-system runs at the cost of higher API throughput.",
+    )
     args = parser.parse_args()
 
     # Load config early and apply logging settings from it
     import yaml as _yaml  # noqa: E402
-    from asem.logging_utils import setup_logging_from_config  # noqa: E402
+    from asem.logging_utils import setup_logging  # noqa: E402
     try:
         with open(args.config, "r", encoding="utf-8") as _fh:
             _cfg = _yaml.safe_load(_fh)
-        setup_logging_from_config(_cfg)
+        _log = (_cfg or {}).get("logging", {}) or {}
+        setup_logging(level=_log.get("level", "INFO"), log_file=_log.get("log_file"))
     except Exception:
         pass  # fall back to LOG_LEVEL env var / defaults
 
@@ -1184,6 +1233,11 @@ Examples:
     if args.ablate:
         # Ablation mode — build only the systems we need
         runners = {}
+    elif args.parallel:
+        # Parallel mode — defer runner construction to worker processes so
+        # each worker builds its own isolated bank + backend (avoids sharing
+        # open SQLite connections / API clients across a process fork).
+        runners = {}
     else:
         runners = build_runners_from_systems_module(
             config_path=args.config,
@@ -1191,7 +1245,10 @@ Examples:
             systems=args.systems,
             max_history_turns=args.max_history_turns,
         )
-    print(f"  Systems: {list(runners.keys()) if runners else '(ablation mode)'}")
+    if args.parallel and not args.ablate:
+        print(f"  Systems (built in workers): {args.systems or ALL_SYSTEMS}")
+    else:
+        print(f"  Systems: {list(runners.keys()) if runners else '(ablation mode)'}")
 
     # ------------------------------------------------------------------
     # Step 3: Run evaluation
@@ -1266,36 +1323,65 @@ Examples:
         # --- Standard evaluation path ---
         all_enriched_preds: Dict[str, List[Dict[str, Any]]] = {}
 
-        for sys_name, runner in runners.items():
-            key = f"locomo10/{sys_name}"
+        if args.parallel and not args.ablate:
+            # Parallel: run each pending system in its own worker process.
+            pending_systems = [
+                s for s in (args.systems or ALL_SYSTEMS)
+                if s in ALL_SYSTEMS and f"locomo10/{s}" not in results
+            ]
+            print(f"\n  Parallel evaluation with {args.parallel} workers: "
+                  f"{', '.join(pending_systems)}")
+            with ProcessPoolExecutor(max_workers=args.parallel) as executor:
+                futures = {
+                    executor.submit(
+                        _eval_system_worker,
+                        sys_name, args.config, db_dir, eval_data,
+                        conversation_groups, args.metrics, preds_dir,
+                        conv_batches,
+                    ): sys_name
+                    for sys_name in pending_systems
+                }
+                for future in as_completed(futures):
+                    sys_name = futures[future]
+                    preds, refs, enriched_preds = future.result()
+                    all_enriched_preds[sys_name] = enriched_preds
+                    key = f"locomo10/{sys_name}"
+                    final_metrics = compute_metrics(preds, refs, args.metrics)
+                    results[key] = final_metrics
+                    results.pop(f"locomo10/{sys_name}/__partial__", None)
+                    _flush_results(results)
+                    print(f"    [{sys_name}] FINAL: {final_metrics}")
+        else:
+            for sys_name, runner in runners.items():
+                key = f"locomo10/{sys_name}"
 
-            if key in results:
-                print(f"\n  [{sys_name}] already completed — skipping")
-                continue
+                if key in results:
+                    print(f"\n  [{sys_name}] already completed — skipping")
+                    continue
 
-            print(f"\n  [{sys_name}] running on {len(eval_data)} examples ...")
+                print(f"\n  [{sys_name}] running on {len(eval_data)} examples ...")
 
-            preds, refs, enriched_preds = evaluate_system(
-                runner=runner,
-                eval_items=eval_data,
-                conversation_groups=conversation_groups,
-                metric_names=args.metrics,
-                preds_dir=preds_dir,
-                sys_name=sys_name,
-                results=results,
-                results_path=args.results,
-                flush_fn=_flush_results,
-                conv_batches=conv_batches,
-            )
+                preds, refs, enriched_preds = evaluate_system(
+                    runner=runner,
+                    eval_items=eval_data,
+                    conversation_groups=conversation_groups,
+                    metric_names=args.metrics,
+                    preds_dir=preds_dir,
+                    sys_name=sys_name,
+                    results=results,
+                    results_path=args.results,
+                    flush_fn=_flush_results,
+                    conv_batches=conv_batches,
+                )
 
-            all_enriched_preds[sys_name] = enriched_preds
+                all_enriched_preds[sys_name] = enriched_preds
 
-            # Final metrics
-            final_metrics = compute_metrics(preds, refs, args.metrics)
-            results[key] = final_metrics
-            results.pop(f"locomo10/{sys_name}/__partial__", None)
-            _flush_results(results)
-            print(f"    [{sys_name}] FINAL: {final_metrics}")
+                # Final metrics
+                final_metrics = compute_metrics(preds, refs, args.metrics)
+                results[key] = final_metrics
+                results.pop(f"locomo10/{sys_name}/__partial__", None)
+                _flush_results(results)
+                print(f"    [{sys_name}] FINAL: {final_metrics}")
 
         # --- Judge evaluation (if enabled) ---
         if args.judge:

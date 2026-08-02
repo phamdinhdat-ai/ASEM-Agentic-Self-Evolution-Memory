@@ -17,6 +17,10 @@ try:
 except ImportError:  # pragma: no cover - optional at runtime
     faiss = None
 
+# Use the FAISS index only for banks at/above this size. Below it, the
+# in-memory numpy dot product is faster and avoids index rebuilds entirely.
+_FAISS_MIN_SIZE = 2048
+
 
 class MemoryBank:
     """FAISS-backed ANN index with SQLite metadata storage."""
@@ -32,7 +36,9 @@ class MemoryBank:
         self._index = None
         self._matrix: Optional[np.ndarray] = None
         self._id_map: List[str] = []
-        self._rebuild_index()
+        self._id_pos: Dict[str, int] = {}
+        self._needs_rebuild: bool = False
+        self._sync_vectors()
 
     def close(self) -> None:
         """Close the SQLite connection and release file handles.
@@ -50,16 +56,50 @@ class MemoryBank:
             pass
 
     def add(self, note: Note) -> None:
+        if note.e is None:
+            raise ValueError(
+                "MemoryBank.add requires an embedding; call "
+                "NoteConstructor.complete_embedding() before storing a note."
+            )
         self._set_dim_if_missing(note.e)
-        payload = self._note_to_row(note)
-        columns = ",".join(payload.keys())
-        placeholders = ",".join(["?"] * len(payload))
-        self._conn.execute(
-            f"INSERT OR REPLACE INTO notes ({columns}) VALUES ({placeholders})",
-            list(payload.values()),
-        )
+        if note.id in self._id_pos:
+            pos = self._id_pos[note.id]
+            self._matrix[pos] = self._normalize(np.asarray(note.e, dtype="float32"))
+        else:
+            self._append_vector(note.id, note.e)
+        self._upsert_row(note)
         self._conn.commit()
-        self._rebuild_index()
+        self._needs_rebuild = True
+
+    def add_many(self, notes: Iterable[Note]) -> None:
+        """Insert many notes in a single transaction with one index update.
+
+        Prefer this over calling :meth:`add` in a loop during batch
+        ingestion: it issues one INSERT batch and one commit instead of
+        one per note.
+        """
+        notes = list(notes)
+        if not notes:
+            return
+        if any(n.e is None for n in notes):
+            raise ValueError(
+                "MemoryBank.add_many requires embeddings; call "
+                "NoteConstructor.complete_embedding() before storing notes."
+            )
+        self._set_dim_if_missing(notes[0].e)
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO notes (id, c, t, K, G, X, e, L, z, q) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [list(self._note_to_row(n).values()) for n in notes],
+        )
+        for note in notes:
+            if note.id in self._id_pos:
+                pos = self._id_pos[note.id]
+                self._matrix[pos] = self._normalize(np.asarray(note.e, dtype="float32"))
+            else:
+                self._append_vector(note.id, note.e)
+        self._conn.commit()
+        self._needs_rebuild = True
 
     def update(self, note_id: str, delta: Dict[str, Any]) -> None:
         note = self._get_note(note_id)
@@ -83,28 +123,45 @@ class MemoryBank:
     def delete(self, note_id: str) -> None:
         self._conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
         self._conn.commit()
-        self._rebuild_index()
+        if note_id not in self._id_pos:
+            return
+        pos = self._id_pos.pop(note_id)
+        last = len(self._id_map) - 1
+        if pos != last:
+            self._matrix[pos] = self._matrix[last]
+            self._id_map[pos] = self._id_map[last]
+            self._id_pos[self._id_map[pos]] = pos
+        self._id_map.pop()
+        self._needs_rebuild = True
 
     def clear(self) -> None:
-        """Remove all notes from the bank and rebuild the (empty) index."""
+        """Remove all notes from the bank and reset the in-memory index."""
         self._conn.execute("DELETE FROM notes")
         self._conn.commit()
-        self._rebuild_index()
+        self._matrix = None
+        self._id_map = []
+        self._id_pos = {}
+        self._index = None
+        self._needs_rebuild = False
 
     def ann_search(self, vector: np.ndarray, k: int) -> List[Note]:
-        if not self._id_map:
+        n = len(self._id_map)
+        if n == 0:
             return []
         query = self._normalize(vector).reshape(1, -1)
-        if self._index is not None:
-            _, indices = self._index.search(query, k)
-            hits = [self._id_map[i] for i in indices[0] if i >= 0]
-            return self._get_notes(hits)
-
-        if self._matrix is None or self._matrix.size == 0:
-            return []
-
-        scores = np.dot(self._matrix, query.reshape(-1))
-        top = np.argsort(scores)[::-1][:k]
+        # FAISS is only used for large banks (lazy rebuild). At research
+        # scale, the in-memory numpy path is faster and rebuild-free.
+        if faiss is not None and n >= _FAISS_MIN_SIZE:
+            if self._index is None or self._needs_rebuild:
+                self._rebuild_index()
+            if self._index is not None:
+                _, indices = self._index.search(query, k)
+                hits = [self._id_map[i] for i in indices[0] if i >= 0]
+                return self._get_notes(hits)
+        scores = self._matrix[:n] @ query.reshape(-1)
+        # Stable argsort on the negated score so ties resolve to the lowest
+        # bank index first (descending similarity), matching FAISS.
+        top = np.argsort(-scores, kind="stable")[:k]
         hits = [self._id_map[int(i)] for i in top]
         return self._get_notes(hits)
 
@@ -333,32 +390,60 @@ class MemoryBank:
             return vec
         return vec / norm
 
-    def _rebuild_index(self) -> None:
-        if self._dim is None:
-            self._index = None
-            self._matrix = None
-            self._id_map = []
-            return
-
-        self._index = faiss.IndexFlatIP(self._dim) if faiss is not None else None
+    def _sync_vectors(self) -> None:
+        """Load all embeddings into the in-memory matrix (called once on open)."""
         self._matrix = None
         self._id_map = []
-
+        self._id_pos = {}
+        self._needs_rebuild = False
+        if self._dim is None:
+            return
         rows = self._conn.execute("SELECT id, e FROM notes").fetchall()
         if not rows:
             return
-
-        vectors = []
-        for row in rows:
+        capacity = max(64, len(rows) * 2)
+        mat = np.empty((capacity, self._dim), dtype="float32")
+        for i, row in enumerate(rows):
             vec = np.asarray(json.loads(row["e"]), dtype="float32")
-            vectors.append(self._normalize(vec))
+            mat[i] = self._normalize(vec)
             self._id_map.append(row["id"])
+        self._matrix = mat
+        self._id_pos = {nid: i for i, nid in enumerate(self._id_map)}
 
-        matrix = np.vstack(vectors)
-        if self._index is not None:
-            self._index.add(matrix)
-        else:
-            self._matrix = matrix
+    def _append_vector(self, note_id: str, vec: np.ndarray) -> None:
+        n = len(self._id_map)
+        if self._matrix is None or self._matrix.shape[0] < n + 1:
+            dim = self._dim if self._dim is not None else int(np.asarray(vec).shape[0])
+            capacity = max(64, (n + 1) * 2)
+            new_mat = np.empty((capacity, dim), dtype="float32")
+            if self._matrix is not None and n > 0:
+                new_mat[:n] = self._matrix[:n]
+            self._matrix = new_mat
+        v = self._normalize(np.asarray(vec, dtype="float32")).reshape(-1)
+        self._matrix[n] = v
+        self._id_map.append(note_id)
+        self._id_pos[note_id] = n
+
+    def _upsert_row(self, note: Note) -> None:
+        payload = self._note_to_row(note)
+        columns = ",".join(payload.keys())
+        placeholders = ",".join(["?"] * len(payload))
+        self._conn.execute(
+            f"INSERT OR REPLACE INTO notes ({columns}) VALUES ({placeholders})",
+            list(payload.values()),
+        )
+
+    def _rebuild_index(self) -> None:
+        """(Re)build the FAISS index from the in-memory matrix.
+
+        The numpy matrix is the source of truth; callers only need this
+        for the large-bank FAISS path (n >= _FAISS_MIN_SIZE).
+        """
+        n = len(self._id_map)
+        self._index = faiss.IndexFlatIP(self._dim) if faiss is not None else None
+        if self._index is not None and n > 0:
+            self._index.add(self._matrix[:n])
+        self._needs_rebuild = False
 
     def _note_to_row(self, note: Note) -> Dict[str, Any]:
         return {
@@ -381,12 +466,16 @@ class MemoryBank:
         return self._row_to_note(row)
 
     def _get_notes(self, note_ids: Iterable[str]) -> List[Note]:
-        notes = []
-        for note_id in note_ids:
-            note = self._get_note(note_id)
-            if note is not None:
-                notes.append(note)
-        return notes
+        ids = list(note_ids)
+        if not ids:
+            return []
+        unique_ids = list(dict.fromkeys(ids))
+        placeholders = ",".join("?" * len(unique_ids))
+        rows = self._conn.execute(
+            f"SELECT * FROM notes WHERE id IN ({placeholders})", unique_ids
+        ).fetchall()
+        row_map = {row["id"]: row for row in rows}
+        return [self._row_to_note(row_map[i]) for i in ids if i in row_map]
 
     def _row_to_note(self, row: sqlite3.Row) -> Note:
         return Note(
