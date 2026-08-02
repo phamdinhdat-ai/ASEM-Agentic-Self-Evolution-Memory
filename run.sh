@@ -20,15 +20,10 @@ set -euo pipefail
 # ------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------
-export PYTHONPATH="${PYTHONPATH:-.}"
-API_KEY="${OPENAI_API_KEY:-sk-15130c9d25aa46c6bf76a023124ad3a4}"
-BASE_URL="${OPENAI_BASE_URL:-https://api.deepseek.com}"
-CONFIG="${CONFIG:-configs/locomo_openai.yaml}"
-RESULTS_DIR="data/benchmarks/results"
-DB_DIR="data/benchmarks/eval_banks_locomo10"
+
 
 mkdir -p "${RESULTS_DIR}" "${DB_DIR}"
-
+ss
 MODE="${1:-help}"
 
 case "${MODE}" in
