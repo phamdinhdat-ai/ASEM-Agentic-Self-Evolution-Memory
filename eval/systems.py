@@ -23,6 +23,7 @@ from asem.note import Note, NoteConstructor
 from asem.pipeline import ASEMPipeline
 from asem.retriever import HybridRetriever
 from asem.utility_updater import UtilityUpdater
+from asem.write_gate import WriteGate
 from eval.baselines import (
     AtomicLinking,
     FullContext,
@@ -128,8 +129,8 @@ class ASEMSystem:
 
     @property
     def bank_size(self) -> int:
-        """Return the number of notes currently in the memory bank."""
-        return len(self.pipeline.memory_bank.list_notes())
+        """Return the number of notes currently in the memory bank (fast)."""
+        return self.pipeline.memory_bank.size()
 
     def answer(self, query: str, history: List[str]) -> str:
         self._logger.debug("ASEMSystem.answer | query={!r} | history_turns={} | bank_size={} | pre_ingested={}",
@@ -327,11 +328,13 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     memory_manager = MemoryManager(
         backend=backend, prompt_template=_MEMORY_MANAGER_PROMPT,
     )
+    wg_cfg = cfg.get("write_gate", {}) or {}
     link_evolver = LinkEvolver(
         backend=backend,
         link_prompt_template=link_prompt,
         evolve_prompt_template=evolve_prompt,
         k=hp["k"],
+        link_tau=float(cfg.get("link_tau", 0.35)),
     )
     retriever = HybridRetriever(
         backend=backend,
@@ -349,6 +352,11 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
         summary_prompt_template=_SUMMARY_PROMPT,
         note_constructor=note_constructor,
     )
+    write_gate = WriteGate(
+        enabled=bool(wg_cfg.get("enabled", True)),
+        tau_high=float(wg_cfg.get("tau_high", 0.45)),
+        tau_redund=float(wg_cfg.get("tau_redund", 0.92)),
+    )
 
     _ensure_dir(db_dir)
     bank = _make_bank(db_dir, "asem")
@@ -361,6 +369,7 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
         retriever=retriever,
         answer_agent=answer_agent,
         utility_updater=utility_updater,
+        write_gate=write_gate,
     )
 
     return ASEMSystem(pipeline=pipeline)
@@ -393,6 +402,7 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
         link_prompt_template=link_prompt,
         evolve_prompt_template=evolve_prompt,
         k=hp["k"],
+        link_tau=float(cfg.get("link_tau", 0.35)),
     )
     retriever = EnhancedHybridRetriever(
         backend=backend,
@@ -422,6 +432,12 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
         q0=hp["q0"],
         top_k_neighbors=hp.get("k", 5),
     )
+    wg_cfg = cfg.get("write_gate", {}) or {}
+    write_gate = WriteGate(
+        enabled=bool(wg_cfg.get("enabled", True)),
+        tau_high=float(wg_cfg.get("tau_high", 0.45)),
+        tau_redund=float(wg_cfg.get("tau_redund", 0.92)),
+    )
 
     _ensure_dir(db_dir)
     bank = _make_bank(db_dir, "asem_v2")
@@ -434,6 +450,7 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
         retriever=retriever,
         answer_agent=answer_agent,
         utility_updater=utility_updater,
+        write_gate=write_gate,
     )
 
     return ASEMSystemV2(pipeline=pipeline, batch_ingestor=batch_ingestor)

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import json
 import uuid
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -70,7 +70,7 @@ class Note:
     K: List[str]
     G: List[str]
     X: str
-    e: np.ndarray
+    e: Optional[np.ndarray]   # None until NoteConstructor.complete_embedding()
     L: List[str]
     z: np.ndarray
     q: float
@@ -83,7 +83,7 @@ class Note:
             "K": list(self.K),
             "G": list(self.G),
             "X": self.X,
-            "e": self.e.tolist(),
+            "e": None if self.e is None else self.e.tolist(),
             "L": list(self.L),
             "z": self.z.tolist(),
             "q": float(self.q),
@@ -135,7 +135,14 @@ class NoteConstructor:
         "Output ONLY the JSON array. No markdown fences, no extra text."
     )
 
-    def build(self, content: str, timestamp: datetime) -> Note:
+    def build(
+        self, content: str, timestamp: datetime, embed_e: bool = True
+    ) -> Note:
+        """Build a note. When ``embed_e=False`` the content+K+G+X embedding
+        is deferred (``note.e`` is None) — call :meth:`complete_embedding`
+        before storing. ``z`` (raw-content embedding) is always computed so
+        the write gate and similarity search can run without the extra embed.
+        """
         _logger.debug("NoteConstructor.build | content={!r}", content[:120])
 
         prompt = self.prompt_template.format(content=content)
@@ -147,7 +154,7 @@ class NoteConstructor:
                            content[:80], raw[:100])
 
         e_text = " ".join([content, " ".join(K), " ".join(G), X])
-        e_vec = self.backend.embed(e_text)
+        e_vec = self.backend.embed(e_text) if embed_e else None
         z_vec = self.backend.embed(content)
 
         note = Note(
@@ -166,14 +173,28 @@ class NoteConstructor:
                       note.id, K[:3], G[:3], X[:80])
         return note
 
+    def complete_embedding(self, note: Note) -> Note:
+        """Compute the note's content+K+G+X embedding if not yet computed.
+
+        Used with ``embed_e=False`` so notes that are never written (NOOP /
+        DELETE) never pay for the embedding.
+        """
+        if note.e is None:
+            e_text = " ".join([note.c, " ".join(note.K), " ".join(note.G), note.X])
+            note.e = self.backend.embed(e_text)
+        return note
+
     def build_batch(
-        self, contents: List[str], timestamp: datetime
+        self, contents: List[str], timestamp: datetime, embed_e: bool = True
     ) -> List[Note]:
         """Build notes for multiple turns in a single LLM call.
 
         Args:
             contents: List of content strings (one per turn).
             timestamp: Base timestamp for all notes.
+            embed_e: If False, the content+K+G+X embeddings are deferred
+                (``note.e`` is None); call :meth:`complete_embedding` before
+                storing. ``z`` embeddings are always computed.
 
         Returns:
             List of Note objects, one per content item.
@@ -197,7 +218,7 @@ class NoteConstructor:
         for i, (content, fields) in enumerate(zip(contents, parsed_list)):
             K, G, X = fields
             e_text = " ".join([content, " ".join(K), " ".join(G), X])
-            e_vec = self.backend.embed(e_text)
+            e_vec = self.backend.embed(e_text) if embed_e else None
             z_vec = self.backend.embed(content)
 
             note = Note(

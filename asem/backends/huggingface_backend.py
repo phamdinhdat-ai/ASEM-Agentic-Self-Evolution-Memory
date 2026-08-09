@@ -66,7 +66,7 @@ class HuggingFaceBackend(InferenceBackend):
         self._token_count += prompt_tokens + completion_tokens
         return result
 
-    def embed(self, text: str) -> np.ndarray:
+    def _embed(self, text: str) -> np.ndarray:
         vector = self._embedder.encode(text, convert_to_numpy=True)
         vector = np.asarray(vector)
         if vector.ndim > 1:
