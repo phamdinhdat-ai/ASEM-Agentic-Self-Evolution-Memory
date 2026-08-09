@@ -83,11 +83,33 @@ class LangChainBackend(InferenceBackend):
 
 def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str, Any]) -> Any:
     if provider == "openai":
-        from langchain_openai import ChatOpenAI
+        from langchain_openai import ChatOpenAI 
 
         import os
         kwargs: Dict[str, Any] = {"model": model_name, "temperature": temperature}
         base_url = cfg.get("base_url") or os.environ.get("OPENAI_BASE_URL")
+        enable_reasoning = cfg.get("enable_reasoning", False)
+        if enable_reasoning:
+            kwargs["reasoning"] = {
+                "effort": "high",
+                "summary" : None,
+            }
+            kwargs["extra_body"] = {
+                
+                "chat_template_kwargs": {
+                    "enable_thinking": True
+                }
+            }
+        else:
+            kwargs["reasoning"] = {
+                "effort": "none",
+                "summary" : None,
+            }
+            kwargs["extra_body"] = {
+            "chat_template_kwargs": {
+                "enable_thinking": False
+            }
+        }
         if base_url:
             kwargs["base_url"] = base_url
         return ChatOpenAI(**kwargs)

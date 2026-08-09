@@ -4,6 +4,7 @@ inference:
     provider: "openai"                    # vLLM exposes an OpenAI-compatible /v1/chat/completions endpoint
     model: "Qwen/Qwen3-4B-2507"                    # must match the --served-model-name of your vLLM server
     temperature: 0.0
+    enable_reasoning: true
     embedder_provider: "huggingface"      # vLLM does not serve embeddings; use local HF embedder
     embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
 
