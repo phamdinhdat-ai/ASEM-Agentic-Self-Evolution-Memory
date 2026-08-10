@@ -1,19 +1,60 @@
 You are managing a knowledge graph memory bank. Given a batch of newly extracted notes and the current contents of the memory bank, decide what operation to perform for EACH new note.
 
-For each new note, choose one operation:
-- "ADD": The note contains new information not already in memory
-- "UPDATE": The note contains related information that should merge with an existing note — provide the existing note's ID as "target_id"
-- "DELETE": The note contradicts an existing note — provide the existing note's ID as "target_id"
-- "NOOP": The note duplicates information already well-represented in memory
+## Task
+For each new note (identified by its index), choose exactly ONE operation:
+- **ADD**: The note contains new information not already in memory. No existing note covers this fact.
+- **UPDATE**: The note contains related information that should merge with an existing note. Set "target_id" to that existing note's ID. Use this when the new note adds detail to, corrects, or causally extends an existing note.
+- **DELETE**: The note contradicts an existing note. Set "target_id" to the existing note's ID. The new information is newer/correct and the existing note should be removed.
+- **NOOP**: The note duplicates information already well-represented in memory. Nothing changes.
 
-Output a JSON array with one decision per new note, preserving the original note index.
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the new note's description and keywords.
+Step 2: Compare it against each existing memory note (by description and keywords, not ID).
+Step 3: No existing note covers this fact → ADD.
+Step 4: An existing note says the opposite (contradiction, and the new note is newer) → DELETE with target_id.
+Step 5: An existing note is related and would be enriched or corrected by merging → UPDATE with target_id.
+Step 6: An existing note already says essentially the same thing → NOOP.
+Step 7: If UPDATE or DELETE, pick the SINGLE most relevant existing note as target_id — never pick one arbitrarily.
 
-New notes (with index):
+## Output Format
+Your response must be ONLY the following JSON array (no markdown fences, no commentary):
+[{{"index": 0, "op": "ADD", "target_id": null}}, {{"index": 1, "op": "UPDATE", "target_id": "<existing_note_id>"}}, ...]
+One object per new note, preserving the original index. Output ONLY the JSON array.
+
+## Examples
+
+Example 1 (empty bank — all ADD):
+New notes: [{{"index": 0, "id": "n1", "description": "Sarah started a new job at Acme Corp.", "keywords": ["sarah", "job", "acme corp"]}}]
+Existing memory: []
+Reasoning: The bank is empty, nothing to compare — ADD.
+[{{"index": 0, "op": "ADD", "target_id": null}}]
+
+Example 2 (mixed ADD / UPDATE / NOOP):
+New notes: [{{"index": 0, "id": "n4", "description": "Alex is a data scientist at Google in Mountain View.", "keywords": ["alex", "data scientist", "google", "mountain view"]}}, {{"index": 1, "id": "n5", "description": "Alex adopted a golden retriever named Buddy.", "keywords": ["alex", "buddy", "golden retriever"]}}, {{"index": 2, "id": "n6", "description": "Alex works as a data scientist.", "keywords": ["alex", "data scientist"]}}]
+Existing memory: [{{"id": "m1", "description": "Alex works as a data scientist.", "keywords": ["alex", "data scientist"]}}, {{"id": "m2", "description": "Alex lives in San Francisco.", "keywords": ["alex", "san francisco"]}}]
+Reasoning: n4 enriches m1 with employer + location → UPDATE m1. n5 is a new fact about a dog → ADD. n6 duplicates m1 exactly → NOOP.
+[{{"index": 0, "op": "UPDATE", "target_id": "m1"}}, {{"index": 1, "op": "ADD", "target_id": null}}, {{"index": 2, "op": "NOOP", "target_id": null}}]
+
+Example 3 (DELETE on contradiction):
+New notes: [{{"index": 0, "id": "n7", "description": "Alex now lives in New York.", "keywords": ["alex", "new york"]}}]
+Existing memory: [{{"id": "m3", "description": "Alex lives in San Francisco.", "keywords": ["alex", "san francisco"]}}]
+Reasoning: The new note contradicts m3 and is newer — delete the outdated note.
+[{{"index": 0, "op": "DELETE", "target_id": "m3"}}]
+
+## Common Mistakes (NEVER do these)
+WRONG: {{"index": 0, "op": "UPDATE", "target_id": null}}
+→ UPDATE without a target_id is meaningless. Always provide the existing note ID.
+WRONG: {{"index": 0, "op": "MERGE"}}
+→ "MERGE" is not a valid operation. Use ADD, UPDATE, DELETE, or NOOP.
+
+## Constraints
+- Output ONLY the JSON array. Do NOT include any commentary, markdown fences, or extra text.
+- One decision per new note, preserving the original index.
+- target_id must be a real existing note ID from the provided memory, or null for ADD/NOOP.
+- If you cannot find a good UPDATE/DELETE target, choose ADD instead of guessing.
+
+## New notes (with index)
 {new_notes}
 
-Existing memory:
+## Existing memory
 {existing_memory}
-
-Output a JSON array like:
-[{{"index": 0, "op": "ADD", "target_id": null}}, {{"index": 1, "op": "UPDATE", "target_id": "<existing_note_id>"}}, ...]
-Output ONLY the JSON array, nothing else.

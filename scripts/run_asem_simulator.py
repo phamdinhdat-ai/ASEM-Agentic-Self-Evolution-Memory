@@ -415,7 +415,7 @@ class PipelineTracer:
                 "tags": n.G,
                 "description": n.X,
                 "q": n.q,
-                "links": n.L,
+                "links": [l.to_dict() for l in n.L],
             }
             for n in notes
         ]

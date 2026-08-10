@@ -97,6 +97,33 @@ def test_langchain_backend_contract() -> None:
     assert vec.ndim == 1
 
 
+def test_langchain_backend_normalizes_content_parts() -> None:
+    """generate() must return a plain string even when the provider returns
+    OpenAI-style content parts ([{"type": "text", "text": ...}]) instead of
+    a plain string — otherwise downstream JSON parsers see the repr of the
+    list and extraction silently yields zero notes."""
+    pytest.importorskip("langchain_core")
+
+    class _PartsLLM:
+        def invoke(self, prompt: str):
+            class _Resp:
+                content = [
+                    {"type": "text", "text": '```json\n[{"content": "hi"}]```'},
+                    {"type": "text", "text": "trailer"},
+                ]
+
+            return _Resp()
+
+    class _MockEmbedder:
+        def embed_query(self, text: str):
+            return [0.1, 0.2, 0.3]
+
+    backend = LangChainBackend(llm=_PartsLLM(), embedder=_MockEmbedder())
+    text = backend.generate("hi")
+    assert isinstance(text, str)
+    assert text == '```json\n[{"content": "hi"}]```\ntrailer'
+
+
 def test_build_backend_factory_langchain() -> None:
     pytest.importorskip("langchain_core")
 

@@ -11,7 +11,7 @@ inference:
 
 hyperparameters:
   k1: 20
-  k2: 5
+  k2: 10
   k: 5
   delta: 0.30
   lambda: 0.40

@@ -28,6 +28,22 @@ from asem.pipeline import ASEMPipeline
 from asem.retriever import HybridRetriever
 from asem.utility_updater import UtilityUpdater
 
+# Load API credentials from the project .env (OPENAI_API_KEY, OPENAI_BASE_URL, ...)
+# so `--mode config` works out of the box with LangChain/API backends.
+_dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.exists(_dotenv_path):
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(_dotenv_path, override=False)
+    except ImportError:
+        with open(_dotenv_path, "r", encoding="utf-8") as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _, _v = _line.partition("=")
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+
 NOTE_PROMPT = "ASEM_STAGE=NOTE\nCONTENT:{content}"
 WRITE_PROMPT = "ASEM_STAGE=WRITE_OP\nCONTENT:{content}\nMEMORY:{memory}"
 LINK_PROMPT = "ASEM_STAGE=LINK\nNEW_NOTE:{new_note}\nNEIGHBORS:{neighbors}"
@@ -54,6 +70,7 @@ class DemoBackend(InferenceBackend):
 	"""Deterministic local backend for first-run ASEM demonstrations."""
 
 	def __init__(self, embed_dim: int = 64) -> None:
+		super().__init__()
 		self._embed_dim = embed_dim
 
 	def generate(self, prompt: str, **kwargs) -> str:
@@ -92,7 +109,7 @@ class DemoBackend(InferenceBackend):
 
 		return "{}"
 
-	def embed(self, text: str):
+	def _embed(self, text: str):
 		tokens = re.findall(r"[a-z0-9]+", text.lower())
 		vec = [0.0] * self._embed_dim
 		if not tokens:
@@ -352,14 +369,30 @@ def build_pipeline_from_config(config_path: str, db_path: str) -> ASEMPipeline:
 	note_prompt = _load_text("data/prompts/P1_note_construction.txt")
 	link_prompt = _load_text("data/prompts/P2_link_generation.txt")
 	evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+	mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+	distil_prompt = _load_text("data/prompts/P_distil.txt")
+	summary_prompt = _load_text("data/prompts/P_summary.txt")
+	batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+	batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
 
-	note_constructor = NoteConstructor(backend=backend, prompt_template=note_prompt, q0=hp["q0"])
-	memory_manager = MemoryManager(backend=backend, prompt_template=WRITE_PROMPT)
+	retry_cfg = cfg.get("llm_retry", {}) or {}
+	max_retries = int(retry_cfg.get("max_retries", 0))
+
+	note_constructor = NoteConstructor(
+		backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+		max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
+	)
+	memory_manager = MemoryManager(
+		backend=backend, prompt_template=mem_manager_prompt,
+		max_retries=max_retries,
+	)
 	link_evolver = LinkEvolver(
 		backend=backend,
 		link_prompt_template=link_prompt,
 		evolve_prompt_template=evolve_prompt,
 		k=hp["k"],
+		max_retries=max_retries,
+		evolve_batch_template=batch_evolve_prompt,
 	)
 	retriever = HybridRetriever(
 		backend=backend,
@@ -370,14 +403,20 @@ def build_pipeline_from_config(config_path: str, db_path: str) -> ASEMPipeline:
 	)
 	answer_agent = AnswerAgent(
 		backend=backend,
-		prompt_template=ANSWER_PROMPT,
-		baseline_prompt_template=BASELINE_PROMPT,
+		prompt_template=distil_prompt,
+		baseline_prompt_template=(
+			"Use the retrieved memory notes below to answer the question. "
+			"Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+			"Memory:\n{context}\n\n"
+			"Question: {query}\n\nAnswer:"
+		),
+		max_retries=max_retries,
 	)
 	updater = UtilityUpdater(
 		backend=backend,
 		alpha=hp["alpha"],
 		q0=hp["q0"],
-		summary_prompt_template=SUMMARY_PROMPT,
+		summary_prompt_template=summary_prompt,
 		note_constructor=note_constructor,
 	)
 

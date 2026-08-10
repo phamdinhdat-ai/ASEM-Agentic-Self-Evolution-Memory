@@ -241,31 +241,6 @@ _RETRIEVAL_PROMPT = (
     "Question: {query}\n\nAnswer:"
 )
 
-_MEMORY_MANAGER_PROMPT = (
-    "Decide memory write operation. Output JSON:\n"
-    '{{"op": "ADD|UPDATE|DELETE|NOOP", "target_id": "<note_id or null>"}}\n'
-    "Rules: ADD if new info. UPDATE if similar note exists. "
-    "DELETE if contradicted. NOOP if irrelevant.\n"
-    "Content: {content}\n"
-    "Existing notes: {memory}"
-)
-
-_DISTIL_PROMPT = (
-    "Select the memory notes needed to answer and provide the answer. "
-    "Output JSON:\n"
-    '{{"selected_ids": ["id1", ...], "answer": "concise answer"}}\n'
-    "Query: {query}\n"
-    "Memory notes: {candidates}"
-)
-
-_SUMMARY_PROMPT = (
-    "Summarize this interaction as a memory note. "
-    "Output 1-2 factual sentences capturing what was learned.\n"
-    "Query: {query}\n"
-    "Answer: {answer}\n"
-    "Reward: {reward}"
-)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -321,12 +296,22 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
     link_prompt = _load_text("data/prompts/P2_link_generation.txt")
     evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
 
     note_constructor = NoteConstructor(
-        backend=backend, prompt_template=note_prompt, q0=hp["q0"]
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
     )
     memory_manager = MemoryManager(
-        backend=backend, prompt_template=_MEMORY_MANAGER_PROMPT,
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
     )
     wg_cfg = cfg.get("write_gate", {}) or {}
     link_evolver = LinkEvolver(
@@ -335,6 +320,8 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
         evolve_prompt_template=evolve_prompt,
         k=hp["k"],
         link_tau=float(cfg.get("link_tau", 0.35)),
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
     )
     retriever = HybridRetriever(
         backend=backend,
@@ -343,13 +330,14 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     )
     answer_agent = AnswerAgent(
         backend=backend,
-        prompt_template=_DISTIL_PROMPT,
+        prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
     )
     utility_updater = UtilityUpdater(
         backend=backend,
         alpha=hp["alpha"], q0=hp["q0"],
-        summary_prompt_template=_SUMMARY_PROMPT,
+        summary_prompt_template=summary_prompt,
         note_constructor=note_constructor,
     )
     write_gate = WriteGate(
@@ -387,15 +375,25 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
     extract_prompt = _load_text("data/prompts/P4_batch_note_extraction.txt")
     mem_ops_prompt = _load_text("data/prompts/P5_batch_memory_ops.txt")
     batch_link_prompt = _load_text("data/prompts/P6_batch_link_generation.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
 
     from asem.batch_ingestion import BatchIngestor
     from asem.enhanced_retriever import EnhancedHybridRetriever
 
     note_constructor = NoteConstructor(
         backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
     )
     memory_manager = MemoryManager(
-        backend=backend, prompt_template=_MEMORY_MANAGER_PROMPT,
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
     )
     link_evolver = LinkEvolver(
         backend=backend,
@@ -403,6 +401,8 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
         evolve_prompt_template=evolve_prompt,
         k=hp["k"],
         link_tau=float(cfg.get("link_tau", 0.35)),
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
     )
     retriever = EnhancedHybridRetriever(
         backend=backend,
@@ -415,13 +415,14 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
     )
     answer_agent = AnswerAgent(
         backend=backend,
-        prompt_template=_DISTIL_PROMPT,
+        prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
     )
     utility_updater = UtilityUpdater(
         backend=backend,
         alpha=hp["alpha"], q0=hp["q0"],
-        summary_prompt_template=_SUMMARY_PROMPT,
+        summary_prompt_template=summary_prompt,
         note_constructor=note_constructor,
     )
     batch_ingestor = BatchIngestor(
@@ -431,6 +432,7 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
         link_prompt=batch_link_prompt,
         q0=hp["q0"],
         top_k_neighbors=hp.get("k", 5),
+        max_retries=max_retries,
     )
     wg_cfg = cfg.get("write_gate", {}) or {}
     write_gate = WriteGate(
@@ -474,21 +476,33 @@ def build_baselines(
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
     link_prompt = _load_text("data/prompts/P2_link_generation.txt")
     evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
 
     _ensure_dir(db_dir)
 
     # Shared components that don't hold mutable state
     note_constructor = NoteConstructor(
-        backend=backend, prompt_template=note_prompt, q0=hp["q0"]
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
     )
     memory_manager = MemoryManager(
-        backend=backend, prompt_template=_MEMORY_MANAGER_PROMPT,
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
     )
     link_evolver = LinkEvolver(
         backend=backend,
         link_prompt_template=link_prompt,
         evolve_prompt_template=evolve_prompt,
         k=hp["k"],
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
     )
     retriever = HybridRetriever(
         backend=backend,
@@ -497,13 +511,14 @@ def build_baselines(
     )
     answer_agent = AnswerAgent(
         backend=backend,
-        prompt_template=_DISTIL_PROMPT,
+        prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
     )
     utility_updater = UtilityUpdater(
         backend=backend,
         alpha=hp["alpha"], q0=hp["q0"],
-        summary_prompt_template=_SUMMARY_PROMPT,
+        summary_prompt_template=summary_prompt,
         note_constructor=note_constructor,
     )
 

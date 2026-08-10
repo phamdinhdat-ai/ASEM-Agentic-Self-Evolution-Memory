@@ -20,15 +20,21 @@ import json
 import re
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
 from .backends.base import InferenceBackend
+from .llm_validator import (
+    LLMRetryHandler,
+    validate_batch_notes,
+    validate_link_array,
+    validate_memory_ops,
+)
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .memory_manager import Op
-from .note import Note
+from .note import LinkRecord, Note
 
 _log = get_logger("batch_ingest")
 
@@ -89,6 +95,19 @@ def _extract_json(raw: str, expect_array: bool = True) -> Any:
         except json.JSONDecodeError:
             pass
 
+    # 6. Salvage a truncated array: models often hit their output token cap
+    #    mid-array (large link lists). Every complete object before the cut
+    #    is still valid JSON — cut after the last complete '}' and close the
+    #    bracket. Flat objects make the last '}' the best cut point, so the
+    #    backwards scan typically succeeds on its first try.
+    if expect_array:
+        for cut in range(len(cleaned) - 1, -1, -1):
+            if cleaned[cut] == "}":
+                try:
+                    return json.loads(cleaned[:cut + 1] + "]")
+                except json.JSONDecodeError:
+                    continue
+
     return None
 
 
@@ -107,6 +126,7 @@ class BatchIngestor:
         link_prompt: str,
         q0: float = 0.5,
         top_k_neighbors: int = 10,
+        max_retries: int = 0,
     ) -> None:
         self._backend = backend
         self._extraction_prompt = extraction_prompt
@@ -114,6 +134,12 @@ class BatchIngestor:
         self._link_prompt = link_prompt
         self._q0 = q0
         self._top_k_neighbors = top_k_neighbors
+        self._max_retries = max_retries
+
+    def _retry(self) -> Optional[LLMRetryHandler]:
+        if self._max_retries <= 0:
+            return None
+        return LLMRetryHandler(self._backend.generate, max_retries=self._max_retries)
 
     # ------------------------------------------------------------------
     # Public API
@@ -224,8 +250,17 @@ class BatchIngestor:
     def _extract_notes(self, dialogue_text: str) -> List[Dict[str, Any]]:
         """Extract all atomic facts from the full dialogue in one LLM call."""
         prompt = self._extraction_prompt.format(dialogue=dialogue_text)
-        raw = self._backend.generate(prompt)
-        data = _extract_json(raw, expect_array=True)
+        raw = ""
+        retry = self._retry()
+        if retry is not None:
+            data, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda r: _extract_json(r, expect_array=True),
+                validate_fn=lambda d: validate_batch_notes(d, require_content=True),
+            )
+        else:
+            raw = self._backend.generate(prompt)
+            data = _extract_json(raw, expect_array=True)
 
         if isinstance(data, list):
             filtered = [item for item in data if isinstance(item, dict)]
@@ -267,6 +302,7 @@ class BatchIngestor:
     def _embed_notes(self, extracted: List[Dict[str, Any]]) -> List[Note]:
         """Create Note objects with embeddings for each extracted fact."""
         notes: List[Note] = []
+        dropped = 0
         for item in extracted:
             c = str(item.get("content", ""))
             K = list(item.get("keywords", []))
@@ -274,6 +310,7 @@ class BatchIngestor:
             X = str(item.get("description", ""))
 
             if not c.strip():
+                dropped += 1
                 continue
 
             # Joint embedding (matches NoteConstructor.build)
@@ -293,6 +330,13 @@ class BatchIngestor:
                 q=self._q0,
             )
             notes.append(note)
+        if dropped:
+            _log.warning(
+                "Dropped {} of {} extracted entries — missing non-empty 'content' "
+                "(wrong output shape? keys were: {})",
+                dropped, len(extracted),
+                sorted({tuple(item.keys()) for item in extracted if isinstance(item, dict)}),
+            )
         return notes
 
     # ------------------------------------------------------------------
@@ -321,8 +365,17 @@ class BatchIngestor:
             new_notes=json.dumps(new_payloads),
             existing_memory=json.dumps(existing_payloads) if existing_payloads else "[]",
         )
-        raw = self._backend.generate(prompt)
-        decisions = _extract_json(raw, expect_array=True)
+        raw = ""
+        retry = self._retry()
+        if retry is not None:
+            decisions, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda r: _extract_json(r, expect_array=True),
+                validate_fn=validate_memory_ops,
+            )
+        else:
+            raw = self._backend.generate(prompt)
+            decisions = _extract_json(raw, expect_array=True)
 
         if isinstance(decisions, list) and decisions:
             # Normalize: ensure each decision has "index", "op", "target_id"
@@ -455,8 +508,19 @@ class BatchIngestor:
             new_notes=json.dumps(new_payloads),
             neighbors=json.dumps(neighbor_payloads) if neighbor_payloads else "[]",
         )
-        raw = self._backend.generate(prompt)
-        relations = _extract_json(raw, expect_array=True)
+        raw = ""
+        retry = self._retry()
+        if retry is not None:
+            relations, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda r: _extract_json(r, expect_array=True),
+                validate_fn=lambda d: validate_link_array(
+                    d, allow_unknown_relations=True
+                ),
+            )
+        else:
+            raw = self._backend.generate(prompt)
+            relations = _extract_json(raw, expect_array=True)
 
         if isinstance(relations, dict) and not isinstance(relations, list):
             # Some models wrap the array in an object: {"relations": [...]}
@@ -497,13 +561,13 @@ class BatchIngestor:
             tgt_is_new = target in new_ids
             is_cross = src_is_new != tgt_is_new  # XOR: one new, one old
 
-            # Add bidirectional links
+            # Add bidirectional links, persisting the relation type
             src_note = all_note_map[source]
             tgt_note = all_note_map[target]
-            if target not in src_note.L:
-                src_note.L.append(target)
-            if source not in tgt_note.L:
-                tgt_note.L.append(source)
+            if not any(l.target_id == target for l in src_note.L):
+                src_note.L.append(LinkRecord(target_id=target, relation=relation_type))
+            if not any(l.target_id == source for l in tgt_note.L):
+                tgt_note.L.append(LinkRecord(target_id=source, relation=relation_type))
 
             # Persist
             memory_bank.update(source, {"L": src_note.L})

@@ -82,10 +82,11 @@ class MemoryGraphBuilder:
                 timestamp=note.t.isoformat(),
             )
 
-        # Edges from L fields (bidirectional, deduplicate)
+        # Edges from L fields (bidirectional, deduplicate, typed)
         edge_set: set = set()
         for note in notes:
-            for target_id in note.L:
+            for link in note.L:
+                target_id = link.target_id
                 edge_key = tuple(sorted([note.id, target_id]))
                 if edge_key in edge_set:
                     continue
@@ -95,7 +96,8 @@ class MemoryGraphBuilder:
                     note.id,
                     target_id,
                     weight=float(sim),
-                    title=f"cosine similarity: {sim:.3f}",
+                    relation=link.relation,
+                    title=f"cosine similarity: {sim:.3f} | relation: {link.relation}",
                 )
 
         _log.info(
@@ -119,12 +121,20 @@ class MemoryGraphBuilder:
             "same-topic": "#4e79a7",
             "extends": "#59a14f",
             "contradicts": "#e15759",
+            "causal": "#f28e2b",
+            "temporal": "#76b7b2",
             "semantic": "#bab0ac",
             "linked": "#d0d0d0",
         }
 
         for u, v in self.graph.edges():
-            inferred = self._infer_relation(u, v)
+            # Prefer the stored LLM-identified relation; fall back to the
+            # heuristic only for legacy "linked" edges without a stored type.
+            stored = self.graph.edges[u, v].get("relation")
+            if stored and stored != "linked":
+                inferred = stored
+            else:
+                inferred = self._infer_relation(u, v)
             self.graph.edges[u, v]["relation"] = inferred
             self.graph.edges[u, v]["color"] = type_colors.get(inferred, "#d0d0d0")
 

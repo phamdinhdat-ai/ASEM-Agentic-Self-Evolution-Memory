@@ -186,12 +186,12 @@ class ASEMPipeline:
         for note in notes:
             if note.L:
                 continue
-            before = set(note.L)
+            before = {l.target_id for l in note.L}
             try:
                 self.link_evolver.link_and_evolve(note, self.memory_bank)
             except Exception:  # linking is best-effort; never block ingestion
                 continue
-            after = set(note.L)
+            after = {l.target_id for l in note.L}
             count += len(after - before)
         _log.success("cross_chunk_link_evolve done | new_edges={}", count)
         return count

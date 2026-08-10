@@ -56,6 +56,23 @@ class EnhancedHybridRetriever(HybridRetriever):
     hop_decay: float = 0.7
     multi_hop_topn: int = 5
 
+    # ── Relation-type-aware traversal ───────────────────────────────────
+    # Weights applied to link traversal scores per relation type.  Strong
+    # relations (contradicts/extends/causal) carry more information than
+    # weak ones (same-topic/temporal/semantic), so traversed neighbors
+    # reached via strong edges are preferred.
+    relation_weights: Dict[str, float] = field(default_factory=lambda: {
+        "contradicts": 1.2,
+        "extends": 1.1,
+        "causal": 1.1,
+        "same-topic": 0.8,
+        "temporal": 0.7,
+        "semantic": 0.6,
+        "linked": 1.0,  # legacy links (unknown type)
+    })
+    # If set, traversal only follows edges whose relation is in this set.
+    filter_relation_types: Optional[Set[str]] = None
+
     # ── Global semantics ────────────────────────────────────────────────
     community_boost: float = 1.2
     enable_intent_q: bool = True
@@ -152,7 +169,16 @@ class EnhancedHybridRetriever(HybridRetriever):
             for note in frontier_notes:
                 if not note.L:
                     continue
-                linked = M.get_notes_by_ids(note.L)
+                # Relation-type-aware edge filtering + weighting
+                edge_map = {l.target_id: l.relation for l in note.L}
+                if self.filter_relation_types:
+                    edge_map = {
+                        tid: rel for tid, rel in edge_map.items()
+                        if rel in self.filter_relation_types
+                    }
+                if not edge_map:
+                    continue
+                linked = M.get_notes_by_ids(list(edge_map.keys()))
                 for neighbor in linked:
                     if neighbor.id in visited:
                         continue
@@ -164,7 +190,10 @@ class EnhancedHybridRetriever(HybridRetriever):
                     if self.enable_intent_q:
                         q_eff *= self._cosine(query_embedding, neighbor.z)
 
-                    score = sim * (0.5 + 0.5 * q_eff) * decay
+                    rel_weight = self.relation_weights.get(
+                        edge_map.get(neighbor.id, ""), 0.5
+                    )
+                    score = sim * (0.5 + 0.5 * q_eff) * decay * rel_weight
                     all_candidates.append((score, neighbor))
 
             frontier = next_frontier

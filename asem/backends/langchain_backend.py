@@ -9,6 +9,28 @@ import numpy as np
 from .base import InferenceBackend
 
 
+def _content_to_text(content: Any) -> str:
+    """Normalize a chat response's ``content`` field to a plain string.
+
+    Some models/proxies (e.g. OpenAI-format content parts) return
+    ``content`` as a list of blocks — ``[{"type": "text", "text": ...}]`` —
+    instead of a plain string. Concatenating the text parts keeps the
+    backend contract (``generate() -> str``) intact so downstream JSON
+    parsers see the raw response text.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and part.get("type") == "text":
+                parts.append(str(part.get("text", "")))
+        return "\n".join(parts)
+    return str(content)
+
+
 class LangChainBackend(InferenceBackend):
     """LangChain inference backend using BaseChatModel and Embeddings."""
 
@@ -25,13 +47,13 @@ class LangChainBackend(InferenceBackend):
             if usage:
                 self._token_count += usage.get("total_tokens", 0)
         if hasattr(response, "content"):
-            return str(response.content)
+            return _content_to_text(response.content)
         return str(response)
 
     async def agenerate(self, prompt: str, **kwargs) -> str:
         response = await self._llm.ainvoke(prompt)
         if hasattr(response, "content"):
-            return str(response.content)
+            return _content_to_text(response.content)
         return str(response)
 
     def _embed(self, text: str) -> np.ndarray:
@@ -45,7 +67,7 @@ class LangChainBackend(InferenceBackend):
     async def astream(self, prompt: str, **kwargs) -> Any:
         async for response in self._llm.astream(prompt):
             if hasattr(response, "content"):
-                yield str(response.content)
+                yield _content_to_text(response.content)
             else:
                 yield str(response)
 
@@ -87,6 +109,8 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
 
         import os
         kwargs: Dict[str, Any] = {"model": model_name, "temperature": temperature}
+        if cfg.get("max_tokens"):
+            kwargs["max_tokens"] = int(cfg["max_tokens"])
         base_url = cfg.get("base_url") or os.environ.get("OPENAI_BASE_URL")
         enable_reasoning = cfg.get("enable_reasoning", False)
         if enable_reasoning:

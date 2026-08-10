@@ -24,3 +24,8 @@ write_gate:
   tau_high: 0.45      # novelty = 1 - max_sim; ADD when novelty >= tau_high
   tau_redund: 0.92    # NOOP when max_sim >= tau_redund (near-duplicate)
 link_tau: 0.35        # only feed the S3 link LLM neighbors at/above this cosine
+
+# LLM output retry — on parse/schema failure, re-issue the prompt with a format
+# correction block quoting the previous bad output (0 = disabled, single-shot)
+llm_retry:
+  max_retries: 2      # small models (0.5B) need retries to converge on JSON

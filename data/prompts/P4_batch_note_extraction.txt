@@ -1,21 +1,59 @@
-You are analyzing a multi-turn conversation. Extract ALL atomic facts, events, and pieces of information from the ENTIRE conversation below.
+You are analyzing a multi-turn conversation to build a memory knowledge graph. Extract ALL atomic facts, events, and pieces of information from the ENTIRE conversation below.
 
+## Task
 For each atomic fact, output a JSON object with:
-- "content": The exact text of the dialogue turn containing this fact (preserve speaker labels)
-- "keywords": 3-5 key terms from this fact
-- "tags": 1-3 categorical labels (e.g., "personal", "work", "health", "travel", "relationship", "event", "opinion", "plan")
-- "description": A 1-2 sentence factual summary of what was learned
+- **content**: The exact text of the dialogue turn containing this fact (preserve speaker labels)
+- **keywords**: 3-5 key terms from this fact (lowercase, specific — no stopwords)
+- **tags**: 1-3 categorical labels from this list: personal, professional, technical, event, preference, fact, question, plan, relationship, location, temporal, health, travel, pet, observation, opinion
+- **description**: A 1-2 sentence factual summary of what was learned, in third person
 
-Rules:
+## Rules
 1. Extract EVERY distinct piece of information — do not merge facts from different turns
-2. If a turn contains multiple distinct facts, create separate entries
-3. Preserve temporal information (dates, times, sequences)
+2. If a turn contains multiple distinct facts, create separate entries (one per fact)
+3. Preserve temporal information (dates, times, sequences) in the description
 4. Include speaker attribution in the content
-5. Output ONLY a JSON array, nothing else
+5. If a fact is mentioned again in a later turn, extract it only ONCE (the first time it appears)
 
-Conversation:
-{dialogue}
+## Reasoning steps (think through these BEFORE outputting the JSON)
+Step 1: Read the whole conversation and list every distinct fact in order.
+Step 2: For each fact, decide which turn it came from and copy that turn's text as content.
+Step 3: For each fact, choose 3-5 keywords and 1-3 tags.
+Step 4: Write the description as a self-contained third-person sentence.
 
-Output a JSON array like:
+## Output Format
+Your response must be ONLY the following JSON array (no markdown fences, no commentary):
 [{{"content": "[Speaker] ...", "keywords": [...], "tags": [...], "description": "..."}}, ...]
-Output ONLY the JSON array, nothing else.
+
+## Examples
+
+Example 1 (two turns, one fact each):
+Conversation:
+[Sarah] I just started a new job at Acme Corp.
+[Sarah] It's a software engineering role, remote from Hanoi.
+Reasoning: Turn 1 has one fact (new job at Acme Corp). Turn 2 adds one fact (remote software engineering role in Hanoi). Two entries.
+[{{"content": "[Sarah] I just started a new job at Acme Corp.", "keywords": ["sarah", "job", "acme corp"], "tags": ["professional"], "description": "Sarah started a new job at Acme Corp."}}, {{"content": "[Sarah] It's a software engineering role, remote from Hanoi.", "keywords": ["software engineer", "remote", "hanoi"], "tags": ["professional", "location"], "description": "Sarah's new role is remote software engineering based in Hanoi."}}]
+
+Example 2 (one turn with multiple facts — split into separate entries):
+Conversation:
+[John] My sister Emma is getting married next June. I need to save money for the wedding gift.
+Reasoning: Two distinct facts in one turn: (1) Emma's wedding next June, (2) John's plan to save money. Two entries.
+[{{"content": "[John] My sister Emma is getting married next June.", "keywords": ["john", "emma", "wedding", "june"], "tags": ["personal", "event", "relationship", "temporal"], "description": "John's sister Emma is getting married next June."}}, {{"content": "[John] I need to save money for the wedding gift.", "keywords": ["saving", "wedding gift"], "tags": ["personal", "plan"], "description": "John plans to save money for the wedding gift."}}]
+
+Example 3 (repeated fact — extract only once):
+Conversation:
+[Mike] I moved to Berlin last month.
+[Mike] Yeah, Berlin. I'm still unpacking.
+Reasoning: "Moved to Berlin" appears twice — keep only the first occurrence.
+[{{"content": "[Mike] I moved to Berlin last month.", "keywords": ["mike", "berlin", "move"], "tags": ["personal", "location", "temporal"], "description": "Mike moved to Berlin last month."}}]
+
+## Common Mistakes (NEVER do these)
+WRONG: Merging the two facts of Example 2 into one entry {{"content": "[John] My sister Emma is getting married next June. I need to save money.", "keywords": ["wedding", "saving"], "tags": ["event"], "description": "John's sister is getting married."}}
+→ Distinct facts must be separate entries. Do not drop facts.
+
+## Constraints
+- Output ONLY the JSON array. Do NOT include any commentary, markdown fences, or extra text.
+- Every entry must have all four keys: content, keywords, tags, description.
+- If the conversation is short, the output array will be small — that is expected.
+
+## Conversation
+{dialogue}

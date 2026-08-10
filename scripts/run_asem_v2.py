@@ -256,13 +256,15 @@ def run_evaluate_phase(
         enable_global_semantics=True,
         enable_intent_q=True,
     )
+    retry_cfg = cfg.get("llm_retry", {}) or {}
     answer_agent = AnswerAgent(
         backend=backend,
-        prompt_template=_load_txt("data/prompts/P3_memory_evolution.txt"),  # reused as distil
+        prompt_template=_load_txt("data/prompts/P_distil.txt"),
         baseline_prompt_template=(
             "Answer using the memory notes below. Reply with ONLY the answer.\n"
             "Memory:\n{context}\n\nQuestion: {query}\n\nAnswer:"
         ),
+        max_retries=int(retry_cfg.get("max_retries", 0)),
     )
 
     # Load the pre-built bank
@@ -283,7 +285,11 @@ def run_evaluate_phase(
                 ref = str(item.get("answer", ""))
 
                 try:
-                    candidates = retriever.retrieve(query, memory_bank)
+                    # Retrieve on the bare question: the enriched query's
+                    # "Conversation between ..." prefix dilutes the embedding
+                    # and hurts factual recall.
+                    retr_query = str(item.get("raw_question") or query)
+                    candidates = retriever.retrieve(retr_query, memory_bank)
                     _, answer = answer_agent.distil_and_answer(query, candidates)
                 except Exception as exc:
                     print(f"\n  ERROR on example {idx}: {exc}")
@@ -459,6 +465,11 @@ def main() -> None:
     # Shared
     parser.add_argument("--config", default="configs/locomo_openai.yaml")
     parser.add_argument("--db", default=None, help="Path to SQLite bank (for --phase ingest/evaluate)")
+    parser.add_argument(
+        "--conversation", type=int, default=None,
+        help="Only evaluate QA pairs from this conversation index (0-based). "
+             "Use when the bank contains a single ingested conversation.",
+    )
 
     # Combined / evaluate
     parser.add_argument("--results", default="data/benchmarks/results/locomo10_v2.json")
@@ -482,6 +493,16 @@ def main() -> None:
     conversation_groups = group_by_conversation(eval_data)
     total_items = sum(len(g) for g in conversation_groups)
     print(f"  {len(conversation_groups)} conversations, {total_items} QA pairs")
+
+    if args.conversation is not None:
+        if args.conversation >= len(conversation_groups):
+            print(f"Error: conversation {args.conversation} not found "
+                  f"(have {len(conversation_groups)} conversations)")
+            sys.exit(1)
+        conversation_groups = [conversation_groups[args.conversation]]
+        total_items = sum(len(g) for g in conversation_groups)
+        print(f"  Filtered to conversation {args.conversation}: "
+              f"{total_items} QA pairs")
 
     # ---- Dispatch by phase ----
     if args.phase == "ingest":

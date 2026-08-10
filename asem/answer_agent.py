@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 from .backends.base import InferenceBackend
+from .llm_validator import LLMRetryHandler, validate_distil_response
 from .logging_utils import get_logger
 from .note import Note, _try_extract_json
 
@@ -20,6 +21,9 @@ class AnswerAgent:
     backend: InferenceBackend
     prompt_template: str
     baseline_prompt_template: str
+    # > 0: re-issue the prompt with a format correction when the LLM output
+    # fails to parse or violates the expected schema (small-model support).
+    max_retries: int = 0
 
     def distil_and_answer(self, query: str, candidates: List[Note]) -> Tuple[List[Note], str]:
         if not candidates:
@@ -30,8 +34,17 @@ class AnswerAgent:
             query=query,
             candidates=json.dumps([self._note_payload(n) for n in candidates]),
         )
-        raw = self.backend.generate(prompt)
-        parsed = self._parse_response(raw)
+        if self.max_retries > 0:
+            retry = LLMRetryHandler(self.backend.generate, max_retries=self.max_retries)
+            data, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda raw: _try_extract_json(raw, expect_array=False),
+                validate_fn=validate_distil_response,
+            )
+            parsed = self._parse_response_data(data)
+        else:
+            raw = self.backend.generate(prompt)
+            parsed = self._parse_response(raw)
         if parsed is None:
             _log.warning("Distil JSON parse failed, falling back to all candidates")
             return candidates, self._baseline_answer(query, candidates)
@@ -53,6 +66,10 @@ class AnswerAgent:
 
     def _parse_response(self, raw: str) -> Tuple[List[str], str] | None:
         data = _try_extract_json(raw, expect_array=False)
+        return self._parse_response_data(data)
+
+    @staticmethod
+    def _parse_response_data(data) -> Tuple[List[str], str] | None:
         if not isinstance(data, dict):
             return None
 

@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import List, Set
+from pathlib import Path
+from typing import List, Optional, Set
 
 import numpy as np
 
 from .backends.base import InferenceBackend
+from .llm_validator import (
+    LLMRetryHandler,
+    validate_batch_notes,
+    validate_link_array,
+    validate_note_fields,
+)
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
-from .note import Note, _try_extract_json  # robust JSON parser for LLM output
+from .note import LinkRecord, Note, _try_extract_json  # robust JSON parser for LLM output
 
 _log = get_logger("S3.linker")
 
@@ -19,17 +26,13 @@ _log = get_logger("S3.linker")
 # Weak relations like "same-topic" or "temporal" don't justify re-describing
 # the neighbor — only structural changes (contradict, extend, causal) do.
 _STRONG_RELATIONS: Set[str] = {"contradicts", "extends", "causal"}
-_EVOLVE_BATCH_TEMPLATE = """Revise the following existing memory notes given new information. For each note, merge keywords/tags and update the description. Output a JSON array with one object per note.
 
-Existing notes:
-{existing_notes}
-
-New note:
-{new_note}
-
-Return ONLY a JSON array like:
-[{{"id": "<note_id>", "keywords": [...], "tags": [...], "description": "updated summary"}}, ...]
-Output ONLY the JSON array, nothing else."""
+# Every relation label that may be stored on an edge; anything else degrades
+# to "semantic" before persistence.
+_VALID_RELATIONS: Set[str] = (
+    _STRONG_RELATIONS | {"same-topic", "temporal", "semantic"}
+)
+_PROMPTS_DIR = Path(__file__).resolve().parent.parent / "data" / "prompts"
 
 
 @dataclass
@@ -49,6 +52,18 @@ class LinkEvolver:
     evolve_prompt_template: str
     k: int = 5
     link_tau: float = 0.35  # only feed the S3 link LLM neighbors at/above this cosine
+    # > 0: re-issue prompts with a format correction when LLM output fails
+    # to parse or violates the expected schema (small-model support).
+    max_retries: int = 0
+    # Batch evolution prompt (one LLM call for all qualifying neighbors).
+    # If None, loads the enhanced file-based template from
+    # data/prompts/P3_batch_evolution.txt.
+    evolve_batch_template: Optional[str] = None
+
+    def _retry(self) -> Optional[LLMRetryHandler]:
+        if self.max_retries <= 0:
+            return None
+        return LLMRetryHandler(self.backend.generate, max_retries=self.max_retries)
 
     def link_and_evolve(self, m_new: Note, M: MemoryBank) -> None:
         neighbors = M.ann_search(m_new.e, k=self.k)
@@ -131,8 +146,20 @@ class LinkEvolver:
             new_note=self._note_payload(m_new),
             neighbors=json.dumps([self._note_payload(n) for n in neighbors]),
         )
-        raw = self.backend.generate(prompt)
-        data = _try_extract_json(raw, expect_array=True)
+        retry = self._retry()
+        if retry is not None:
+            data, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda raw: _try_extract_json(raw, expect_array=True),
+                validate_fn=lambda d: validate_link_array(
+                    d,
+                    valid_source_id=m_new.id,
+                    valid_target_ids={n.id for n in neighbors},
+                    allow_unknown_relations=True,
+                ),
+            )
+        else:
+            data = _try_extract_json(self.backend.generate(prompt), expect_array=True)
         if isinstance(data, list):
             return [item for item in data if isinstance(item, dict)]
         return []
@@ -151,13 +178,19 @@ class LinkEvolver:
         for rel in relations:
             source = str(rel.get("source", ""))
             target = str(rel.get("target", ""))
+            # Persist the LLM-identified relation type on both ends of the
+            # edge so downstream consumers (get_link_graph, retrieval) can
+            # use it instead of heuristically re-inferring it.
+            relation = str(rel.get("relation", "")).lower() or "semantic"
+            if relation not in _VALID_RELATIONS:
+                relation = "semantic"  # unknown labels degrade to the fallback type
             if source == m_new.id and target in neighbor_map:
-                self._add_link(m_new, target)
-                self._add_link(neighbor_map[target], m_new.id)
+                self._add_link(m_new, target, relation)
+                self._add_link(neighbor_map[target], m_new.id, relation)
                 M.update(target, {"L": neighbor_map[target].L})
             elif target == m_new.id and source in neighbor_map:
-                self._add_link(m_new, source)
-                self._add_link(neighbor_map[source], m_new.id)
+                self._add_link(m_new, source, relation)
+                self._add_link(neighbor_map[source], m_new.id, relation)
                 M.update(source, {"L": neighbor_map[source].L})
 
         M.update(m_new.id, {"L": m_new.L})
@@ -173,12 +206,24 @@ class LinkEvolver:
         existing_payload = json.dumps(
             [self._note_payload(n) for n in neighbors]
         )
-        prompt = _EVOLVE_BATCH_TEMPLATE.format(
+        template = self.evolve_batch_template
+        if template is None:
+            template = (_PROMPTS_DIR / "P3_batch_evolution.txt").read_text(
+                encoding="utf-8"
+            )
+        prompt = template.format(
             existing_notes=existing_payload,
             new_note=json.dumps(self._note_payload(m_new)),
         )
-        raw = self.backend.generate(prompt)
-        data = _try_extract_json(raw, expect_array=True)
+        retry = self._retry()
+        if retry is not None:
+            data, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda raw: _try_extract_json(raw, expect_array=True),
+                validate_fn=validate_batch_notes,
+            )
+        else:
+            data = _try_extract_json(self.backend.generate(prompt), expect_array=True)
 
         if not isinstance(data, list):
             return []
@@ -223,8 +268,15 @@ class LinkEvolver:
             existing_note=self._note_payload(note),
             new_note=self._note_payload(m_new),
         )
-        raw = self.backend.generate(prompt)
-        data = _try_extract_json(raw, expect_array=False)
+        retry = self._retry()
+        if retry is not None:
+            data, _attempt = retry.invoke(
+                prompt,
+                parse_fn=lambda raw: _try_extract_json(raw, expect_array=False),
+                validate_fn=validate_note_fields,
+            )
+        else:
+            data = _try_extract_json(self.backend.generate(prompt), expect_array=False)
         if not isinstance(data, dict):
             return None
 
@@ -268,6 +320,6 @@ class LinkEvolver:
         return float(np.dot(a, b) / denom)
 
     @staticmethod
-    def _add_link(note: Note, target_id: str) -> None:
-        if target_id not in note.L:
-            note.L.append(target_id)
+    def _add_link(note: Note, target_id: str, relation: str = "linked") -> None:
+        if not any(link.target_id == target_id for link in note.L):
+            note.L.append(LinkRecord(target_id=target_id, relation=relation))

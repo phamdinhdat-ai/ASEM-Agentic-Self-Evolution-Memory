@@ -44,14 +44,14 @@ def _note(note_id: str, desc: str) -> Note:
 def test_link_and_evolve() -> None:
     pytest.importorskip("faiss")
 
-    # The current code uses batch evolution with a hardcoded template
+    # The current code uses batch evolution (P3_batch_evolution template)
     # and gates evolution on strong relations (extends, contradicts, causal).
     # The batch evolution template expects JSON with notes containing "id", "keywords",
     # "tags", "description".
     responses = [
         # link generation response — use "extends" (strong relation) to trigger evolution
         '[{"source": "new", "target": "n1", "relation": "extends"}]',
-        # batch evolution response for neighbor (matches _EVOLVE_BATCH_TEMPLATE format)
+        # batch evolution response for neighbor
         '[{"id": "n1", "keywords": ["updated"], "tags": ["tag"], "description": "Updated."}]',
     ]
     backend = _QueueBackend(responses)
@@ -77,12 +77,21 @@ def test_link_and_evolve() -> None:
 
         updated_neighbor = bank.get_note("n1")
         assert updated_neighbor is not None
-        assert "new" in updated_neighbor.L
+        assert any(l.target_id == "new" for l in updated_neighbor.L)
+        # The LLM-identified relation type must be persisted on the edge
+        assert any(
+            l.target_id == "new" and l.relation == "extends"
+            for l in updated_neighbor.L
+        )
         assert updated_neighbor.K == ["updated"]
         assert updated_neighbor.X == "Updated."
 
         updated_new = bank.get_note("new")
         assert updated_new is not None
-        assert "n1" in updated_new.L
+        assert any(l.target_id == "n1" for l in updated_new.L)
+        assert any(
+            l.target_id == "n1" and l.relation == "extends"
+            for l in updated_new.L
+        )
 
         bank.close()

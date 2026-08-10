@@ -175,7 +175,7 @@ class HybridRetriever:
             if not seed.L:
                 continue
             # Batch-lookup linked neighbors by ID
-            linked_notes = M.get_notes_by_ids(seed.L)
+            linked_notes = M.get_notes_by_ids([l.target_id for l in seed.L])
             for neighbor in linked_notes:
                 if neighbor.id in seen_ids:
                     continue

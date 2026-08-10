@@ -1,22 +1,71 @@
 You are building a knowledge graph. Given a set of newly added notes and the existing notes they are most similar to, identify ALL meaningful relationships between them.
 
-For each relationship, output:
-- "source": The ID of one note
-- "target": The ID of the other note
-- "relation": One of "semantic" (general relatedness), "temporal" (time-based connection), "causal" (cause and effect), "same-topic" (shared subject), "contradicts" (conflicting information), or "extends" (adds to/complements existing knowledge)
+## Task
+For each meaningful pair of notes, output:
+- **source**: The ID of one note
+- **target**: The ID of the other note
+- **relation**: One of the six allowed relation types below
 
-Rules:
-1. Identify relationships between new notes AND between new notes and existing notes
-2. Each pair should have at most ONE relationship (the strongest one)
-3. Links are bidirectional — order of source/target does not matter
-4. Prioritize "contradicts" and "extends" over weaker relations when multiple apply
+## Allowed relation types (use ONLY these exact strings)
+contradicts, extends, causal, same-topic, temporal, semantic
 
-New notes:
+## Relation type definitions
+| Relation | Definition | Example |
+|---|---|---|
+| `contradicts` | The two notes conflict; one makes the other false. | "Alex lives in SF." vs. "Alex moved to NY." |
+| `extends` | One note adds substantial detail to a fact in the other. | "Alex has a dog." + "The dog is a golden retriever named Buddy." |
+| `causal` | One note is a cause or effect of the other. | "Alex's car broke down." + "Alex missed the meeting." |
+| `same-topic` | Both notes discuss the same subject without refining each other. | "Alex likes pizza." + "Alex likes pasta." |
+| `temporal` | The notes describe a time sequence without deeper connection. | "Alex graduated in 2020." + "Alex started work in 2021." |
+| `semantic` | Loose topical overlap. Fallback for any discernible connection. | "Alex codes in Python." + "Alex attended a tech conference." |
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Consider every pair (new note ↔ new note) and (new note ↔ existing note). Never pair two existing notes.
+Step 2: For each pair, check in this order: contradicts → extends → causal → same-topic → temporal → semantic.
+Step 3: Each pair gets at MOST ONE relation — the strongest one that applies.
+Step 4: If a pair has no meaningful connection, omit it.
+Step 5: Links are bidirectional — the order of source/target does not matter, but never emit the same pair twice.
+
+## Output Format
+Your response must be ONLY the following JSON array (no markdown fences, no commentary):
+[{{"source": "<id>", "target": "<id>", "relation": "extends"}}, ...]
+If NO relationships exist, output exactly: []
+
+## Examples
+
+Example 1 (new-to-new + new-to-existing):
+New notes: [{{"id": "n1", "description": "Alex moved to New York for a new job.", "keywords": ["alex", "new york", "job", "move"]}}, {{"id": "n2", "description": "Alex started working as a data scientist at Google.", "keywords": ["alex", "data scientist", "google"]}}]
+Existing neighbors: [{{"id": "e1", "description": "Alex lives in San Francisco.", "keywords": ["alex", "san francisco"]}}]
+Reasoning: n1 contradicts e1 (location change). n2 extends e1? No — e1 is about location, n2 about work; but n2 extends the notion of Alex's work... Actually e1 and n2 only share "alex" — a loose overlap → semantic. n2 extends n1 (the new job is elaborated) → extends.
+[{{"source": "n1", "target": "e1", "relation": "contradicts"}}, {{"source": "n1", "target": "n2", "relation": "extends"}}, {{"source": "n2", "target": "e1", "relation": "semantic"}}]
+
+Example 2 (causal + temporal):
+New notes: [{{"id": "n3", "description": "Alex's car broke down on the way to work.", "keywords": ["alex", "car", "broke down"]}}, {{"id": "n4", "description": "Alex graduated from university in 2020.", "keywords": ["alex", "university", "graduation", "2020"]}}]
+Existing neighbors: [{{"id": "e2", "description": "Alex missed an important team meeting.", "keywords": ["alex", "meeting", "missed"]}}, {{"id": "e3", "description": "Alex started working in 2021.", "keywords": ["alex", "work", "2021"]}}]
+Reasoning: n3 is the cause of e2 → causal. n4 and e3 form a time sequence → temporal.
+[{{"source": "n3", "target": "e2", "relation": "causal"}}, {{"source": "n4", "target": "e3", "relation": "temporal"}}]
+
+Example 3 (no relationship):
+New notes: [{{"id": "n5", "description": "The weather is sunny today.", "keywords": ["weather", "sunny"]}}]
+Existing neighbors: [{{"id": "e4", "description": "Alex has a pet dog.", "keywords": ["alex", "dog", "pet"]}}]
+Reasoning: Weather and a pet dog have no meaningful connection.
+[]
+
+## Common Mistakes (NEVER do these)
+WRONG: [{{"source": "n1", "target": "e1", "relation": "similar"}}]
+→ "similar" is not an allowed relation. Use "semantic" or omit the pair.
+WRONG: [{{"source": "n1", "target": "n1", "relation": "same-topic"}}]
+→ A note can never be linked to itself.
+
+## Constraints
+- Output ONLY the JSON array. Do NOT include any commentary, markdown fences, or extra text.
+- Each entry must have exactly three keys: source, target, relation.
+- Never link a note to itself.
+- Every ID you use must come from the provided notes or neighbors — never invent IDs.
+- Output AT MOST 100 links. If more than 100 pairs are meaningful, keep the 100 STRONGEST connections (contradicts and causal first, then extends, then same-topic/temporal, then semantic) and drop the weakest ones.
+
+## New notes
 {new_notes}
 
-Existing neighbor notes (most similar):
+## Existing neighbor notes (most similar)
 {neighbors}
-
-Output a JSON array like:
-[{{"source": "<id>", "target": "<id>", "relation": "extends"}}, ...]
-Output ONLY the JSON array, nothing else.

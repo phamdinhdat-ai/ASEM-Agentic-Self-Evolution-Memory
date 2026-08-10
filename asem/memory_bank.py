@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import numpy as np
 
-from .note import Note
+from .note import LinkRecord, Note
 
 try:
     import faiss
@@ -207,11 +207,11 @@ class MemoryBank:
                 note = self.get_note(nid)
                 if note is None:
                     continue
-                for linked_id in note.L:
-                    if linked_id not in visited:
-                        visited.add(linked_id)
-                        next_ring.add(linked_id)
-                        collected_ids.append(linked_id)
+                for link in note.L:
+                    if link.target_id not in visited:
+                        visited.add(link.target_id)
+                        next_ring.add(link.target_id)
+                        collected_ids.append(link.target_id)
             if not next_ring:
                 break
             current_ring = next_ring
@@ -228,7 +228,6 @@ class MemoryBank:
             edges : list of {source, target, relation}
         """
         all_notes = self.list_notes()
-        note_map = {n.id: n for n in all_notes}
 
         nodes = []
         for n in all_notes:
@@ -244,25 +243,17 @@ class MemoryBank:
         edges = []
         seen_edges: Set[Tuple[str, str]] = set()
         for n in all_notes:
-            for target_id in n.L:
+            for link in n.L:
+                target_id = link.target_id
                 edge_key = (n.id, target_id) if n.id < target_id else (target_id, n.id)
                 if edge_key not in seen_edges:
                     seen_edges.add(edge_key)
-                    target_note = note_map.get(target_id)
-                    if target_note:
-                        shared = set(str(k).lower() for k in n.K) & \
-                                 set(str(k).lower() for k in target_note.K)
-                        rel = "extends" if len(shared) >= 3 else \
-                              "same-topic" if len(shared) >= 2 else \
-                              "semantic" if len(shared) >= 1 else "related"
-                    else:
-                        rel = "related"
                     edges.append({
                         "source": n.id[:8],
                         "target": target_id[:8],
                         "source_full": n.id,
                         "target_full": target_id,
-                        "relation": rel,
+                        "relation": link.relation,
                     })
 
         return {"nodes": nodes, "edges": edges}
@@ -454,7 +445,7 @@ class MemoryBank:
             "G": json.dumps(note.G),
             "X": note.X,
             "e": json.dumps(note.e.tolist()),
-            "L": json.dumps(note.L),
+            "L": json.dumps([lr.to_dict() for lr in note.L]),
             "z": json.dumps(note.z.tolist()),
             "q": float(note.q),
         }
@@ -486,7 +477,7 @@ class MemoryBank:
             G=json.loads(row["G"]),
             X=row["X"],
             e=np.asarray(json.loads(row["e"]), dtype=float),
-            L=json.loads(row["L"]),
+            L=[LinkRecord.from_dict(item) for item in json.loads(row["L"])],
             z=np.asarray(json.loads(row["z"]), dtype=float),
             q=float(row["q"]),
         )

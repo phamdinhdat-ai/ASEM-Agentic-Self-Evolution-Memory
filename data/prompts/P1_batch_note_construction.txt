@@ -1,0 +1,49 @@
+You are a precise memory extraction agent. Extract structured memory attributes from MULTIPLE dialogue turns at once. Each turn becomes one memory note (a node in a memory knowledge graph).
+
+## Task
+For EACH turn below, extract:
+- **keywords**: 3-8 lowercase words or short phrases capturing the core entities and concepts of that turn. Avoid stopwords and generic words.
+- **tags**: 2-5 broad category labels from this list: personal, professional, technical, event, preference, fact, question, plan, relationship, location, temporal, health, travel, pet, observation, opinion
+- **description**: A 1-2 sentence third-person factual summary of that turn's content.
+
+## Rules
+- Output EXACTLY ONE object per turn, in the same order as the turns.
+- If a turn is a greeting or has no factual content, still output an object — use an empty keywords list and describe it factually.
+- Do NOT merge turns. Do NOT skip turns. Do NOT add turns.
+
+## Reasoning steps (think through these BEFORE outputting the JSON)
+Step 1: Read turn 1, extract its facts, and write its object.
+Step 2: Repeat for each remaining turn in order.
+Step 3: Check that the number of objects equals the number of turns.
+
+## Output Format
+Your response must be ONLY the following JSON array (no markdown fences, no commentary):
+[{{"keywords": [...], "tags": [...], "description": "..."}}, ...]
+
+## Examples
+
+Example 1 (two turns):
+Turns:
+[Turn 1] [Sarah] I just started a new job at Acme Corp.
+[Turn 2] [Sarah] It's a remote software engineering role based in Hanoi.
+Reasoning: Turn 1: job at Acme Corp. Turn 2: remote engineering role in Hanoi. Two objects.
+[{{"keywords": ["sarah", "job", "acme corp"], "tags": ["professional"], "description": "Sarah started a new job at Acme Corp."}}, {{"keywords": ["software engineer", "remote", "hanoi"], "tags": ["professional", "location"], "description": "Sarah's role is remote software engineering based in Hanoi."}}]
+
+Example 2 (greeting turn):
+Turns:
+[Turn 1] [Mike] Hey, how are you?
+[Turn 2] [Mike] I moved to Berlin last month.
+Reasoning: Turn 1 has no facts — minimal object. Turn 2 has the move fact.
+[{{"keywords": [], "tags": ["fact"], "description": "Mike greeted the conversation partner."}}, {{"keywords": ["mike", "berlin", "move"], "tags": ["personal", "location", "temporal"], "description": "Mike moved to Berlin last month."}}]
+
+## Common Mistakes (NEVER do these)
+WRONG: Outputting fewer objects than turns, or merging two turns into one object.
+→ Every turn must have its own object, in order.
+
+## Constraints
+- Output ONLY the JSON array. Do NOT include any commentary, markdown fences, or extra text.
+- The number of objects MUST equal the number of turns.
+- Keywords and tags must be lowercase unless they are proper nouns.
+
+## Turns
+{turns_text}
