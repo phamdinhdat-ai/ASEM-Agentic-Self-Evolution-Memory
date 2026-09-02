@@ -1,0 +1,66 @@
+# Fast-ASEM preset: SOTA Benchmark Configuration
+# Tuned to maximize Exact Match, ROUGE-L, and LLM-as-a-Judge on LoCoMo10 & LongMemEval.
+
+preset: "sota_benchmark"
+
+inference:
+  backend: "langchain"
+  langchain:
+    provider: "openai"
+    model: "gpt-5.4"
+    temperature: 0.1
+    max_tokens: 4096
+    embedder_provider: "huggingface"
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+hyperparameters:
+  k1: 30
+  k2: 8
+  k: 6
+  delta: 0.25
+  lambda: 0.35
+  alpha: 0.10
+  q0: 0.50
+
+write_gate:
+  enabled: true
+  # tau_high is the UPDATE threshold in FastSessionIngestor. 0.40 was far too
+  # low: LoCoMo is dominated by 2 speakers, so entity overlap was almost always
+  # non-empty and any two facts with sim>=0.40 got merged into one note,
+  # destroying atomic-fact granularity. 0.75 keeps distinct facts as separate
+  # ADDs while still collapsing true near-duplicates.
+  tau_high: 0.75
+  tau_redund: 0.90
+
+retriever:
+  mode: "rrf"
+  use_bm25: true
+  use_entity_filter: true
+  use_temporal_boost: true
+  max_hops: 2
+  hop_decay: 0.75
+  rrf_k: 60
+  dense_weight: 1.0
+  bm25_weight: 0.9
+  entity_weight: 0.7
+  temporal_weight: 0.6
+
+answer:
+  direct_mode: true
+  include_dates: true
+  max_context_notes: 8
+  max_tokens: 350
+  temperature: 0.0
+
+ingestion:
+  mode: "session_batch"
+  lazy_evolution: true
+  link_tau: 0.30
+  max_notes_per_session: 20
+
+link_tau: 0.30
+llm_retry:
+  max_retries: 1
+
+logging:
+  level: "INFO"

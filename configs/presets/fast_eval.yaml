@@ -1,0 +1,61 @@
+# Fast-ASEM preset: Ultra-fast evaluation (<30s per 300-turn conversation)
+# Optimized for high-throughput benchmark runs and rapid experimentation.
+
+preset: "fast_eval"
+
+inference:
+  backend: "langchain"
+  langchain:
+    provider: "openai"
+    model: "gpt-5.4"
+    temperature: 0.1
+    max_tokens: 4096
+    embedder_provider: "huggingface"
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+hyperparameters:
+  k1: 20
+  k2: 5
+  k: 5
+  delta: 0.25
+  lambda: 0.35
+  alpha: 0.10
+  q0: 0.50
+
+write_gate:
+  enabled: true
+  tau_high: 0.45
+  tau_redund: 0.92
+
+retriever:
+  mode: "rrf"
+  use_bm25: true
+  use_entity_filter: true
+  use_temporal_boost: true
+  max_hops: 1
+  hop_decay: 0.70
+  rrf_k: 60
+  dense_weight: 1.0
+  bm25_weight: 0.8
+  entity_weight: 0.5
+  temporal_weight: 0.5
+
+answer:
+  direct_mode: true
+  include_dates: true
+  max_context_notes: 6
+  max_tokens: 256
+  temperature: 0.0
+
+ingestion:
+  mode: "session_batch"
+  lazy_evolution: true
+  link_tau: 0.35
+  max_notes_per_session: 15
+
+link_tau: 0.35
+llm_retry:
+  max_retries: 0
+
+logging:
+  level: "INFO"

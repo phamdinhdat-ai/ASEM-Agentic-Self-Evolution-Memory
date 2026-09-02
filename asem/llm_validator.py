@@ -14,12 +14,36 @@ This module provides:
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from .logging_utils import get_logger
 
 _log = get_logger("llm_validator")
+
+# Transient network errors that are safe to retry (DNS blips, connection
+# resets, timeouts). Matched by class name so we don't hard-depend on the
+# specific SDK (openai/httpx) that raised them.
+_TRANSIENT_ERROR_NAMES = {
+    "APIConnectionError", "APIStatusError", "ConnectError",
+    "ConnectTimeout", "ReadTimeout", "Timeout", "ConnectionError",
+    "RemoteProtocolError", "NetworkError", "InternalServerError",
+    "RateLimitError",
+}
+
+
+def _is_transient_network_error(exc: BaseException) -> bool:
+    """Return True if ``exc`` looks like a transient network/transport error."""
+    if type(exc).__name__ in _TRANSIENT_ERROR_NAMES:
+        return True
+    # Walk the cause chain (openai wraps httpx errors in APIConnectionError).
+    cause = getattr(exc, "__cause__", None)
+    while cause is not None:
+        if type(cause).__name__ in _TRANSIENT_ERROR_NAMES:
+            return True
+        cause = getattr(cause, "__cause__", None)
+    return False
 
 # The exact relation labels the S3 link prompts are allowed to emit.
 # Any other value is a format violation that triggers a retry.
@@ -280,7 +304,19 @@ class LLMRetryHandler:
         """
         last_parsed: Any = None
         for attempt in range(self.max_retries + 1):
-            raw = self.generate_fn(prompt)
+            try:
+                raw = self.generate_fn(prompt)
+            except Exception as exc:  # noqa: BLE001
+                if _is_transient_network_error(exc) and attempt < self.max_retries:
+                    backoff = min(2 ** attempt, 15)
+                    _log.warning(
+                        "Transient network error (attempt {}/{}): {} — retrying in {}s",
+                        attempt + 1, self.max_retries + 1,
+                        type(exc).__name__, backoff,
+                    )
+                    time.sleep(backoff)
+                    continue
+                raise
             last_parsed = parse_fn(raw)
 
             if last_parsed is None:

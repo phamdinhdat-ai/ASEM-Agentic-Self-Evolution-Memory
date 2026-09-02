@@ -46,8 +46,17 @@ class MemoryBank:
         Must be called before deleting the database file on Windows.
         """
         if self._conn is not None:
-            self._conn.close()
+            try:
+                self._conn.close()
+            except Exception:
+                pass
             self._conn = None
+
+    def __enter__(self) -> "MemoryBank":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
     def __del__(self) -> None:
         try:
@@ -87,9 +96,11 @@ class MemoryBank:
                 "NoteConstructor.complete_embedding() before storing notes."
             )
         self._set_dim_if_missing(notes[0].e)
+        sample = self._note_to_row(notes[0])
+        cols = ", ".join(sample.keys())
+        placeholders = ", ".join(["?"] * len(sample))
         self._conn.executemany(
-            "INSERT OR REPLACE INTO notes (id, c, t, K, G, X, e, L, z, q) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            f"INSERT OR REPLACE INTO notes ({cols}) VALUES ({placeholders})",
             [list(self._note_to_row(n).values()) for n in notes],
         )
         for note in notes:
@@ -344,7 +355,12 @@ class MemoryBank:
                 e TEXT,
                 L TEXT,
                 z TEXT,
-                q REAL
+                q REAL,
+                session_id TEXT,
+                session_date TEXT,
+                timestamp_iso TEXT,
+                entities TEXT,
+                speaker TEXT
             )
             """
         )
@@ -356,6 +372,16 @@ class MemoryBank:
             )
             """
         )
+        # Migrate existing tables if columns are missing
+        existing_cols = {
+            row[1] for row in self._conn.execute("PRAGMA table_info(notes)").fetchall()
+        }
+        for col in ["session_id", "session_date", "timestamp_iso", "entities", "speaker"]:
+            if col not in existing_cols:
+                try:
+                    self._conn.execute(f"ALTER TABLE notes ADD COLUMN {col} TEXT")
+                except Exception:
+                    pass
         self._conn.commit()
 
     def _get_dim(self) -> Optional[int]:
@@ -395,6 +421,8 @@ class MemoryBank:
         capacity = max(64, len(rows) * 2)
         mat = np.empty((capacity, self._dim), dtype="float32")
         for i, row in enumerate(rows):
+            if row["e"] is None:
+                continue
             vec = np.asarray(json.loads(row["e"]), dtype="float32")
             mat[i] = self._normalize(vec)
             self._id_map.append(row["id"])
@@ -425,11 +453,7 @@ class MemoryBank:
         )
 
     def _rebuild_index(self) -> None:
-        """(Re)build the FAISS index from the in-memory matrix.
-
-        The numpy matrix is the source of truth; callers only need this
-        for the large-bank FAISS path (n >= _FAISS_MIN_SIZE).
-        """
+        """(Re)build the FAISS index from the in-memory matrix."""
         n = len(self._id_map)
         self._index = faiss.IndexFlatIP(self._dim) if faiss is not None else None
         if self._index is not None and n > 0:
@@ -444,10 +468,15 @@ class MemoryBank:
             "K": json.dumps(note.K),
             "G": json.dumps(note.G),
             "X": note.X,
-            "e": json.dumps(note.e.tolist()),
+            "e": json.dumps(note.e.tolist()) if note.e is not None else None,
             "L": json.dumps([lr.to_dict() for lr in note.L]),
-            "z": json.dumps(note.z.tolist()),
+            "z": json.dumps(note.z.tolist()) if note.z is not None else None,
             "q": float(note.q),
+            "session_id": note.session_id,
+            "session_date": note.session_date,
+            "timestamp_iso": note.timestamp_iso,
+            "entities": json.dumps(note.entities),
+            "speaker": note.speaker,
         }
 
     def _get_note(self, note_id: str) -> Optional[Note]:
@@ -469,6 +498,7 @@ class MemoryBank:
         return [self._row_to_note(row_map[i]) for i in ids if i in row_map]
 
     def _row_to_note(self, row: sqlite3.Row) -> Note:
+        keys = row.keys()
         return Note(
             id=row["id"],
             c=row["c"],
@@ -476,8 +506,104 @@ class MemoryBank:
             K=json.loads(row["K"]),
             G=json.loads(row["G"]),
             X=row["X"],
-            e=np.asarray(json.loads(row["e"]), dtype=float),
+            e=np.asarray(json.loads(row["e"]), dtype=float) if row["e"] is not None else None,
             L=[LinkRecord.from_dict(item) for item in json.loads(row["L"])],
             z=np.asarray(json.loads(row["z"]), dtype=float),
             q=float(row["q"]),
+            session_id=row["session_id"] if "session_id" in keys else None,
+            session_date=row["session_date"] if "session_date" in keys else None,
+            timestamp_iso=row["timestamp_iso"] if "timestamp_iso" in keys else None,
+            entities=json.loads(row["entities"]) if "entities" in keys and row["entities"] else [],
+            speaker=row["speaker"] if "speaker" in keys else None,
         )
+
+    def bm25_search(self, query: str, k: int = 10) -> List[Tuple[float, Note]]:
+        """Fast in-memory BM25 keyword matching against (c, K, G, X, entities)."""
+        import re, math
+        all_notes = self.list_notes()
+        if not all_notes:
+            return []
+
+        tokens = re.findall(r"\w+", query.lower())
+        if not tokens:
+            return []
+
+        # Build corpus
+        docs = []
+        for n in all_notes:
+            text = " ".join([
+                n.c, " ".join(n.K), " ".join(n.G), n.X, " ".join(n.entities)
+            ]).lower()
+            docs.append(re.findall(r"\w+", text))
+
+        N = len(docs)
+        avgdl = sum(len(d) for d in docs) / max(1, N)
+        k1 = 1.5
+        b = 0.75
+
+        # Compute IDF
+        df = {}
+        for d in docs:
+            unique_terms = set(d)
+            for t in unique_terms:
+                df[t] = df.get(t, 0) + 1
+
+        scores = []
+        for i, (doc, note) in enumerate(zip(docs, all_notes)):
+            doc_len = len(doc)
+            score = 0.0
+            term_counts = {}
+            for t in doc:
+                term_counts[t] = term_counts.get(t, 0) + 1
+
+            for token in tokens:
+                if token in term_counts:
+                    freq = term_counts[token]
+                    doc_freq = df.get(token, 0)
+                    idf = math.log(1.0 + (N - doc_freq + 0.5) / (doc_freq + 0.5))
+                    numerator = freq * (k1 + 1.0)
+                    denominator = freq + k1 * (1.0 - b + b * (doc_len / avgdl))
+                    score += idf * (numerator / denominator)
+
+            if score > 0.0:
+                scores.append((score, note))
+
+        scores.sort(key=lambda x: x[0], reverse=True)
+        return scores[:k]
+
+    def search_by_entities(self, entities: List[str], k: int = 10) -> List[Note]:
+        """Find notes containing any of the given named entities."""
+        if not entities:
+            return []
+        norm_entities = {e.strip().lower() for e in entities if e.strip()}
+        if not norm_entities:
+            return []
+
+        all_notes = self.list_notes()
+        matched = []
+        for note in all_notes:
+            note_ents = {e.lower() for e in note.entities}
+            overlap = len(norm_entities & note_ents)
+            if overlap > 0:
+                matched.append((overlap, note))
+
+        matched.sort(key=lambda x: x[0], reverse=True)
+        return [note for _, note in matched[:k]]
+
+    def get_notes_by_time_range(
+        self,
+        t_start: Optional[datetime] = None,
+        t_end: Optional[datetime] = None,
+    ) -> List[Note]:
+        """Retrieve notes created within [t_start, t_end]."""
+        query = "SELECT * FROM notes WHERE 1=1"
+        params = []
+        if t_start is not None:
+            query += " AND t >= ?"
+            params.append(t_start.isoformat())
+        if t_end is not None:
+            query += " AND t <= ?"
+            params.append(t_end.isoformat())
+        query += " ORDER BY t ASC"
+        rows = self._conn.execute(query, params).fetchall()
+        return [self._row_to_note(r) for r in rows]

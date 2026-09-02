@@ -175,23 +175,25 @@ def test_pipeline_gate_skips_s2_llm() -> None:
     gate = WriteGate(enabled=True, tau_high=0.45, tau_redund=0.92)
     with tempfile.TemporaryDirectory() as tmp:
         pipeline, bank = _make_pipeline(tmp, backend, gate)
+        try:
+            # empty bank -> gate ADD
+            assert pipeline.write_path("apple pie", datetime(2024, 1, 1)) is not None
+            assert bank.size() == 1
 
-        # empty bank -> gate ADD
-        assert pipeline.write_path("apple pie", datetime(2024, 1, 1)) is not None
-        assert bank.size() == 1
+            # identical turn -> gate NOOP, nothing written, S2 LLM skipped
+            assert pipeline.write_path("apple pie", datetime(2024, 1, 1)) is None
+            assert bank.size() == 1
 
-        # identical turn -> gate NOOP, nothing written, S2 LLM skipped
-        assert pipeline.write_path("apple pie", datetime(2024, 1, 1)) is None
-        assert bank.size() == 1
+            # unrelated topic -> gate ADD, S2 LLM skipped
+            assert pipeline.write_path("quantum computing", datetime(2024, 1, 1)) is not None
+            assert bank.size() == 2
 
-        # unrelated topic -> gate ADD, S2 LLM skipped
-        assert pipeline.write_path("quantum computing", datetime(2024, 1, 1)) is not None
-        assert bank.size() == 2
-
-        # the S2 LLM must never have been consulted on any gated turn
-        assert "MM" not in backend.calls
-        assert gate.stats["gate_add"] >= 2
-        assert gate.stats["gate_noop"] >= 1
+            # the S2 LLM must never have been consulted on any gated turn
+            assert "MM" not in backend.calls
+            assert gate.stats["gate_add"] >= 2
+            assert gate.stats["gate_noop"] >= 1
+        finally:
+            bank.close()
 
 
 def test_pipeline_ambiguous_band_consults_llm_and_audits() -> None:
@@ -200,16 +202,18 @@ def test_pipeline_ambiguous_band_consults_llm_and_audits() -> None:
     gate = WriteGate(enabled=True, tau_high=0.45, tau_redund=0.92)
     with tempfile.TemporaryDirectory() as tmp:
         pipeline, bank = _make_pipeline(tmp, backend, gate)
+        try:
+            # seed a note (empty bank -> gate ADD)
+            assert pipeline.write_path("seed", datetime(2024, 1, 1)) is not None
 
-        # seed a note (empty bank -> gate ADD)
-        assert pipeline.write_path("seed", datetime(2024, 1, 1)) is not None
-
-        # "mid" sits in the ambiguous band (cos 0.6) -> LLM must be consulted
-        backend.mm_op = "UPDATE"
-        assert pipeline.write_path("mid", datetime(2024, 1, 1)) is not None
-        assert "MM" in backend.calls
-        assert gate.stats["ambiguous"] == 1
-        assert gate.stats["amb_update"] == 1
+            # "mid" sits in the ambiguous band (cos 0.6) -> LLM must be consulted
+            backend.mm_op = "UPDATE"
+            assert pipeline.write_path("mid", datetime(2024, 1, 1)) is not None
+            assert "MM" in backend.calls
+            assert gate.stats["ambiguous"] == 1
+            assert gate.stats["amb_update"] == 1
+        finally:
+            bank.close()
 
 
 def test_pipeline_lazy_embedding_only_for_written_notes() -> None:
@@ -218,12 +222,14 @@ def test_pipeline_lazy_embedding_only_for_written_notes() -> None:
     gate = WriteGate(enabled=True, tau_high=0.45, tau_redund=0.92)
     with tempfile.TemporaryDirectory() as tmp:
         pipeline, bank = _make_pipeline(tmp, backend, gate)
+        try:
+            # first write: z (1) + completed e (1) = 2 embeds
+            pipeline.write_path("apple pie", datetime(2024, 1, 1))
+            assert backend.embed_calls == 2
 
-        # first write: z (1) + completed e (1) = 2 embeds
-        pipeline.write_path("apple pie", datetime(2024, 1, 1))
-        assert backend.embed_calls == 2
-
-        # duplicate turn: only z (1) is computed, e is skipped -> 3 total
-        pipeline.write_path("apple pie", datetime(2024, 1, 1))
-        assert backend.embed_calls == 3
-        assert bank.size() == 1
+            # duplicate turn: only z (1) is computed, e is skipped -> 3 total
+            pipeline.write_path("apple pie", datetime(2024, 1, 1))
+            assert backend.embed_calls == 3
+            assert bank.size() == 1
+        finally:
+            bank.close()

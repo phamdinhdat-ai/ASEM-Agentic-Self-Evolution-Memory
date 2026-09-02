@@ -36,9 +36,9 @@ _MAX_LINK_HOPS = 3
 
 @dataclass
 class HybridRetriever:
-    """Hybrid retrieval: similarity filter + value-aware re-rank + link traversal.
+    """Hybrid retrieval: similarity/BM25/entity RRF + value-aware re-rank + link traversal.
 
-    Phase A: similarity-based candidate recall (unchanged)
+    Phase A: multi-channel candidate recall (Dense ANN + BM25 keyword + Entity match via RRF)
     Phase B: value-aware composite re-rank with adaptive lambda (A4)
     Phase C: multi-hop link traversal from top candidates (A1)
     """
@@ -50,7 +50,18 @@ class HybridRetriever:
     lambda_weight: float
     use_zscore: bool = True
 
-    # A1+A4 — new knobs
+    # Multi-Channel RRF knobs
+    use_rrf: bool = True
+    use_bm25: bool = True
+    use_entity_filter: bool = True
+    use_temporal_boost: bool = True
+    dense_weight: float = 1.0
+    bm25_weight: float = 0.8
+    entity_weight: float = 0.6
+    temporal_weight: float = 0.5
+    rrf_k: int = 60
+
+    # A1+A4 — link traversal and adaptive lambda knobs
     enable_link_traversal: bool = True
     max_link_hops: int = 1           # 1 = only direct neighbors
     link_traversal_topn: int = 3     # how many linked neighbors to add
@@ -62,14 +73,110 @@ class HybridRetriever:
     def retrieve(self, query: str, M: MemoryBank) -> List[Note]:
         self.stats = {}
 
-        # A4 — adaptive lambda based on query type
+        # Adaptive lambda based on query type
         lam = self._adaptive_lambda(query) if self.enable_adaptive_lambda else self.lambda_weight
-
         e_q = self.backend.embed(query)
+
+        if not self.use_rrf:
+            return self._classic_retrieve(query, e_q, lam, M)
+
+        # ── Multi-Channel RRF Candidate Recall ──
+        dense_candidates = M.ann_search(e_q, k=self.k1)
+        if not dense_candidates:
+            self.stats["phase_a_hits"] = 0
+            _log.debug("Phase A: no candidates from ANN search")
+            return []
+
+        dense_ranks: Dict[str, int] = {n.id: r for r, n in enumerate(dense_candidates)}
+        all_pool_map: Dict[str, Note] = {n.id: n for n in dense_candidates}
+
+        # Channel 2: BM25
+        bm25_ranks: Dict[str, int] = {}
+        if self.use_bm25 and hasattr(M, "bm25_search"):
+            bm25_hits = M.bm25_search(query, k=self.k1)
+            for r, (_, n) in enumerate(bm25_hits):
+                bm25_ranks[n.id] = r
+                all_pool_map[n.id] = n
+
+        # Channel 3: Entity match
+        entity_ranks: Dict[str, int] = {}
+        if self.use_entity_filter and hasattr(M, "search_by_entities"):
+            query_entities = re.findall(r"\b[A-Z][a-z0-9_-]+\b", query)
+            if query_entities:
+                entity_hits = M.search_by_entities(query_entities, k=self.k1)
+                for r, n in enumerate(entity_hits):
+                    entity_ranks[n.id] = r
+                    all_pool_map[n.id] = n
+
+        # Check temporal query
+        is_temp = bool(re.search(r"\b(when|before|after|date|time|year|month|day|during|first|last)\b", query, re.I))
+
+        # Compute RRF score per candidate
+        rrf_scores: List[Tuple[Note, float]] = []
+        for nid, note in all_pool_map.items():
+            score = 0.0
+            if nid in dense_ranks:
+                score += self.dense_weight / (self.rrf_k + dense_ranks[nid])
+            if nid in bm25_ranks:
+                score += self.bm25_weight / (self.rrf_k + bm25_ranks[nid])
+            if nid in entity_ranks:
+                score += self.entity_weight / (self.rrf_k + entity_ranks[nid])
+            if self.use_temporal_boost and is_temp and (note.session_date or note.timestamp_iso):
+                score += self.temporal_weight / (self.rrf_k + 0)
+
+            # Cosine similarity filter threshold
+            sim = self._cosine(e_q, note.e) if note.e is not None else 0.0
+            if sim >= self.delta or nid in bm25_ranks or nid in entity_ranks:
+                rrf_scores.append((note, score))
+
+        if not rrf_scores:
+            self.stats["phase_a_hits"] = 0
+            return []
+
+        self.stats["phase_a_hits"] = len(rrf_scores)
+        rrf_scores.sort(key=lambda x: x[1], reverse=True)
+        top_candidates = rrf_scores[: self.k1]
+
+        notes = [n for n, _ in top_candidates]
+        sim_scores = [s for _, s in top_candidates]
+        q_scores = [n.q for n in notes]
+
+        if self.use_zscore and len(notes) > 1:
+            sim_norm = self._zscore(sim_scores)
+            q_norm = self._zscore(q_scores)
+        else:
+            sim_norm = list(sim_scores)
+            q_norm = list(q_scores)
+
+        scored: List[Tuple[float, Note]] = []
+        for note, s_norm, q_norm_val in zip(notes, sim_norm, q_norm):
+            comp_score = (1.0 - lam) * s_norm + lam * q_norm_val
+            scored.append((comp_score, note))
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        top_k = scored[: self.k2]
+        result = [note for _, note in top_k]
+
+        self.stats["lambda_used"] = lam
+        self.stats["query_type"] = self._classify_query_type(query)
+
+        # Link traversal
+        if self.enable_link_traversal and result:
+            linked = self._traverse_links(result, e_q, M)
+            seen_ids = {n.id for n in result}
+            for n in linked:
+                if n.id not in seen_ids:
+                    result.append(n)
+                    seen_ids.add(n.id)
+            self.stats["link_traversal_added"] = len(linked)
+
+        self.stats["total_retrieved"] = len(result)
+        return result
+
+    def _classic_retrieve(self, query: str, e_q: np.ndarray, lam: float, M: MemoryBank) -> List[Note]:
         candidates = M.ann_search(e_q, k=self.k1)
         if not candidates:
             self.stats["phase_a_hits"] = 0
-            _log.debug("Phase A: no candidates from ANN search")
             return []
 
         sims = [self._cosine(e_q, note.e) for note in candidates]
@@ -80,12 +187,9 @@ class HybridRetriever:
         ]
         if not filtered:
             self.stats["phase_a_hits"] = 0
-            _log.debug("Phase A: all {} candidates below delta={}", len(candidates), self.delta)
             return []
 
         self.stats["phase_a_hits"] = len(filtered)
-        _log.debug("Phase A: {} / {} candidates pass delta={}", len(filtered), len(candidates), self.delta)
-
         notes, sim_scores = zip(*filtered)
         q_scores = [note.q for note in notes]
         if self.use_zscore:
@@ -104,26 +208,16 @@ class HybridRetriever:
         top_k = scored[: self.k2]
         result = [note for _, note in top_k]
 
-        self.stats["lambda_used"] = lam
-        self.stats["query_type"] = self._classify_query_type(query)
-
-        _log.info("Phase B: k2={}  lambda={:.2f}  query_type={}  top_scores={}",
-                  self.k2, lam, self.stats["query_type"],
-                  [f"{s:.3f}" for s, _ in top_k[:5]])
-
-        # A1 — traverse link graph from top candidates
         if self.enable_link_traversal and result:
             linked = self._traverse_links(result, e_q, M)
-            # Deduplicate by note ID (Note is unhashable due to ndarray fields)
             seen_ids = {n.id for n in result}
             for n in linked:
                 if n.id not in seen_ids:
                     result.append(n)
                     seen_ids.add(n.id)
             self.stats["link_traversal_added"] = len(linked)
-            self.stats["total_retrieved"] = len(result)
-            _log.debug("Phase C: link traversal added {} notes, total={}", len(linked), len(result))
 
+        self.stats["total_retrieved"] = len(result)
         return result
 
     # ------------------------------------------------------------------

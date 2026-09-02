@@ -103,7 +103,7 @@ def _try_extract_json(raw: str, expect_array: bool = True) -> Any:
 
 @dataclass
 class Note:
-    """Atomic memory note."""
+    """Atomic memory note with temporal and entity grounding."""
 
     id: str
     c: str
@@ -115,6 +115,11 @@ class Note:
     L: List[LinkRecord]       # typed links (relation-aware, backward-compatible)
     z: np.ndarray
     q: float
+    session_id: Optional[str] = None
+    session_date: Optional[str] = None
+    timestamp_iso: Optional[str] = None
+    entities: List[str] = field(default_factory=list)
+    speaker: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -128,6 +133,11 @@ class Note:
             "L": [lr.to_dict() for lr in self.L],
             "z": self.z.tolist(),
             "q": float(self.q),
+            "session_id": self.session_id,
+            "session_date": self.session_date,
+            "timestamp_iso": self.timestamp_iso,
+            "entities": list(self.entities),
+            "speaker": self.speaker,
         }
 
     @classmethod
@@ -139,10 +149,15 @@ class Note:
             K=list(data.get("K", [])),
             G=list(data.get("G", [])),
             X=str(data.get("X", "")),
-            e=np.asarray(data.get("e", []), dtype=float),
+            e=np.asarray(data.get("e", []), dtype=float) if data.get("e") is not None else None,
             L=[LinkRecord.from_dict(item) for item in data.get("L", [])],
             z=np.asarray(data.get("z", []), dtype=float),
             q=float(data.get("q", 0.0)),
+            session_id=data.get("session_id"),
+            session_date=data.get("session_date"),
+            timestamp_iso=data.get("timestamp_iso"),
+            entities=list(data.get("entities", [])),
+            speaker=data.get("speaker"),
         )
 
     def to_json(self) -> str:

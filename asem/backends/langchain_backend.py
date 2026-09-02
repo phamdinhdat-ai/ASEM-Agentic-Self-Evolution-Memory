@@ -112,30 +112,18 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
         if cfg.get("max_tokens"):
             kwargs["max_tokens"] = int(cfg["max_tokens"])
         base_url = cfg.get("base_url") or os.environ.get("OPENAI_BASE_URL")
-        enable_reasoning = cfg.get("enable_reasoning", False)
+        api_key = cfg.get("api_key") or os.environ.get("OPENAI_API_KEY")
+        if base_url:
+            kwargs["base_url"] = base_url
+        if api_key:
+            kwargs["api_key"] = api_key
+        enable_reasoning = cfg.get("enable_reasoning", cfg.get("reasoning", False))
         if enable_reasoning:
-            kwargs["reasoning"] = {
-                "effort": "high",
-                "summary" : None,
-            }
             kwargs["extra_body"] = {
-                
                 "chat_template_kwargs": {
                     "enable_thinking": True
                 }
             }
-        else:
-            kwargs["reasoning"] = {
-                "effort": "none",
-                "summary" : None,
-            }
-            kwargs["extra_body"] = {
-            "chat_template_kwargs": {
-                "enable_thinking": False
-            }
-        }
-        if base_url:
-            kwargs["base_url"] = base_url
         return ChatOpenAI(**kwargs)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -161,11 +149,41 @@ def _build_embedder(cfg: Dict[str, Any]) -> Any:
 
         return OpenAIEmbeddings(model=model_name)
     if provider in {"huggingface_hub", "huggingface"}:
-        from langchain_huggingface import HuggingFaceEmbeddings
-
-        return HuggingFaceEmbeddings(model_name=model_name)
+        try:
+            from langchain_huggingface import HuggingFaceEmbeddings
+            return HuggingFaceEmbeddings(model_name=model_name)
+        except ImportError:
+            # Fallback: wrap sentence-transformers directly
+            return _SentenceTransformerEmbedder(model_name=model_name)
     if provider == "ollama":
         from langchain_ollama import OllamaEmbeddings
 
         return OllamaEmbeddings(model=model_name)
     raise ValueError(f"Unsupported embedding provider: {provider}")
+
+
+class _SentenceTransformerEmbedder:
+    """Lightweight wrapper around sentence-transformers that exposes
+    the same ``embed_query`` / ``embed_documents`` interface that
+    LangChain embedders provide — used as a fallback when
+    ``langchain-huggingface`` is not installed.
+    """
+
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2") -> None:
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise ImportError(
+                "Neither langchain-huggingface nor sentence-transformers is "
+                "installed. Install one of them:\n"
+                "  pip install langchain-huggingface\n"
+                "  pip install sentence-transformers"
+            ) from exc
+        self._model = SentenceTransformer(model_name)
+
+    def embed_query(self, text: str):
+        return self._model.encode(text, normalize_embeddings=True).tolist()
+
+    def embed_documents(self, texts):
+        return self._model.encode(texts, normalize_embeddings=True).tolist()
+

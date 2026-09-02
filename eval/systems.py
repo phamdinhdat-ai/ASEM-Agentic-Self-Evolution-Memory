@@ -207,11 +207,45 @@ class ASEMSystemV2:
         if not self._ingested and history:
             self.ingest_conversation(history)
 
-        _, answer = self.pipeline.read_path(query)
+@dataclass
+class FastASEMSystem:
+    """Fast-ASEM (ASEM-v3): High-speed session-level atomic fact ingestion,
+    multi-channel RRF hybrid retrieval with temporal grounding, and direct QA answering.
+    """
+
+    pipeline: ASEMPipeline
+    fast_ingestor: object  # FastSessionIngestor
+    config: object = None  # ASEMConfig
+    _ingested: bool = False
+
+    def ingest_session(self, turns: List[str], session_date: str, session_id: str) -> List[Note]:
+        notes = self.fast_ingestor.ingest_session(
+            turns=turns,
+            session_date_str=session_date,
+            session_id=session_id,
+            memory_bank=self.pipeline.memory_bank,
+        )
+        self._ingested = True
+        return notes
+
+    def ingest_conversation(self, sessions: List[Dict[str, Any]]) -> int:
+        """Ingest all sessions of a conversation with explicit temporal dates."""
+        total_notes = 0
+        for s in sessions:
+            notes = self.ingest_session(
+                turns=s.get("turns", []),
+                session_date=s.get("date", ""),
+                session_id=s.get("session_id", "sess_0"),
+            )
+            total_notes += len(notes)
+        self._ingested = True
+        return total_notes
+
+    def answer(self, query: str, history: List[str] = None) -> str:
+        used_notes, answer = self.pipeline.read_path(query)
         return answer
 
     def reset(self) -> None:
-        """Clear the memory bank for the next conversation."""
         self.pipeline.memory_bank.clear()
         self._ingested = False
 
@@ -267,7 +301,9 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
     SQLite locking issues.
     """
     path = os.path.join(db_dir, f"{name}.sqlite")
-    for suffix in ["", "-wal", "-shm", "-journal"]:
+    # Only remove WAL/SHM/journal sidecars from a previous crashed run.
+    # Never delete the main database file itself — that would wipe ingested notes.
+    for suffix in ["-wal", "-shm", "-journal"]:
         full = path + suffix
         if os.path.exists(full):
             try:
@@ -566,15 +602,117 @@ def build_baselines(
     }
 
 
+def build_fast_asem_system(
+    config_path_or_preset: str = "configs/presets/sota_benchmark.yaml",
+    db_dir: str = "data/benchmarks/eval_banks",
+) -> FastASEMSystem:
+    """Build the Fast-ASEM (ASEM-v3) pipeline."""
+    from asem.config import ASEMConfig
+    from asem.fast_ingest import FastSessionIngestor
+
+    asem_cfg = ASEMConfig.load(config_path_or_preset)
+    backend = build_backend(asem_cfg.inference)
+    hp = asem_cfg.hyperparameters
+    rt_cfg = asem_cfg.retriever
+    ans_cfg = asem_cfg.answer
+    wg_cfg = asem_cfg.write_gate
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+    qa_prompt_path = os.path.join("data", "prompts", "P_temporal_qa.txt")
+    qa_prompt = _load_text(qa_prompt_path) if os.path.exists(qa_prompt_path) else _RETRIEVAL_PROMPT
+
+    max_retries = int(asem_cfg.llm_retry.get("max_retries", 0))
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp.q0,
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend,
+        link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt,
+        k=hp.k,
+        link_tau=asem_cfg.link_tau,
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
+    )
+    retriever = HybridRetriever(
+        backend=backend,
+        k1=hp.k1, k2=hp.k2,
+        delta=hp.delta, lambda_weight=hp.lambda_weight,
+        use_rrf=True,
+        use_bm25=rt_cfg.use_bm25,
+        use_entity_filter=rt_cfg.use_entity_filter,
+        use_temporal_boost=rt_cfg.use_temporal_boost,
+        dense_weight=rt_cfg.dense_weight,
+        bm25_weight=rt_cfg.bm25_weight,
+        entity_weight=rt_cfg.entity_weight,
+        temporal_weight=rt_cfg.temporal_weight,
+        rrf_k=rt_cfg.rrf_k,
+        max_link_hops=rt_cfg.max_hops,
+        enable_link_traversal=True,
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=qa_prompt,
+        direct_mode=ans_cfg.direct_mode,
+        max_retries=max_retries,
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend,
+        alpha=hp.alpha, q0=hp.q0,
+        summary_prompt_template=summary_prompt,
+        note_constructor=note_constructor,
+    )
+    fast_ingestor = FastSessionIngestor(
+        backend=backend,
+        q0=hp.q0,
+        tau_novel=wg_cfg.tau_high,
+        tau_redund=wg_cfg.tau_redund,
+        max_retries=max_retries,
+    )
+    write_gate = WriteGate(
+        enabled=wg_cfg.enabled,
+        tau_high=wg_cfg.tau_high,
+        tau_redund=wg_cfg.tau_redund,
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "fast_asem")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+        write_gate=write_gate,
+    )
+
+    return FastASEMSystem(pipeline=pipeline, fast_ingestor=fast_ingestor, config=asem_cfg)
+
+
 def get_systems(
     config_path: str = "configs/default.yaml",
     db_dir: str = "data/benchmarks/eval_banks",
 ) -> Dict[str, object]:
-    """Build ASEM and baseline systems for evaluation runners.
-
-    Each system gets its own isolated MemoryBank.
-    """
+    """Build ASEM, Fast-ASEM, and baseline systems for evaluation runners."""
     systems = build_baselines(config_path, db_dir)
     systems["ASEM"] = build_asem_system(config_path, db_dir)
     systems["ASEMv2"] = build_asem_v2_system(config_path, db_dir)
+    systems["FastASEM"] = build_fast_asem_system(config_path, db_dir)
     return systems
