@@ -1,0 +1,320 @@
+% ============================================================================
+%  ASEMv2 -> FastASEM (ASEM-v3): Core Algorithms
+%  Pseudocode for ingestion and retrieval of both systems.
+%
+%  Compile with:  pdflatex asemv2_to_fastasem_algorithms.tex
+%  (run twice for cross-references)
+%
+%  Companion document: asemv2_to_fastasem_upgrade.md
+% ============================================================================
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=blue!70!black,
+}
+
+% ---- listings style (for inline code / symbols) ----
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!50},
+  backgroundcolor=\color{gray!5},
+}
+
+% ---- notation macros ----
+\newcommand{\ANN}{\mathrm{ANN}}
+\newcommand{\cos}{\mathrm{cos}}
+\newcommand{\embed}{\mathrm{embed}}
+\newcommand{\rank}{\mathrm{rank}}
+\newcommand{\zscore}{\mathrm{zscore}}
+\newcommand{\topk}{\mathrm{top}\text{-}k}
+\newcommand{\LLM}{\mathrm{LLM}}
+\newcommand{\NOW}{\mathrm{NOW}_{\mathrm{UTC}}}
+\newcommand{\tauR}{\tau_{\mathrm{redund}}}
+\newcommand{\tauN}{\tau_{\mathrm{novel}}}
+\newcommand{\rrfk}{k_{\mathrm{rrf}}}
+
+\title{\textbf{ASEMv2 $\rightarrow$ FastASEM (ASEM-v3): Core Algorithms}\\
+\large Pseudocode for Ingestion and Retrieval}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+% ============================================================================
+\section*{Notation}
+% ============================================================================
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{ll}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} \\
+\midrule
+$M$ & memory bank (FAISS index + SQLite store) \\
+$\embed(x)$ & dense embedding of text $x$ \\
+$\cos(a,b)$ & cosine similarity between vectors $a,b$ \\
+$\ANN(v,k)$ & top-$k$ approximate nearest neighbours of vector $v$ \\
+$\LLM(\text{prompt})$ & one inference-backend model call \\
+$e,\ z$ & joint embedding (fact+K+G+entities) / intent embedding (fact only) \\
+$q$ & learned utility (Q-value), initialised to $q_0$ \\
+$k_1,\ k_2$ & Phase-A candidate pool size / Phase-B final count \\
+$\delta$ & cosine similarity threshold (Phase-A filter) \\
+$\lambda$ & similarity-vs-utility blend weight (Phase B) \\
+$\tauN,\ \tauR$ & UPDATE / NOOP similarity thresholds (deterministic gate) \\
+$\rrfk$ & RRF smoothing constant \\
+$w_{\mathrm{dense}},w_{\mathrm{bm25}},w_{\mathrm{ent}},w_{\mathrm{temp}}$ & RRF channel weights \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================================
+\section*{Ingestion}
+% ============================================================================
+
+\subsection*{Algorithm 1 --- ASEMv2 ingestion (\texttt{BatchIngestor})}
+\begin{algorithm}[H]
+\caption{ASEMv2 batch ingestion: 3 LLM calls per session.}
+\label{alg:asemv2_ingest}
+\begin{algorithmic}[1]
+\Require dialogue turns $T$, memory bank $M$
+\Ensure list of added/updated notes
+\State $D \leftarrow \textsc{Join}(T)$
+\State \Comment{Step 1: batch note extraction (LLM call \#1)}
+\State $F \leftarrow \LLM\big(P4_{\text{extract}}(D)\big)$
+\If{$F = \varnothing$} \State $F \leftarrow \textsc{FallbackPerLine}(D)$ \EndIf
+\State \Comment{Step 2: embed notes --- NO session date}
+\For{each $f \in F$}
+    \State $c \leftarrow f.\text{content}$
+    \State $e \leftarrow \embed\big(c \,\Vert\, f.K \,\Vert\, f.G \,\Vert\, f.X\big)$
+    \State $z \leftarrow \embed(c)$
+    \State $\textsc{Notes}.append\big(\textsc{Note}(c,\ t=\NOW,\ f.K,\ f.G,\ f.X,\ e,\ z,\ q_0)\big)$
+\EndFor
+\State \Comment{Step 3: batch memory ops (LLM call \#2)}
+\State $E \leftarrow \textsc{First20}(M)$
+\State $O \leftarrow \LLM\big(P5_{\text{ops}}(\textsc{Notes}, E)\big)$
+\Comment{$O = [\{\text{index},\text{op},\text{target\_id}\}]$, op $\in$ \{ADD, UPDATE, DELETE, NOOP\}}
+\State \Comment{Step 4: execute ops}
+\For{each $(i, o) \in O$}
+    \State $n \leftarrow \textsc{Notes}[i]$
+    \If{$o.\text{op} = \text{ADD}$}
+        \State $M.\textsc{Add}(n)$; \State $\textsc{Added}.append(n)$
+    \ElsIf{$o.\text{op} = \text{UPDATE}$}
+        \State $M.\textsc{Add}\big(\textsc{Overwrite}(M.\textsc{Get}(o.\text{target}), n)\big)$
+        \Comment{original $c$ is lost}
+    \ElsIf{$o.\text{op} = \text{DELETE}$}
+        \State $M.\textsc{Delete}(o.\text{target})$
+    \EndIf
+\EndFor
+\State \Comment{Step 5: batch link generation (LLM call \#3)}
+\State $N \leftarrow \textsc{TopK-ANN}(\textsc{Added},\ k{=}10)$ \Comment{$\le 20$ payloads}
+\State $R \leftarrow \LLM\big(P6_{\text{link}}(\textsc{Added}, N)\big)$
+\For{each $(s,t,r) \in R$} \State $\textsc{AddEdge}_{\text{bi}}(s, t, r)$ \EndFor
+\State \Comment{Step 6: rebuild FAISS index once}
+\State $M.\textsc{RebuildIndex}()$
+\State \Return $\textsc{Added}$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Cost.} 3 LLM calls/session; non-deterministic; UPDATE overwrites; DELETE destructive.
+
+\subsection*{Algorithm 2 --- FastASEM ingestion (\texttt{FastSessionIngestor}, SLAFI)}
+\begin{algorithm}[H]
+\caption{FastASEM session-level atomic-fact ingestion: 1 LLM call per session.}
+\label{alg:fastasem_ingest}
+\Require turns $T$, session date string $d$, session id $s$, memory bank $M$
+\Ensure list of added/updated notes
+\State $(\mathit{dt},\ \mathit{iso}) \leftarrow \textsc{ParseSessionDateTime}(d)$
+\State \Comment{Step 1: atomic-fact extraction (LLM call \#1, the ONLY LLM call)}
+\State $F \leftarrow \LLM\big(\textsc{SLAFI}(d, \textsc{Join}(T))\big)$
+\Comment{rules: resolve pronouns; resolve relative$\to$absolute dates; atomic; entities}
+\If{$F = \varnothing$} \State $F \leftarrow \textsc{FallbackPerLine}(T, d)$ \EndIf
+\State \Comment{Step 2: build candidate notes (session date stamped)}
+\For{each $f \in F$}
+    \State $e \leftarrow \embed\big(f.\text{fact} \,\Vert\, f.K \,\Vert\, f.G \,\Vert\, f.\text{ent}\big)$
+    \State $z \leftarrow \embed(f.\text{fact})$
+    \State $\textsc{Raw}.append\big(\textsc{Note}(f.\text{fact},\ t=\mathit{dt},\ f.K,\ f.G,\ f.\text{fact},\ e,\ z,\ q_0,\ \mathit{sid}{=}s,\ \mathit{date}{=}d,\ \mathit{iso},\ f.\text{ent},\ f.\text{spk})\big)$
+\EndFor
+\State \Comment{Step 3: deterministic gate (NO LLM)}
+\For{each $n \in \textsc{Raw}$}
+    \State $C \leftarrow \ANN(n.z,\ 3)$
+    \If{$C = \varnothing$} \State $M.\textsc{Add}(n)$; \State $\textsc{Added}.append(n)$; \State \textbf{continue} \EndIf
+    \State $(n^{*},\ \sigma) \leftarrow \arg\max_{c \in C}\ \cos(n.z, c.z)$
+    \If{$\sigma \ge \tauR$}
+        \Comment{near-duplicate $\to$ NOOP}
+        \State \textbf{continue}
+    \ElsIf{$\sigma \ge \tauN$}
+        \Comment{candidate UPDATE}
+        \State $S \leftarrow \{n.\text{spk},\ n^{*}.\text{spk}\}$
+        \State $\Omega \leftarrow (n.\text{ent} \cap n^{*}.\text{ent}) \setminus S$
+        \If{$\Omega \neq \varnothing$}
+            \State $M.\textsc{Add}\big(\textsc{AppendMerge}(n^{*}, n)\big)$
+            \Comment{$X$ grows, $e$ recomputed, $c/t$ preserved}
+            \State $\textsc{Added}.append(n^{*})$; \State \textbf{continue}
+        \EndIf
+    \EndIf
+    \State $M.\textsc{Add}(n)$; \State $\textsc{Added}.append(n)$ \Comment{default $\to$ ADD}
+\EndFor
+\State \Comment{Step 4: deterministic graph weaving (NO LLM)}
+\For{each $n \in \textsc{Added}$}
+    \For{each $m \in M.\textsc{SearchByEntities}(n.\text{ent},\ 5)$}
+        \If{$m \neq n$} \State $\textsc{AddEdge}_{\text{bi}}(n, m, \text{same-entity})$ \EndIf
+    \EndFor
+    \For{each $b \in \ANN(n.e,\ 4)$}
+        \If{$b \neq n$ \textbf{and} $\cos(n.e, b.e) \ge 0.55$}
+            \State $\textsc{AddEdge}_{\text{bi}}\big(n, b,\ \text{temporal if same session else semantic}\big)$
+        \EndIf
+    \EndFor
+\EndFor
+\State \Return $\textsc{Added}$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Cost.} 1 LLM call/session; deterministic; UPDATE appends (no loss); no DELETE.
+
+% ============================================================================
+\section*{Retrieval}
+% ============================================================================
+
+\subsection*{Algorithm 3 --- ASEMv2 retrieval (\texttt{EnhancedHybridRetriever})}
+\begin{algorithm}[H]
+\caption{ASEMv2 retrieval: RRF recall + N-hop BFS + global-graph re-rank.}
+\label{alg:asemv2_retrieve}
+\Require query $q$, memory bank $M$
+\Ensure ranked list of notes
+\State $e_q \leftarrow \embed(q)$
+\State \Comment{Phase A: multi-channel RRF recall}
+\State $P \leftarrow \ANN(e_q, k_1)$; \State $r_d \leftarrow \rank(P)$
+\If{$\text{use\_bm25}$} \State $r_b \leftarrow \rank\big(M.\textsc{BM25}(q, k_1)\big)$ \EndIf
+\If{$\text{use\_entity}$} \State $r_e \leftarrow \rank\big(M.\textsc{SearchByEntities}(\textsc{CapTokens}(q), k_1)\big)$ \EndIf
+\State $\mathit{isTemp} \leftarrow \textsc{IsTemporalQuery}(q)$
+\For{each $n \in P \cup r_b \cup r_e$}
+    \State $\sigma \leftarrow 0$
+    \If{$n \in r_d$} \State $\sigma \mathrel{+}= w_{\mathrm{dense}} / (\rrfk + r_d[n])$ \EndIf
+    \If{$n \in r_b$} \State $\sigma \mathrel{+}= w_{\mathrm{bm25}} / (\rrfk + r_b[n])$ \EndIf
+    \If{$n \in r_e$} \State $\sigma \mathrel{+}= w_{\mathrm{ent}} / (\rrfk + r_e[n])$ \EndIf
+    \If{$\mathit{isTemp}$ \textbf{and} $n$ has session date} \State $\sigma \mathrel{+}= w_{\mathrm{temp}} / \rrfk$ \EndIf
+    \If{$\cos(e_q, n.e) \ge \delta$ \textbf{or} $n \in r_b \cup r_e$} \State $\textsc{Cand}.append(n, \sigma)$ \EndIf
+\EndFor
+\State $\textsc{Cand} \leftarrow \topk(\textsc{Cand},\ k_1)$
+\State \Comment{Phase B: z-scored composite re-rank}
+\State $\lambda \leftarrow \textsc{AdaptiveLambda}(q)$ \Comment{factual 0.25 / reasoning 0.60 / default 0.40}
+\State $s \leftarrow \zscore\big([\cos(e_q, n.e)\ \forall n \in \textsc{Cand}]\big)$
+\State $u \leftarrow \zscore\big([n.q\ \forall n \in \textsc{Cand}]\big)$
+\State $\textsc{Res} \leftarrow \topk\big(\textsc{Cand},\ (1-\lambda)s + \lambda u,\ k_2\big)$
+\State \Comment{Phase C: TRUE N-hop BFS expansion (ASEMv2-specific)}
+\State $\mathit{frontier} \leftarrow \textsc{Ids}(\textsc{Res}[\text{top }t])$; \State $\mathit{visited} \leftarrow \textsc{Ids}(\textsc{Res})$; \State $\mathit{found} \leftarrow \varnothing$
+\For{$h = 1$ \textbf{to} $h_{\max}$}
+    \State $\mathit{decay} \leftarrow \mathit{hopDecay}^{\,h}$
+    \State $\mathit{next} \leftarrow \varnothing$
+    \For{each $n \in M.\textsc{GetNotes}(\mathit{frontier})$}
+        \For{each $(b, \rho) \in n.L$}
+            \If{$b \in \mathit{visited}$} \State \textbf{continue} \EndIf
+            \State $\mathit{visited}.add(b)$; \State $\mathit{next}.add(b)$
+            \State $q_{\text{eff}} \leftarrow b.q \cdot \cos(e_q, b.z)$ \Comment{intent-grounded Q}
+            \State $\mathit{found}.append\big(\cos(e_q, b.e)\cdot(0.5 + 0.5\,q_{\text{eff}})\cdot\mathit{decay}\cdot w_{\rho},\ b\big)$
+        \EndFor
+    \EndFor
+    \State $\mathit{frontier} \leftarrow \mathit{next}$
+    \If{$\mathit{frontier} = \varnothing$} \State \textbf{break} \EndIf
+\EndFor
+\State $\textsc{Res} \leftarrow \textsc{Res} \cup \topk(\mathit{found},\ 5)$
+\State \Comment{Phase D: GLOBAL-GRAPH re-rank (ASEMv2-specific)}
+\State $\textsc{RefreshGraph}(M)$ \Comment{Louvain communities + PageRank, cached by bank hash}
+\For{each $n \in \textsc{Res}$}
+    \State $\mathit{local} \leftarrow \cos(e_q, n.e)$
+    \State $q_{\text{eff}} \leftarrow n.q \cdot \cos(e_q, n.z)$
+    \State $\mathit{global} \leftarrow \textsc{CommunityBoost}(n) + \textsc{PageRank}(n)$
+    \State $\mathit{hybrid} \leftarrow \alpha\,\textsc{norm}(\mathit{local}) + \beta\,\mathit{global} + \gamma\,\textsc{norm}(q_{\text{eff}})$
+    \Comment{$\alpha{=}0.35,\ \beta{=}0.25,\ \gamma{=}0.40$}
+\EndFor
+\State $\textsc{Res} \leftarrow \textsc{Resort}(\textsc{Res},\ \mathit{hybrid})$
+\State \Return $\textsc{Res}$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Cost.} RRF Phase A + N-hop BFS (2 hops, relation-weighted) + global-graph re-rank
+(Louvain + PageRank). Strong on multi-hop/inference; no temporal signal beyond the shared
+RRF boost.
+
+\subsection*{Algorithm 4 --- FastASEM retrieval (\texttt{HybridRetriever})}
+\begin{algorithm}[H]
+\caption{FastASEM retrieval: RRF recall + 1-hop traversal.}
+\label{alg:fastasem_retrieve}
+\Require query $q$, memory bank $M$
+\Ensure ranked list of notes
+\State $e_q \leftarrow \embed(q)$
+\State \Comment{Phase A: multi-channel RRF recall (identical to ASEMv2 Phase A)}
+\State $P \leftarrow \ANN(e_q, k_1)$; \State $r_d \leftarrow \rank(P)$
+\If{$\text{use\_bm25}$} \State $r_b \leftarrow \rank\big(M.\textsc{BM25}(q, k_1)\big)$ \EndIf
+\If{$\text{use\_entity}$} \State $r_e \leftarrow \rank\big(M.\textsc{SearchByEntities}(\textsc{CapTokens}(q), k_1)\big)$ \EndIf
+\State $\mathit{isTemp} \leftarrow \textsc{IsTemporalQuery}(q)$
+\For{each $n \in P \cup r_b \cup r_e$}
+    \State $\sigma \leftarrow 0$
+    \If{$n \in r_d$} \State $\sigma \mathrel{+}= w_{\mathrm{dense}} / (\rrfk + r_d[n])$ \EndIf
+    \If{$n \in r_b$} \State $\sigma \mathrel{+}= w_{\mathrm{bm25}} / (\rrfk + r_b[n])$ \EndIf
+    \If{$n \in r_e$} \State $\sigma \mathrel{+}= w_{\mathrm{ent}} / (\rrfk + r_e[n])$ \EndIf
+    \If{$\mathit{isTemp}$ \textbf{and} $n$ has session date} \State $\sigma \mathrel{+}= w_{\mathrm{temp}} / \rrfk$ \EndIf
+    \Comment{$\uparrow$ effective here because FastASEM notes carry absolute dates}
+    \If{$\cos(e_q, n.e) \ge \delta$ \textbf{or} $n \in r_b \cup r_e$} \State $\textsc{Cand}.append(n, \sigma)$ \EndIf
+\EndFor
+\State $\textsc{Cand} \leftarrow \topk(\textsc{Cand},\ k_1)$
+\State \Comment{Phase B: z-scored composite re-rank (identical to ASEMv2 Phase B)}
+\State $\lambda \leftarrow \textsc{AdaptiveLambda}(q)$
+\State $s \leftarrow \zscore\big([\cos(e_q, n.e)\ \forall n \in \textsc{Cand}]\big)$
+\State $u \leftarrow \zscore\big([n.q\ \forall n \in \textsc{Cand}]\big)$
+\State $\textsc{Res} \leftarrow \topk\big(\textsc{Cand},\ (1-\lambda)s + \lambda u,\ k_2\big)$
+\State \Comment{Phase C: 1-hop link traversal (simpler than ASEMv2's N-hop)}
+\For{each $n \in \textsc{Res}$}
+    \For{each $b \in M.\textsc{GetNotes}(\{l.\text{target} \mid l \in n.L\})$}
+        \If{$b \notin \textsc{Res}$}
+            \State $\textsc{Score}(b) \leftarrow \cos(e_q, b.e) \cdot (0.5 + 0.5\, b.q)$
+        \EndIf
+    \EndFor
+\EndFor
+\State $\textsc{Res} \leftarrow \textsc{Res} \cup \topk(\textsc{Score},\ 3)$
+\State \Return $\textsc{Res}$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Cost.} RRF Phase A + 1-hop traversal only. No N-hop BFS, no global-graph re-rank.
+The temporal-boost term in Phase A is what makes ``when'' questions work, and it is
+effective \emph{because} FastASEM's notes carry absolute dates.
+
+% ============================================================================
+\section*{Side-by-side summary}
+% ============================================================================
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\small
+\begin{tabular}{p{4.2cm}p{5.2cm}p{5.2cm}}
+\toprule
+\textbf{Aspect} & \textbf{ASEMv2} & \textbf{FastASEM} \\
+\midrule
+Ingest LLM calls/session & 3 (extract, ops, links) & 1 (extract only) \\
+Note timestamp & $\NOW$ (wall-clock) & parsed session date + ISO \\
+Memory-op decision & LLM (20-note cap) & deterministic cosine gate \\
+UPDATE semantics & overwrite (loses original) & append (preserves original) \\
+DELETE & LLM-judged, destructive & none \\
+Link generation & LLM free-form & deterministic entity + adjacency \\
+Retrieval Phase A & RRF (dense+BM25+entity+temporal) & RRF (dense+BM25+entity+temporal) \\
+Retrieval Phase C & N-hop BFS (2 hops, relation-weighted) & 1-hop traversal \\
+Retrieval Phase D & Louvain community + PageRank re-rank & none \\
+Answer mode & distillation (select + rewrite) & direct (date-prefixed context) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

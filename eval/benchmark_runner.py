@@ -200,6 +200,7 @@ def run_benchmark(
     use_judge: bool = False,
     use_bertscore: bool = False,
     db_dir: str = "data/benchmarks/eval_banks",
+    preds_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     print("=" * 70)
     print("FAST-ASEM LONG-TERM MEMORY BENCHMARK RUNNER")
@@ -261,6 +262,17 @@ def run_benchmark(
         "systems": {},
     }
 
+    # Stream per-QA predictions to JSONL so partial results survive a crash/kill.
+    preds_files: Dict[str, Any] = {}
+    if preds_dir:
+        os.makedirs(preds_dir, exist_ok=True)
+        for name in system_names:
+            preds_files[name] = open(
+                os.path.join(preds_dir, f"{os.path.basename(data_path).rsplit('.', 1)[0]}_{name}.jsonl"),
+                "w", encoding="utf-8",
+            )
+        print(f"Streaming per-QA predictions to: {preds_dir}\n")
+
     for sys_name, sys_instance in systems.items():
         print(f"--- Running System: {sys_name} ---")
         sys_results = {
@@ -272,7 +284,10 @@ def run_benchmark(
             "qa_time_sec": 0.0,
             "by_category": defaultdict(lambda: {"total": 0, "em": 0.0, "rouge_l": 0.0, "judge": 0.0}),
             "qa_log": [],
+            "conversations": [],
         }
+        # Register early (mutable) so partial saves include in-progress results
+        results["systems"][sys_name] = sys_results
 
         for conv_idx, conv in enumerate(conversations):
             conv_id = conv.get("conversation_id", f"conv_{conv_idx + 1}")
@@ -310,6 +325,11 @@ def run_benchmark(
             sys_results["ingest_time_sec"] += ingest_dur
 
             print(f"  [{conv_id}] Ingested {len(sessions)} sessions in {ingest_dur:.2f}s. Answering {len(qa_items)} QA pairs...")
+
+            # Per-conversation prediction log
+            conv_qa_log: List[Dict[str, Any]] = []
+            conv_em = conv_rouge = conv_judge = 0.0
+            conv_total = 0
 
             # Run QA
             t0_qa = time.time()
@@ -349,7 +369,7 @@ def run_benchmark(
                 if use_judge:
                     cat_stats["judge"] += 1.0 if judge_ok else 0.0
 
-                sys_results["qa_log"].append({
+                entry = {
                     "conv_id": conv_id,
                     "category": cat_name,
                     "question": question,
@@ -358,18 +378,69 @@ def run_benchmark(
                     "em": em,
                     "rouge_l": rouge,
                     "judge_correct": judge_ok if use_judge else None,
-                })
+                }
+                sys_results["qa_log"].append(entry)
+                conv_qa_log.append(entry)
+
+                # Stream prediction to JSONL immediately (crash-safe partial results)
+                if sys_name in preds_files:
+                    preds_files[sys_name].write(json.dumps({
+                        "idx": len(sys_results["qa_log"]) - 1,
+                        "session_id": conv_id,
+                        "category": cat_id,
+                        "category_name": cat_name,
+                        "query": question,
+                        "pred": pred,
+                        "ref": gold_answer,
+                        "em": em,
+                        "rouge_l": rouge,
+                        "judge_correct": judge_ok if use_judge else None,
+                    }, ensure_ascii=False) + "\n")
+                    preds_files[sys_name].flush()
+
+                conv_total += 1
+                conv_em += em
+                conv_rouge += rouge
+                if use_judge:
+                    conv_judge += 1.0 if judge_ok else 0.0
 
             qa_dur = time.time() - t0_qa
             sys_results["qa_time_sec"] += qa_dur
 
-        # BERTScore-F1 (batched over all QA pairs for this system)
+            # Per-conversation BERTScore-F1 (computed on this conversation's pairs)
+            if use_bertscore:
+                conv_preds = [e["pred"] for e in conv_qa_log]
+                conv_refs = [e["gold"] for e in conv_qa_log]
+                conv_bs = compute_bertscore_batch(conv_preds, conv_refs)
+                for e, bs in zip(conv_qa_log, conv_bs):
+                    e["bertscore_f1"] = bs
+                conv_bs_avg = sum(conv_bs) / max(1, len(conv_bs))
+            else:
+                conv_bs_avg = None
+
+            # Store per-conversation predictions + aggregate scores
+            conv_n = max(1, conv_total)
+            sys_results["conversations"].append({
+                "conv_id": conv_id,
+                "num_sessions": len(sessions),
+                "num_questions": conv_total,
+                "avg_em": conv_em / conv_n,
+                "avg_rouge_l": conv_rouge / conv_n,
+                "avg_judge": (conv_judge / conv_n) if use_judge else None,
+                "avg_bertscore_f1": conv_bs_avg,
+                "qa": conv_qa_log,
+            })
+            print(f"  [{conv_id}] {conv_total} QA | EM={conv_em / conv_n:.3f} | ROUGE-L={conv_rouge / conv_n:.3f}" + (f" | Judge={conv_judge / conv_n:.3f}" if use_judge else "") + (f" | BERTScore={conv_bs_avg:.3f}" if use_bertscore else ""))
+
+            # Save partial results after each conversation (crash-safe)
+            if out_file:
+                os.makedirs(os.path.dirname(os.path.abspath(out_file)), exist_ok=True)
+                with open(out_file, "w", encoding="utf-8") as f:
+                    json.dump(results, f, indent=2, default=str)
+
+        # BERTScore-F1 aggregate (per-entry scores already computed per conversation)
         if use_bertscore:
-            preds = [entry["pred"] for entry in sys_results["qa_log"]]
-            refs = [entry["gold"] for entry in sys_results["qa_log"]]
-            bs_scores = compute_bertscore_batch(preds, refs)
-            for entry, bs in zip(sys_results["qa_log"], bs_scores):
-                entry["bertscore_f1"] = bs
+            bs_scores = [entry.get("bertscore_f1", 0.0) for entry in sys_results["qa_log"]]
             sys_results["bertscore_f1"] = sum(bs_scores) / max(1, len(bs_scores))
 
         # Compute averages
@@ -395,12 +466,34 @@ def run_benchmark(
         summary += f" | Ingest={sys_results['ingest_time_sec']:.1f}s | QA={sys_results['qa_time_sec']:.1f}s\n"
         print(summary)
 
+        # Per-conversation summary table
+        if sys_results.get("conversations"):
+            print(f"  --- {sys_name} per-conversation ---")
+            header = f"  {'Conv':<10}{'#Q':<5}{'EM':<8}{'ROUGE-L':<10}"
+            if use_judge:
+                header += f"{'Judge':<8}"
+            if use_bertscore:
+                header += f"{'BERT-F1':<8}"
+            print(header)
+            print("  " + "-" * (len(header) - 2))
+            for c in sys_results["conversations"]:
+                row = f"  {c['conv_id']:<10}{c['num_questions']:<5}{c['avg_em']:<8.3f}{c['avg_rouge_l']:<10.3f}"
+                if use_judge:
+                    row += f"{(c['avg_judge'] if c['avg_judge'] is not None else 0.0):<8.3f}"
+                if use_bertscore:
+                    row += f"{(c['avg_bertscore_f1'] if c['avg_bertscore_f1'] is not None else 0.0):<8.3f}"
+                print(row)
+            print()
+
     # Save output
     if out_file:
         os.makedirs(os.path.dirname(os.path.abspath(out_file)), exist_ok=True)
         with open(out_file, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, default=str)
         print(f"Results written to: {out_file}")
+
+    for fh in preds_files.values():
+        fh.close()
 
     return results
 
@@ -415,6 +508,8 @@ def main():
     parser.add_argument("--judge", action="store_true", help="Enable LLM-as-a-Judge evaluation")
     parser.add_argument("--bertscore", action="store_true", help="Enable BERTScore-F1 evaluation")
     parser.add_argument("--db-dir", default="data/benchmarks/eval_banks", help="Database storage directory")
+    parser.add_argument("--preds-dir", default="data/benchmarks/results/preds",
+                        help="Directory to stream per-QA predictions JSONL (crash-safe partial results)")
     args = parser.parse_args()
 
     run_benchmark(
@@ -426,6 +521,7 @@ def main():
         use_judge=args.judge,
         use_bertscore=args.bertscore,
         db_dir=args.db_dir,
+        preds_dir=args.preds_dir,
     )
 
 

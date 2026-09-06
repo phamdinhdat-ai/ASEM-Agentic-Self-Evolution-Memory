@@ -1,0 +1,169 @@
+{
+  "metadata": {
+    "data_path": "datasets/locomo/locomo10.json",
+    "config_path": "configs/presets/sota_benchmark.yaml",
+    "conv_id": "conv-26",
+    "conv_index": 0,
+    "n_sessions": 19,
+    "n_turns": 419,
+    "total_questions": 117,
+    "judge": true,
+    "timestamp": "2026-09-03T15:31:20"
+  },
+  "overall": {
+    "FastASEM": {
+      "n": 117,
+      "em": 0.2905982905982906,
+      "rouge_l": 0.4361609151061551,
+      "bertscore_f1": 0.882231284919967,
+      "null_preds": 0,
+      "judge": 0.7008547008547008
+    },
+    "ASEMv2": {
+      "n": 117,
+      "em": 0.1794871794871795,
+      "rouge_l": 0.19286431360020598,
+      "bertscore_f1": 0.8289791197858305,
+      "null_preds": 0,
+      "judge": 0.6581196581196581
+    },
+    "SimRetrieval": {
+      "n": 117,
+      "em": 0.27350427350427353,
+      "rouge_l": 0.3653835159075802,
+      "bertscore_f1": 0.8700409883107895,
+      "null_preds": 0,
+      "judge": 0.7008547008547008
+    },
+    "FullContext": {
+      "n": 117,
+      "em": 0.2905982905982906,
+      "rouge_l": 0.37707327118869544,
+      "bertscore_f1": 0.8710301365607824,
+      "null_preds": 0,
+      "judge": 0.7606837606837606
+    }
+  },
+  "by_category": {
+    "FastASEM": {
+      "Conversational Context": {
+        "n": 35,
+        "em": 0.3142857142857143,
+        "rouge_l": 0.4947746309090847,
+        "bertscore_f1": 0.8922403948647636,
+        "null_preds": 0
+      },
+      "Multi-Hop / Commonsense": {
+        "n": 13,
+        "em": 0.07692307692307693,
+        "rouge_l": 0.06329567868029407,
+        "bertscore_f1": 0.8134550131284274,
+        "null_preds": 0
+      },
+      "Single-Hop": {
+        "n": 32,
+        "em": 0.1875,
+        "rouge_l": 0.3269847985327441,
+        "bertscore_f1": 0.8615852668881416,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 37,
+        "em": 0.43243243243243246,
+        "rouge_l": 0.6061448002624473,
+        "bertscore_f1": 0.9147838289673264,
+        "null_preds": 0
+      }
+    },
+    "ASEMv2": {
+      "Conversational Context": {
+        "n": 35,
+        "em": 0.42857142857142855,
+        "rouge_l": 0.385627019320989,
+        "bertscore_f1": 0.8723023414611817,
+        "null_preds": 0
+      },
+      "Multi-Hop / Commonsense": {
+        "n": 13,
+        "em": 0.07692307692307693,
+        "rouge_l": 0.1005364932573274,
+        "bertscore_f1": 0.8406819792894217,
+        "null_preds": 0
+      },
+      "Single-Hop": {
+        "n": 32,
+        "em": 0.125,
+        "rouge_l": 0.1413764557882205,
+        "bertscore_f1": 0.8359943926334381,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 37,
+        "em": 0.02702702702702703,
+        "rouge_l": 0.08749075722759933,
+        "bertscore_f1": 0.7778186202049255,
+        "null_preds": 0
+      }
+    },
+    "SimRetrieval": {
+      "Conversational Context": {
+        "n": 35,
+        "em": 0.4857142857142857,
+        "rouge_l": 0.4826590801749947,
+        "bertscore_f1": 0.8972756045205252,
+        "null_preds": 0
+      },
+      "Multi-Hop / Commonsense": {
+        "n": 13,
+        "em": 0.15384615384615385,
+        "rouge_l": 0.20602454622459387,
+        "bertscore_f1": 0.8453114216144269,
+        "null_preds": 0
+      },
+      "Single-Hop": {
+        "n": 32,
+        "em": 0.15625,
+        "rouge_l": 0.2564118744011836,
+        "bertscore_f1": 0.855329480022192,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 37,
+        "em": 0.21621621621621623,
+        "rouge_l": 0.4046839046839047,
+        "bertscore_f1": 0.8656907291025728,
+        "null_preds": 0
+      }
+    },
+    "FullContext": {
+      "Conversational Context": {
+        "n": 35,
+        "em": 0.5714285714285714,
+        "rouge_l": 0.6897686293003407,
+        "bertscore_f1": 0.9243258646556309,
+        "null_preds": 0
+      },
+      "Multi-Hop / Commonsense": {
+        "n": 13,
+        "em": 0.23076923076923078,
+        "rouge_l": 0.2726152479998634,
+        "bertscore_f1": 0.8521881607862619,
+        "null_preds": 0
+      },
+      "Single-Hop": {
+        "n": 32,
+        "em": 0.3125,
+        "rouge_l": 0.33127250308171363,
+        "bertscore_f1": 0.8750082459300756,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 37,
+        "em": 0.02702702702702703,
+        "rouge_l": 0.1575933075933076,
+        "bertscore_f1": 0.8237949207022384,
+        "null_preds": 0
+      }
+    }
+  }
+}

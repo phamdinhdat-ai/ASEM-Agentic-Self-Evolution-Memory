@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Tuple
 
 from .backends.base import InferenceBackend
-from .llm_validator import LLMRetryHandler, validate_distil_response
+from .llm_validator import LLMRetryHandler, _is_transient_network_error, validate_distil_response
 from .logging_utils import get_logger
 from .note import Note, _try_extract_json
 
@@ -24,6 +25,29 @@ class AnswerAgent:
     baseline_prompt_template: str
     direct_mode: bool = False
     max_retries: int = 0
+
+    def _generate_resilient(self, prompt: str) -> str:
+        """Generate with retry on transient network errors (DNS blips, etc.).
+
+        The direct/baseline answer paths call ``backend.generate`` directly
+        (no JSON parsing), so they bypass the LLMRetryHandler. Without this,
+        a single transient connection error during the QA phase would crash
+        the whole benchmark run.
+        """
+        attempts = max(1, self.max_retries + 1)
+        for attempt in range(attempts):
+            try:
+                return self.backend.generate(prompt)
+            except Exception as exc:  # noqa: BLE001
+                if _is_transient_network_error(exc) and attempt < attempts - 1:
+                    backoff = min(2 ** attempt, 15)
+                    _log.warning(
+                        "Transient network error in answer (attempt {}/{}): {} — retrying in {}s",
+                        attempt + 1, attempts, type(exc).__name__, backoff,
+                    )
+                    time.sleep(backoff)
+                    continue
+                raise
 
     def distil_and_answer(self, query: str, candidates: List[Note]) -> Tuple[List[Note], str]:
         if not candidates:
@@ -81,14 +105,14 @@ class AnswerAgent:
 
         context = "\n".join(context_items)
         prompt = self.baseline_prompt_template.format(query=query, context=context)
-        return self.backend.generate(prompt).strip()
+        return self._generate_resilient(prompt).strip()
 
     def _baseline_answer(self, query: str, candidates: List[Note]) -> str:
         context = "\n".join([
             f"- {note.c}" for note in candidates
         ])
         prompt = self.baseline_prompt_template.format(query=query, context=context)
-        return self.backend.generate(prompt).strip()
+        return self._generate_resilient(prompt).strip()
 
     def _parse_response(self, raw: str) -> Tuple[List[str], str] | None:
         data = _try_extract_json(raw, expect_array=False)

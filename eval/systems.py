@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import os
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import yaml
 
@@ -206,6 +206,9 @@ class ASEMSystemV2:
         # If not yet ingested and history is provided, auto-ingest
         if not self._ingested and history:
             self.ingest_conversation(history)
+        used_notes, answer = self.pipeline.read_path(query)
+        return answer
+
 
 @dataclass
 class FastASEMSystem:
