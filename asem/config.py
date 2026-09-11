@@ -64,6 +64,23 @@ class IngestionConfig:
 
 
 @dataclass
+class PhaseConfig:
+    """Phase-separated benchmark control.
+
+    ``mode`` selects which half of the pipeline a run executes:
+      - ``"ingest"``   : build + persist the memory banks only (no answering)
+      - ``"retrieve"`` : load pre-built banks and answer/score only
+      - ``"combined"`` : ingest then retrieve in a single run
+
+    ``bank_tag`` names the shared bank directory so retrieval sweeps across
+    different backbone LLMs can all reuse one ingestion result.
+    """
+    mode: str = "combined"      # "ingest" | "retrieve" | "combined"
+    bank_tag: str = "shared"    # shared bank directory tag
+    ingest_config: Optional[str] = None  # config used to build banks (defaults to self)
+
+
+@dataclass
 class ASEMConfig:
     preset: str = "sota_benchmark"  # "fast_eval" | "sota_benchmark" | "deep_evolution" | "custom"
     inference: Dict[str, Any] = field(default_factory=lambda: {
@@ -81,6 +98,7 @@ class ASEMConfig:
     retriever: RetrieverConfig = field(default_factory=RetrieverConfig)
     answer: AnswerConfig = field(default_factory=AnswerConfig)
     ingestion: IngestionConfig = field(default_factory=IngestionConfig)
+    phase: PhaseConfig = field(default_factory=PhaseConfig)
     link_tau: float = 0.35
     llm_retry: Dict[str, Any] = field(default_factory=lambda: {"max_retries": 1})
     logging: Dict[str, Any] = field(default_factory=lambda: {"level": "INFO"})
@@ -150,6 +168,14 @@ class ASEMConfig:
                 lazy_evolution=ing.get("lazy_evolution", True),
                 link_tau=ing.get("link_tau", 0.35),
                 max_notes_per_session=ing.get("max_notes_per_session", 20),
+            )
+
+        if "phase" in data:
+            ph = data["phase"] or {}
+            cfg.phase = PhaseConfig(
+                mode=ph.get("mode", "combined"),
+                bank_tag=ph.get("bank_tag", "shared"),
+                ingest_config=ph.get("ingest_config"),
             )
 
         if "link_tau" in data:
