@@ -106,10 +106,11 @@ def load_fastasem_entries(preds_path: str) -> List[Dict[str, Any]]:
     return entries
 
 
-def build_system(name: str, config_path: str, db_dir: str):
+def build_system(name: str, config_path: str, db_dir: str, with_dates: bool = False):
     if name == "ASEMv2":
         return build_asem_v2_system(config_path, db_dir)
-    baselines = build_baselines(config_path, db_dir, max_history_turns=0)
+    baselines = build_baselines(config_path, db_dir, max_history_turns=0,
+                                with_dates=with_dates)
     if name not in baselines:
         raise ValueError(f"Unknown system: {name} (choose {', '.join(SYSTEMS)})")
     return baselines[name]
@@ -156,6 +157,21 @@ def _norm_pred(pred: Optional[str]) -> str:
     if not isinstance(pred, str):
         return str(pred)
     return pred
+
+
+def _date_leveled_turns(sessions: List[Dict[str, Any]]) -> List[str]:
+    """Prefix every turn with its session date, e.g.
+    '[1:56 pm on 8 May, 2023] [Caroline] Hey Mel! ...' — the same ``[<session date>]``
+    prefix FastASEM stamps on its memory notes, so the non-FastASEM methods carry the
+    same absolute-date context when ``--with-dates`` is enabled.
+    """
+    dated: List[str] = []
+    for s in sessions:
+        date_str = (s.get("date") or "").strip()
+        prefix = f"[{date_str}] " if date_str else ""
+        for t in s.get("turns", []):
+            dated.append(prefix + t)
+    return dated
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +235,10 @@ def main() -> None:
                         help="Run LLM-as-a-Judge for every prediction (costs 1 call each)")
     parser.add_argument("--score-only", action="store_true",
                         help="Skip LLM runs; re-score existing fairplay_*.jsonl + FastASEM")
+    parser.add_argument("--with-dates", action="store_true",
+                        help="FAIR leveling: give FullContext/SimRetrieval/ASEMv2 the same "
+                             "session dates as FastASEM (prefix turns/notes with "
+                             "[<session date>]). Writes _dates output files.")
     args = parser.parse_args()
 
     os.makedirs(args.preds_dir, exist_ok=True)
@@ -234,6 +254,20 @@ def main() -> None:
     sessions = extract_sessions_from_conv(conv_data)
     all_turns = [t for s in sessions for t in s["turns"]]
     session_batches = [(s["session_id"] + " " + s["date"], s["turns"]) for s in sessions]
+
+    # ---- Fair temporal leveling: dates in the context for ALL methods --------
+    out_tag = "_dates" if args.with_dates else ""
+    if args.with_dates:
+        # Level the input field: the three non-FastASEM methods now receive the
+        # same absolute session-date context that FastASEM has always used.
+        #   * FullContext / ASEMv2  -> transcript prefixed per turn with [<session date>]
+        #   * SimRetrieval          -> session label is just the date (its notes get the prefix)
+        all_turns = _date_leveled_turns(sessions)
+        session_batches = [
+            (s.get("date") or s["session_id"], s["turns"]) for s in sessions
+        ]
+
+    session_batches_all = session_batches  # alias kept for clarity below
 
     # ---- Canonical test set (identical for every method) ------------------
     test_set = load_test_set(args.fastasem_preds)
@@ -256,7 +290,8 @@ def main() -> None:
         systems: Dict[str, Any] = {}
         for name in args.systems:
             print(f"\n--- Building + ingesting: {name} ---")
-            sys_instance = build_system(name, args.config, args.db_dir)
+            sys_instance = build_system(name, args.config, args.db_dir,
+                                        with_dates=args.with_dates)
             if hasattr(sys_instance, "reset"):
                 sys_instance.reset()  # clean bank so re-runs don't accumulate duplicates
             t0 = time.time()
@@ -275,8 +310,8 @@ def main() -> None:
         # ---- Answer all questions for each system -------------------------
         results = {name: [] for name in args.systems}
         preds_files = {
-            name: open(os.path.join(args.preds_dir, f"fairplay_{name}_conv26.jsonl"), "w",
-                       encoding="utf-8")
+            name: open(os.path.join(args.preds_dir, f"fairplay_{name}_conv26{out_tag}.jsonl"),
+                       "w", encoding="utf-8")
             for name in args.systems
         }
 
@@ -321,7 +356,7 @@ def main() -> None:
     else:
         # ---- Score-only: load existing fairplay_*.jsonl -------------------
         for name in args.systems:
-            path = os.path.join(args.preds_dir, f"fairplay_{name}_conv26.jsonl")
+            path = os.path.join(args.preds_dir, f"fairplay_{name}_conv26{out_tag}.jsonl")
             if not os.path.exists(path):
                 print(f"  [score-only] missing {path} — skipping {name}")
                 continue
@@ -349,6 +384,7 @@ def main() -> None:
             "n_turns": len(all_turns),
             "total_questions": len(test_set),
             "judge": args.judge,
+            "with_dates": bool(args.with_dates),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         },
         "overall": {},
@@ -364,7 +400,7 @@ def main() -> None:
         summary["by_category"].setdefault(name, {})
         summary["by_category"][name] = score_by_category(entries)
 
-    summary_path = os.path.join(args.results_dir, "fairplay_locomo10_conv26.json")
+    summary_path = os.path.join(args.results_dir, f"fairplay_locomo10_conv26{out_tag}.json")
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
 

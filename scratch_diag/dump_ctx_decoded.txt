@@ -1,0 +1,156 @@
+python : W0903 20:39:47.803000 16160 
+site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: 
+Redirects are currently not supported in Windows or MacOs.
+At line:1 char:27
++ ...  memory-r1; python scripts/dump_fastasem_context.py --only 1,2,3 2>&1 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (W0903 20:39:47....ndows or MacOs. 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Bank size: 389 notes
+
+================================================================================================
+[1] Q: When did Caroline go to the LGBTQ support group?
+    GOLD: '7 May 2023'
+    Retrieved 11 candidates.
+------------------------------------------------------------------------------------------------
+>>> EXACT CONTEXT (goes into {context}) <<<
+- [1:56 pm on 8 May, 2023] On 7 May 2023, Caroline went to an LGBTQ support group. (Entities: Caroline, LGBTQ support group) (Keywords: support group, LGBTQ, visited)
+- [7:55 pm on 9 June, 2023] On 2 June 2023, Caroline encouraged students to get involved in the LGBTQ community. (Entities: Caroline, LGBTQ community) (Keywords: students, LGBTQ community, encouragement)
+- [1:36 pm on 3 July, 2023] Caroline felt that the LGBTQ+ community had grown significantly. (Entities: Caroline, LGBTQ+ community) (Keywords: community growth, LGBTQ+)
+- [4:33 pm on 12 July, 2023] On 10 July 2023, Caroline went to an LGBTQ conference. (Entities: Caroline, LGBTQ conference) (Keywords: LGBTQ conference, attended, met people, connected, similar journeys, accepted, welcoming environment, felt) (Description: On 10 July 2023, Caroline went to an LGBTQ conference. | At the LGBTQ conference on 10 July 2023, Caroline met and connected with people who have gone through similar journeys. | Caroline felt totally accepted and welcomed at the LGBTQ conference on 10 July 2023.)
+- [1:51 pm on 15 July, 2023] Caroline felt comforted by knowing that Caroline was not alone and had a supportive community. (Entities: Caroline, LGBTQ+ community) (Keywords: community, support, belonging)
+- [1:51 pm on 15 July, 2023] Caroline feels supported by people who embrace and back Caroline up. (Entities: Caroline, Caroline's support network) (Keywords: acceptance, support, community)
+- [8:56 pm on 20 July, 2023] The name of Caroline's group is Connected LGBTQ Activists. (Entities: Caroline, Connected LGBTQ Activists) (Keywords: group name, Connected LGBTQ Activists)
+- [8:56 pm on 20 July, 2023] On 18 July 2023, Caroline joined a new LGBTQ activist group. (Entities: Caroline, LGBTQ activist group) (Keywords: joined, LGBTQ, activist group, meeting people, community, group, fulfilling, participation) (Description: On 18 July 2023, Caroline joined a new LGBTQ activist group. | Caroline is meeting many new people through Caroline's new LGBTQ activist group. | Caroline finds participating in Caroline's new LGBTQ activist group fulfilling.)
+- [2:24 pm on 14 August, 2023] Caroline found the pride parade inspiring and it pushed her to keep fighting for LGBTQ rights. (Entities: Caroline) (Keywords: inspiring, fighting, LGBTQ rights)
+- [3:31 pm on 23 August, 2023] Caroline supports LGBTQ rights. (Entities: Caroline, LGBTQ rights) (Keywords: LGBTQ, rights, advocacy)
+- [3:19 pm on 28 August, 2023] Caroline talked with LGBTQ+ young people at the youth center. (Entities: Caroline, LGBTQ+ young people, LGBTQ+ youth center) (Keywords: talking, support, young people)
+------------------------------------------------------------------------------------------------
+>>> FULLY-RENDERED PROMPT <<<
+You are a conversational memory QA assistant.
+Use the retrieved memory notes below to answer the question as accurately and concisely as possible.
+
+Guidelines:
+1. Answer concisely: a few words or one short sentence. No conversational preamble, no commentary, no quotes around the answer.
+2. Rely strictly on the facts in the memory notes.
+3. For time/date questions, provide the exact date, month, year, or relative timeframe mentioned in the notes.
+4. If no note contains information relevant to the question, answer "I don't know".
+
+Memory Notes:
+- [1:56 pm on 8 May, 2023] On 7 May 2023, Caroline went to an LGBTQ support group. (Entities: Caroline, LGBTQ support group) (Keywords: support group, LGBTQ, visited)
+- [7:55 pm on 9 June, 2023] On 2 June 2023, Caroline encouraged students to get involved in the LGBTQ community. (Entities: Caroline, LGBTQ community) (Keywords: students, LGBTQ community, encouragement)
+- [1:36 pm on 3 July, 2023] Caroline felt that the LGBTQ+ community had grown significantly. (Entities: Caroline, LGBTQ+ community) (Keywords: community growth, LGBTQ+)
+- [4:33 pm on 12 July, 2023] On 10 July 2023, Caroline went to an LGBTQ conference. (Entities: Caroline, LGBTQ conference) (Keywords: LGBTQ conference, attended, met people, connected, similar journeys, accepted, welcoming environment, felt) (Description: On 10 July 2023, Caroline went to an LGBTQ conference. | At the LGBTQ conference on 10 July 2023, Caroline met and connected with people who have gone through similar journeys. | Caroline felt totally accepted and welcomed at the LGBTQ conference on 10 July 2023.)
+- [1:51 pm on 15 July, 2023] Caroline felt comforted by knowing that Caroline was not alone and had a supportive community. (Entities: Caroline, LGBTQ+ community) (Keywords: community, support, belonging)
+- [1:51 pm on 15 July, 2023] Caroline feels supported by people who embrace and back Caroline up. (Entities: Caroline, Caroline's support network) (Keywords: acceptance, support, community)
+- [8:56 pm on 20 July, 2023] The name of Caroline's group is Connected LGBTQ Activists. (Entities: Caroline, Connected LGBTQ Activists) (Keywords: group name, Connected LGBTQ Activists)
+- [8:56 pm on 20 July, 2023] On 18 July 2023, Caroline joined a new LGBTQ activist group. (Entities: Caroline, LGBTQ activist group) (Keywords: joined, LGBTQ, activist group, meeting people, community, group, fulfilling, participation) (Description: On 18 July 2023, Caroline joined a new LGBTQ activist group. | Caroline is meeting many new people through Caroline's new LGBTQ activist group. | Caroline finds participating in Caroline's new LGBTQ activist group fulfilling.)
+- [2:24 pm on 14 August, 2023] Caroline found the pride parade inspiring and it pushed her to keep fighting for LGBTQ rights. (Entities: Caroline) (Keywords: inspiring, fighting, LGBTQ rights)
+- [3:31 pm on 23 August, 2023] Caroline supports LGBTQ rights. (Entities: Caroline, LGBTQ rights) (Keywords: LGBTQ, rights, advocacy)
+- [3:19 pm on 28 August, 2023] Caroline talked with LGBTQ+ young people at the youth center. (Entities: Caroline, LGBTQ+ young people, LGBTQ+ youth center) (Keywords: talking, support, young people)
+
+Question: When did Caroline go to the LGBTQ support group?
+Answer:
+
+================================================================================================
+
+================================================================================================
+[2] Q: When did Melanie paint a sunrise?
+    GOLD: 2022
+    Retrieved 11 candidates.
+------------------------------------------------------------------------------------------------
+>>> EXACT CONTEXT (goes into {context}) <<<
+- [1:56 pm on 8 May, 2023] On 2022, Melanie painted a lake sunrise. (Entities: Melanie, lake sunrise) (Keywords: painted, lake sunrise, art)
+- [1:56 pm on 8 May, 2023] Melanie said the lake sunrise painting is special to Melanie. (Entities: Melanie, lake sunrise painting) (Keywords: special, painting, meaningful)
+- [1:51 pm on 15 July, 2023] On 8û9 July 2023, Melanie and Melanie's children worked on a painting of a sunset with a palm tree. (Entities: Melanie, Melanie's children, Sunset, Palm tree, Sunset painting) (Keywords: painting, sunset, palm tree, collaboration, family) (Description: On 8û9 July 2023, Melanie and Melanie's children worked on a painting of a sunset with a palm tree. | Melanie and Melanie's children both contributed to their sunset-and-palm-tree painting.)
+- [2:31 pm on 17 July, 2023] Melanie and her kids just finished another painting. (Entities: Melanie) (Keywords: painting, kids)
+- [1:33 pm on 25 August, 2023] Melanie made a pottery plate with a bunch of flowers on it during a pottery class on 24 August 2023. (Entities: Melanie) (Keywords: pottery, plate, flowers, class)
+- [1:33 pm on 25 August, 2023] Melanie recently painted a sunflower on a canvas. (Entities: Melanie) (Keywords: painting, sunflower, canvas)
+- [1:33 pm on 25 August, 2023] Melanie is feeling inspired by autumn and is planning a few paintings. (Entities: Melanie) (Keywords: autumn, inspired, painting, planning)
+- [12:09 am on 13 September, 2023] Melanie's real art muses are painting and pottery. (Entities: Melanie) (Keywords: painting, pottery, muses)
+- [12:09 am on 13 September, 2023] Melanie created a pottery piece featuring a group of bowls and a starfish on a white surface. (Entities: Melanie) (Keywords: pottery, bowls, starfish)
+- [10:31 am on 13 October, 2023] Melanie painted a sunset-inspired painting last week, around early October 2023, with a pink sky. (Entities: Melanie) (Keywords: painting, sunset, pink sky)
+- [10:31 am on 13 October, 2023] Melanie has done an abstract painting with a blue background. (Entities: Melanie) (Keywords: abstract painting, blue background)
+------------------------------------------------------------------------------------------------
+>>> FULLY-RENDERED PROMPT <<<
+You are a conversational memory QA assistant.
+Use the retrieved memory notes below to answer the question as accurately and concisely as possible.
+
+Guidelines:
+1. Answer concisely: a few words or one short sentence. No conversational preamble, no commentary, no quotes around the answer.
+2. Rely strictly on the facts in the memory notes.
+3. For time/date questions, provide the exact date, month, year, or relative timeframe mentioned in the notes.
+4. If no note contains information relevant to the question, answer "I don't know".
+
+Memory Notes:
+- [1:56 pm on 8 May, 2023] On 2022, Melanie painted a lake sunrise. (Entities: Melanie, lake sunrise) (Keywords: painted, lake sunrise, art)
+- [1:56 pm on 8 May, 2023] Melanie said the lake sunrise painting is special to Melanie. (Entities: Melanie, lake sunrise painting) (Keywords: special, painting, meaningful)
+- [1:51 pm on 15 July, 2023] On 8û9 July 2023, Melanie and Melanie's children worked on a painting of a sunset with a palm tree. (Entities: Melanie, Melanie's children, Sunset, Palm tree, Sunset painting) (Keywords: painting, sunset, palm tree, collaboration, family) (Description: On 8û9 July 2023, Melanie and Melanie's children worked on a painting of a sunset with a palm tree. | Melanie and Melanie's children both contributed to their sunset-and-palm-tree painting.)
+- [2:31 pm on 17 July, 2023] Melanie and her kids just finished another painting. (Entities: Melanie) (Keywords: painting, kids)
+- [1:33 pm on 25 August, 2023] Melanie made a pottery plate with a bunch of flowers on it during a pottery class on 24 August 2023. (Entities: Melanie) (Keywords: pottery, plate, flowers, class)
+- [1:33 pm on 25 August, 2023] Melanie recently painted a sunflower on a canvas. (Entities: Melanie) (Keywords: painting, sunflower, canvas)
+- [1:33 pm on 25 August, 2023] Melanie is feeling inspired by autumn and is planning a few paintings. (Entities: Melanie) (Keywords: autumn, inspired, painting, planning)
+- [12:09 am on 13 September, 2023] Melanie's real art muses are painting and pottery. (Entities: Melanie) (Keywords: painting, pottery, muses)
+- [12:09 am on 13 September, 2023] Melanie created a pottery piece featuring a group of bowls and a starfish on a white surface. (Entities: Melanie) (Keywords: pottery, bowls, starfish)
+- [10:31 am on 13 October, 2023] Melanie painted a sunset-inspired painting last week, around early October 2023, with a pink sky. (Entities: Melanie) (Keywords: painting, sunset, pink sky)
+- [10:31 am on 13 October, 2023] Melanie has done an abstract painting with a blue background. (Entities: Melanie) (Keywords: abstract painting, blue background)
+
+Question: When did Melanie paint a sunrise?
+Answer:
+
+================================================================================================
+
+================================================================================================
+[3] Q: What fields would Caroline be likely to pursue in her educaton?
+    GOLD: 'Psychology, counseling certification'
+    Retrieved 11 candidates.
+------------------------------------------------------------------------------------------------
+>>> EXACT CONTEXT (goes into {context}) <<<
+- [1:56 pm on 8 May, 2023] Caroline plans to continue her education. (Entities: Caroline) (Keywords: education, continue, plans)
+- [1:56 pm on 8 May, 2023] Caroline plans to check out career options. (Entities: Caroline) (Keywords: career options, research, plans)
+- [1:56 pm on 8 May, 2023] On 8 May 2023, Caroline was going to do some research. (Entities: Caroline) (Keywords: research, going to, plan)
+- [1:56 pm on 8 May, 2023] Caroline is keen on counseling. (Entities: Caroline, counseling) (Keywords: counseling, interest, career)
+- [1:56 pm on 8 May, 2023] Caroline is keen on working in mental health. (Entities: Caroline, mental health) (Keywords: mental health, career, interest)
+- [7:55 pm on 9 June, 2023] On 2 June 2023, Caroline talked about Caroline's transgender journey at a school event. (Entities: Caroline) (Keywords: transgender journey, school event, talk)
+- [7:55 pm on 9 June, 2023] On 2 June 2023, Caroline encouraged students to get involved in the LGBTQ community. (Entities: Caroline, LGBTQ community) (Keywords: students, LGBTQ community, encouragement)
+- [10:37 am on 27 June, 2023] Caroline is thinking of working with trans people, helping them accept themselves and supporting their mental health. (Entities: Caroline, trans people) (Keywords: trans people, acceptance, mental health, counseling)
+- [8:18 pm on 6 July, 2023] Caroline has kids' books in her library, including classics, stories from different cultures, and educational books. (Entities: Caroline, books) (Keywords: kids' books, classics, cultural stories, educational books)
+- [2:24 pm on 14 August, 2023] Art has allowed Caroline to explore her transition and her changing body. (Entities: Caroline) (Keywords: transition, changing body, exploration)
+- [3:31 pm on 23 August, 2023] Caroline went horseback riding with Caroline's dad during Caroline's childhood. (Entities: Caroline, Caroline's dad, fields) (Keywords: horseback riding, childhood, dad, fields) (Description: Caroline went horseback riding with Caroline's dad during Caroline's childhood. | During Caroline's childhood, Caroline and Caroline's dad rode horses through fields.)
+------------------------------------------------------------------------------------------------
+>>> FULLY-RENDERED PROMPT <<<
+You are a conversational memory QA assistant.
+Use the retrieved memory notes below to answer the question as accurately and concisely as possible.
+
+Guidelines:
+1. Answer concisely: a few words or one short sentence. No conversational preamble, no commentary, no quotes around the answer.
+2. Rely strictly on the facts in the memory notes.
+3. For time/date questions, provide the exact date, month, year, or relative timeframe mentioned in the notes.
+4. If no note contains information relevant to the question, answer "I don't know".
+
+Memory Notes:
+- [1:56 pm on 8 May, 2023] Caroline plans to continue her education. (Entities: Caroline) (Keywords: education, continue, plans)
+- [1:56 pm on 8 May, 2023] Caroline plans to check out career options. (Entities: Caroline) (Keywords: career options, research, plans)
+- [1:56 pm on 8 May, 2023] On 8 May 2023, Caroline was going to do some research. (Entities: Caroline) (Keywords: research, going to, plan)
+- [1:56 pm on 8 May, 2023] Caroline is keen on counseling. (Entities: Caroline, counseling) (Keywords: counseling, interest, career)
+- [1:56 pm on 8 May, 2023] Caroline is keen on working in mental health. (Entities: Caroline, mental health) (Keywords: mental health, career, interest)
+- [7:55 pm on 9 June, 2023] On 2 June 2023, Caroline talked about Caroline's transgender journey at a school event. (Entities: Caroline) (Keywords: transgender journey, school event, talk)
+- [7:55 pm on 9 June, 2023] On 2 June 2023, Caroline encouraged students to get involved in the LGBTQ community. (Entities: Caroline, LGBTQ community) (Keywords: students, LGBTQ community, encouragement)
+- [10:37 am on 27 June, 2023] Caroline is thinking of working with trans people, helping them accept themselves and supporting their mental health. (Entities: Caroline, trans people) (Keywords: trans people, acceptance, mental health, counseling)
+- [8:18 pm on 6 July, 2023] Caroline has kids' books in her library, including classics, stories from different cultures, and educational books. (Entities: Caroline, books) (Keywords: kids' books, classics, cultural stories, educational books)
+- [2:24 pm on 14 August, 2023] Art has allowed Caroline to explore her transition and her changing body. (Entities: Caroline) (Keywords: transition, changing body, exploration)
+- [3:31 pm on 23 August, 2023] Caroline went horseback riding with Caroline's dad during Caroline's childhood. (Entities: Caroline, Caroline's dad, fields) (Keywords: horseback riding, childhood, dad, fields) (Description: Caroline went horseback riding with Caroline's dad during Caroline's childhood. | During Caroline's childhood, Caroline and Caroline's dad rode horses through fields.)
+
+Question: What fields would Caroline be likely to pursue in her educaton?
+Answer:
+
+================================================================================================
+
+phân tích kỹ hơn về lý do tại sao EM của FastASEM  tại sao bất thường đáng kể so với fullcontext như vậy
+Tại sao cùng một model mà nó lại trả lời relative như vậy ( FASTASEM) trong khi fullcontext lại trả lời chính xác hơn?
+Cần giải thích minh chứng Fullycontext tại sao EM kém
+model size 
+time to first token --> which one is better  ? 
+1B, 2.5B, 3,4B: đo thêm chạy với context như thế nào 

@@ -9,12 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import yaml
 
 from asem.answer_agent import AnswerAgent
-from asem.backends import build_backend
+from asem.backends import InferenceBackend, build_backend
 from asem.link_evolver import LinkEvolver
 from asem.logging_utils import get_logger
 from asem.memory_bank import MemoryBank
@@ -278,6 +278,30 @@ _RETRIEVAL_PROMPT = (
     "Question: {query}\n\nAnswer:"
 )
 
+# Date-leveled variants: the context carries each session's absolute date (the
+# same ``[<session date>]`` prefix FastASEM stamps on its notes), so the
+# baselines can resolve relative time the way FastASEM does at ingestion time.
+_FULL_CONTEXT_PROMPT_DATED = (
+    "Each conversation line is prefixed with the absolute session date in brackets, "
+    "e.g. [1:56 pm on 8 May, 2023]. When the question asks for a time or date, "
+    "resolve any relative expressions (yesterday, last week, next month, last year) "
+    "against that session date and give the exact absolute date.\n\n"
+    "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+    "Conversation:\n{context}\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
+_RETRIEVAL_PROMPT_DATED = (
+    "Use the retrieved memory notes below to answer the question. Each note may be "
+    "prefixed with its session date in brackets, e.g. [1:56 pm on 8 May, 2023]. When "
+    "the question asks for a time or date, resolve any relative expressions (yesterday, "
+    "last week, next month, last year) against that session date and give the exact "
+    "absolute date.\n\n"
+    "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+    "Memory:\n{context}\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -325,11 +349,22 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
 # Builders
 # ---------------------------------------------------------------------------
 
-def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
-    """Build the full ASEM pipeline wrapped as an eval system."""
+def build_asem_system(
+    config_path: str,
+    db_dir: str,
+    backend: Optional[InferenceBackend] = None,
+) -> ASEMSystem:
+    """Build the full ASEM pipeline wrapped as an eval system.
+
+    Args:
+        backend: Optional pre-built inference backend. When ``None`` (default)
+            a backend is constructed from the config. Supplying a shared
+            backend lets phased runners load the model once and reuse it
+            across many systems/conversations.
+    """
     cfg = _load_config(config_path)
 
-    backend = build_backend(cfg["inference"])
+    backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
@@ -402,10 +437,14 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     return ASEMSystem(pipeline=pipeline)
 
 
-def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
+def build_asem_v2_system(
+    config_path: str,
+    db_dir: str,
+    backend: Optional[InferenceBackend] = None,
+) -> ASEMSystemV2:
     """Build the two-phase ASEM v2 pipeline with batch ingestion + enhanced retrieval."""
     cfg = _load_config(config_path)
-    backend = build_backend(cfg["inference"])
+    backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
@@ -501,16 +540,28 @@ def build_baselines(
     config_path: str,
     db_dir: str,
     max_history_turns: int = 150,
+    with_dates: bool = False,
+    backend: Optional[InferenceBackend] = None,
+    only: Optional[Iterable[str]] = None,
 ) -> Dict[str, object]:
     """Build all six baseline systems, each with its own isolated MemoryBank.
 
     Args:
         max_history_turns: Truncation limit for FullContext baseline.
             0 = no truncation. Default 150 for LoCoMo.
+        with_dates: When True, use the date-leveled QA prompts (expects the
+            context/history to carry ``[<session date>]`` prefixes) so the
+            baselines can resolve relative time like FastASEM.
+        backend: Optional pre-built inference backend (shared model instance).
+        only: Optional subset of baseline names to return. When provided the
+            non-requested systems are dropped from the returned dict.
     """
     cfg = _load_config(config_path)
-    backend = build_backend(cfg["inference"])
+    backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
+
+    retrieval_prompt = _RETRIEVAL_PROMPT_DATED if with_dates else _RETRIEVAL_PROMPT
+    full_context_prompt = _FULL_CONTEXT_PROMPT_DATED if with_dates else _FULL_CONTEXT_PROMPT
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
     link_prompt = _load_text("data/prompts/P2_link_generation.txt")
@@ -561,14 +612,14 @@ def build_baselines(
         note_constructor=note_constructor,
     )
 
-    return {
+    systems: Dict[str, object] = {
         "NoMemory": NoMemory(
             backend=backend,
             prompt_template=_NO_MEMORY_PROMPT,
         ),
         "FullContext": FullContext(
             backend=backend,
-            prompt_template=_FULL_CONTEXT_PROMPT,
+            prompt_template=full_context_prompt,
             max_history_turns=max_history_turns,
         ),
         "SimRetrieval": SimRetrieval(
@@ -576,7 +627,7 @@ def build_baselines(
             memory_bank=_make_bank(db_dir, "simretrieval"),
             note_constructor=note_constructor,
             top_k=hp["k2"],
-            prompt_template=_RETRIEVAL_PROMPT,
+            prompt_template=retrieval_prompt,
         ),
         "AtomicLinking": AtomicLinking(
             backend=backend,
@@ -604,17 +655,28 @@ def build_baselines(
         ),
     }
 
+    if only is not None:
+        wanted = set(only)
+        systems = {name: sys for name, sys in systems.items() if name in wanted}
+
+    return systems
+
 
 def build_fast_asem_system(
     config_path_or_preset: str = "configs/presets/sota_benchmark.yaml",
     db_dir: str = "data/benchmarks/eval_banks",
+    backend: Optional[InferenceBackend] = None,
 ) -> FastASEMSystem:
-    """Build the Fast-ASEM (ASEM-v3) pipeline."""
+    """Build the Fast-ASEM (ASEM-v3) pipeline.
+
+    Args:
+        backend: Optional pre-built inference backend (shared model instance).
+    """
     from asem.config import ASEMConfig
     from asem.fast_ingest import FastSessionIngestor
 
     asem_cfg = ASEMConfig.load(config_path_or_preset)
-    backend = build_backend(asem_cfg.inference)
+    backend = backend if backend is not None else build_backend(asem_cfg.inference)
     hp = asem_cfg.hyperparameters
     rt_cfg = asem_cfg.retriever
     ans_cfg = asem_cfg.answer
@@ -719,3 +781,57 @@ def get_systems(
     systems["ASEMv2"] = build_asem_v2_system(config_path, db_dir)
     systems["FastASEM"] = build_fast_asem_system(config_path, db_dir)
     return systems
+
+
+# ---------------------------------------------------------------------------
+# Phase-benchmark helpers
+# ---------------------------------------------------------------------------
+
+#: Systems backed by a persistent MemoryBank, mapped to the SQLite filename
+#: their builder creates inside ``db_dir``. Used by the phase runner to place
+#: one bank per conversation so ingestion can be done once and reused.
+BANK_FILE_NAMES: Dict[str, str] = {
+    "ASEM": "asem",
+    "ASEMv2": "asem_v2",
+    "FastASEM": "fast_asem",
+    "SimRetrieval": "simretrieval",
+    "AtomicLinking": "atomiclinking",
+    "RLManagerOnly": "rlmanageronly",
+    "ValueRetrievalOnly": "valueretrievalonly",
+}
+
+#: Systems that need no memory bank (pure prompt/context baselines).
+NO_BANK_SYSTEMS: Tuple[str, ...] = ("NoMemory", "FullContext")
+
+#: Canonical evaluation system order.
+ALL_SYSTEMS: List[str] = [
+    "NoMemory", "FullContext", "SimRetrieval", "AtomicLinking",
+    "RLManagerOnly", "ValueRetrievalOnly", "ASEM", "ASEMv2", "FastASEM",
+]
+
+
+def build_system(
+    name: str,
+    config_path: str,
+    db_dir: str,
+    backend: Optional[InferenceBackend] = None,
+) -> object:
+    """Build a single eval system by name, sharing ``backend`` when supplied.
+
+    ``db_dir`` may point at an existing bank directory: the builders open the
+    SQLite file in place (they never delete the main database), so the same
+    call works for both the ingest and the retrieval phase.
+    """
+    if name == "ASEM":
+        return build_asem_system(config_path, db_dir, backend=backend)
+    if name == "ASEMv2":
+        return build_asem_v2_system(config_path, db_dir, backend=backend)
+    if name == "FastASEM":
+        return build_fast_asem_system(config_path, db_dir, backend=backend)
+
+    baselines = build_baselines(config_path, db_dir, backend=backend, only=[name])
+    if name in baselines:
+        return baselines[name]
+    raise ValueError(
+        f"Unknown system: {name!r}. Known: {ALL_SYSTEMS}"
+    )

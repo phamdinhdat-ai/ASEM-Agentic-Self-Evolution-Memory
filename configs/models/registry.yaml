@@ -1,0 +1,60 @@
+# Model registry — phase-separated retrieval benchmark
+# ===========================================================================
+# Maps short model tags to backbone configs so a single retrieval sweep can
+# iterate many backbone sizes against ONE shared, pre-ingested bank.
+#
+#   python scripts/run_phase_benchmark.py --phase retrieve \
+#       --models qwen3_1.7b_hf qwen2.5_1.5b_hf qwen3_4b_hf
+#
+# RULE: every config listed here MUST use the same `embedder_name` (below).
+# The embedder produces the note/query vectors stored in the bank, so mixing
+# embedders across the ingest and retrieve phases is not supported.
+# ===========================================================================
+
+embedder: "sentence-transformers/all-MiniLM-L6-v2"
+
+models:
+  # ---- local HuggingFace (offline; CPU-capable) --------------------------
+  qwen3_1.7b_hf:
+    size_b: 1.7
+    backend: "huggingface"
+    model_id: "Qwen/Qwen3-1.7B"
+    config: "configs/models/qwen3_1.7b_hf.yaml"
+
+  qwen2.5_1.5b_hf:
+    size_b: 1.5
+    backend: "huggingface"
+    model_id: "Qwen/Qwen2.5-1.5B-Instruct"
+    config: "configs/models/qwen2.5_1.5b_hf.yaml"
+
+  qwen3_4b_hf:
+    size_b: 4.0
+    backend: "huggingface"
+    model_id: "Qwen/Qwen3-4B"
+    config: "configs/models/qwen3_4b_hf.yaml"
+
+  # ---- OpenAI-compatible API (vLLM / proxy) ------------------------------
+  qwen3_1.7b_api:
+    size_b: 1.7
+    backend: "langchain"
+    model_id: "Qwen/Qwen3-1.7B"
+    config: "configs/models/qwen3_1.7b_api.yaml"
+
+  qwen2.5_1.5b_api:
+    size_b: 1.5
+    backend: "langchain"
+    model_id: "Qwen/Qwen2.5-1.5B-Instruct"
+    config: "configs/models/qwen2.5_1.5b_api.yaml"
+
+  qwen3_4b_api:
+    size_b: 4.0
+    backend: "langchain"
+    model_id: "Qwen/Qwen3-4B"
+    config: "configs/models/qwen3_4b_api.yaml"
+
+# Convenience groups usable with --models-group
+groups:
+  hf_small: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf"]
+  api_small: ["qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api"]
+  all: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf",
+        "qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api"]

@@ -1,0 +1,195 @@
+=== GATE DECISION COUNTS ===
+{'NOOP': 72, 'UPDATE': 176}
+
+=== ALL NOOP (fact DROPPED as near-duplicate, tau_redund>=0.90) ===
+  DROPPED | On 7 May 2023, Caroline found the LGBTQ support 
+  DROPPED | On 8 May 2023, the lake sunrise painting was 
+  DROPPED | On 8 May 2023, painting was a fun way for 
+  DROPPED | On 25 May 2023, Melanie said that self-care is 
+  DROPPED | Gated NOOP | sim=0.919 | fact="On 25 May 2023, Caroline's goal is to give kids 
+  DROPPED | On 25 May 2023, Caroline said that Caroline has 
+  DROPPED | On 25 May 2023, Caroline is looking into a 
+  DROPPED | On 25 May 2023, Caroline said that Caroline 
+  DROPPED | On 25 May 2023, Caroline said that Caroline 
+  DROPPED | Caroline found the LGBTQ+ counseling workshop 
+  DROPPED | The LGBTQ+ pride parade on approximately 26 
+  DROPPED | Caroline is excited to meet other people from 
+  DROPPED | Caroline plans to learn more about advocacy at 
+  DROPPED | Caroline is very excited about attending the 
+  DROPPED | Caroline is currently looking into counseling 
+  DROPPED | Gated NOOP | sim=0.934 | fact="Melanie's children loved the pottery workshop."
+  DROPPED | Around late June 2023, Caroline attended a 
+  DROPPED | Caroline participated in the pride parade 
+  DROPPED | Caroline felt proud and grateful at the pride 
+  DROPPED | Gated NOOP | sim=0.935 | fact="On 15 July 2023, many people marched in 
+  DROPPED | Gated NOOP | sim=0.902 | fact="On 15 July 2023, people at Caroline's city's 
+  DROPPED | Gated NOOP | sim=0.926 | fact="On 15 July 2023, people at Caroline's city's 
+  DROPPED | Gated NOOP | sim=0.925 | fact="On 15 July 2023, people at Caroline's city's 
+  DROPPED | Gated NOOP | sim=0.949 | fact="Melanie feels that Melanie's family brings 
+  DROPPED | Gated NOOP | sim=0.963 | fact="On 13 August 2023, Melanie celebrated Melanie's 
+  DROPPED | On 11 August 2023, Caroline went to a pride 
+  DROPPED | The pride parade on 11 August 2023 made 
+  DROPPED | The pride parade on 11 August 2023 inspired 
+  DROPPED | Gated NOOP | sim=0.906 | fact="Caroline uses Caroline's art to help people 
+  DROPPED | Gated NOOP | sim=0.963 | fact="Caroline said that 'Embracing Identity' is 
+  DROPPED | Gated NOOP | sim=0.929 | fact="Art has allowed Caroline to explore Caroline's 
+  DROPPED | On 17 August 2023, Caroline said that Caroline 
+  DROPPED | On 17 August 2023, Caroline wanted to see a 
+  DROPPED | On 17 August 2023, Melanie was proud of the 
+  DROPPED | On 17 August 2023, Melanie said that Melanie 
+  DROPPED | On 17 August 2023, Melanie said that painting 
+  DROPPED | On 17 August 2023, Caroline said that Melanie 
+  DROPPED | On 17 August 2023, Melanie said that Melanie is 
+  DROPPED | On 17 August 2023, Caroline told Melanie that 
+  DROPPED | On 17 August 2023, Melanie agreed to plan 
+  DROPPED | On 23 August 2023, Caroline said that Caroline 
+  DROPPED | On 23 August 2023, Caroline said that painting 
+  DROPPED | On 23 August 2023, Caroline said that painting 
+  DROPPED | On 23 August 2023, Caroline said that painting 
+  DROPPED | On 23 August 2023, Caroline said that Caroline 
+  DROPPED | Caroline is putting together an LGBTQ art show 
+  DROPPED | Caroline considers volunteering at the LGBTQ+ 
+  DROPPED | Caroline uses acoustic guitar playing as a way 
+  DROPPED | On 9û10 September 2023, Caroline saw 
+  DROPPED | In approximately early September 2023, Melanie 
+  DROPPED | In approximately early September 2023, Melanie 
+  DROPPED | Melanie finds painting and pottery calming and 
+  DROPPED | Art helped Caroline understand and accept 
+  DROPPED | Melanie had a good time at the cafΘ on 9û10 
+  DROPPED | Melanie and her family bond over nature while 
+  DROPPED | Gated NOOP | sim=0.909 | fact="Caroline's dream is to create a safe and loving 
+  DROPPED | Gated NOOP | sim=0.930 | fact="On 1 February 2023, Gina described Gina's 
+  DROPPED | Gated NOOP | sim=0.900 | fact="On 1 February 2023, Gina said Gina's designed 
+  DROPPED | On 1 February 2023, Gina chose furniture that 
+  DROPPED | On 1 February 2023, making the store 
+  DROPPED | Gated NOOP | sim=0.912 | fact="On 4 February 2023, Jon said that Gina's help 
+  DROPPED | On 4 February 2023, Gina said that Gina was 
+  DROPPED | Gated NOOP | sim=0.967 | fact="On 4 February 2023, Jon said that Jon was 
+  DROPPED | On 4 February 2023, Jon said that dancing 
+  DROPPED | On 4 February 2023, Jon said that dancing 
+  DROPPED | On 4 February 2023, Jon said that the dance 
+  DROPPED | On 4 February 2023, Jon said that Jon was 
+  DROPPED | Gina recently lost her job at Door Dash.
+  DROPPED | Gated NOOP | sim=0.930 | fact="Dance is Gina's form of stress relief."
+  DROPPED | In May 2023, Jon plans to host a dance 
+  DROPPED | Gated NOOP | sim=0.907 | fact="On May 2023, Jon's dance studio and other 
+  DROPPED | Gina stays motivated by reminding herself of 
+
+=== UPDATE merge sizes (facts folded into one note) ===
+
+  note faa16dcd  <-- 7 facts merged:
+      - Pottery allows Melanie to express herself 
+      - Melanie is a major fan of pottery.
+      - Melanie values the creativity and skill 
+      - Melanie finds pottery calming.
+      - Gated UPDATE | id=faa16dcd | fact="Pottery is a major part of Melanie's life 
+      - Gated UPDATE | id=faa16dcd | fact="Pottery helps Melanie express Melanie's 
+      - Gated UPDATE | id=faa16dcd | fact="Melanie is excited to see how pottery 
+
+  note f04a1d6a  <-- 6 facts merged:
+      - Jon wants to share dancing with others.
+      - Jon has been into dancing since childhood.
+      - Jon wants to teach others the joy that 
+      - Dancing brings Jon joy and reminds Jon why 
+      - Jon is thrilled to dance each day.
+      - Gated UPDATE | id=f04a1d6a | fact="Jon considers dance Jon's passion."
+
+  note 19cdf5a1  <-- 5 facts merged:
+      - Caroline talked with young people at the 
+      - Caroline felt fulfilled while guiding and 
+      - Gated UPDATE | id=19cdf5a1 | fact="Caroline shared Caroline's personal story 
+      - Caroline offered support to young people at 
+      - Caroline plans to continue volunteering at 
+
+  note e151856e  <-- 4 facts merged:
+      - Gated UPDATE | id=e151856e | fact="During the week of 19 June 2023, Melanie 
+      - Gated UPDATE | id=e151856e | fact="During the week of 19 June 2023, Melanie's 
+      - Gated UPDATE | id=e151856e | fact="During the week of 19 June 2023, Melanie's 
+      - Gated UPDATE | id=e151856e | fact="Melanie's family looks forward to Melanie's 
+
+  note 67e1e775  <-- 4 facts merged:
+      - Gated UPDATE | id=67e1e775 | fact="Melanie's family enjoys each other's 
+      - Gated UPDATE | id=67e1e775 | fact="Melanie considers Melanie's family camping 
+      - Melanie enjoys camping trips with her 
+      - Camping gives Melanie and her family 
+
+  note a2876d7e  <-- 4 facts merged:
+      - Gated UPDATE | id=a2876d7e | fact="Caroline said that the woman in 'Embracing 
+      - Gated UPDATE | id=a2876d7e | fact="Caroline's aim in 'Embracing Identity' was 
+      - Gated UPDATE | id=a2876d7e | fact="Caroline's aim in 'Embracing Identity' was 
+      - Gated UPDATE | id=a2876d7e | fact="Caroline's aim in 'Embracing Identity' was 
+
+  note 58c5afb1  <-- 4 facts merged:
+      - Gated UPDATE | id=58c5afb1 | fact="On 27 August 2023, Melanie's children 
+      - On 9û10 September 2023, Melanie also had 
+      - On 19 October 2023, Melanie went on a trail 
+      - Gated UPDATE | id=58c5afb1 | fact="Melanie's children enjoyed the trail walk 
+
+  note bd84db30  <-- 4 facts merged:
+      - On 1 February 2023, making the store 
+      - On 1 February 2023, Gina wanted customers 
+      - On 1 February 2023, Gina was creating a 
+      - On 1 February 2023, Gina said Gina believed 
+
+  note 4576cb66  <-- 3 facts merged:
+      - On 7 May 2023, Caroline heard inspiring 
+      - On 7 May 2023, Caroline felt happy because 
+      - On 7 May 2023, Caroline felt thankful for 
+
+  note a3f2dd26  <-- 3 facts merged:
+      - At the pride parade on approximately 26 
+      - The pride parade showed Caroline that the 
+      - Caroline talked with members of the LGBTQ+ 
+
+  note 31e55265  <-- 3 facts merged:
+      - Gated UPDATE | id=31e55265 | fact="In 2022, Melanie and Melanie's family lay 
+      - Gated UPDATE | id=31e55265 | fact="In 2022, Melanie and Melanie's family made 
+      - Gated UPDATE | id=31e55265 | fact="Melanie will always remember Melanie's 2022 
+
+  note ae2d8a58  <-- 3 facts merged:
+      - Gated UPDATE | id=ae2d8a58 | fact="Melanie feels lucky to be with Melanie's 
+      - Gated UPDATE | id=ae2d8a58 | fact="Melanie's family has love."
+      - Gated UPDATE | id=ae2d8a58 | fact="Melanie's family helps Melanie during hard 
+
+  note 1d4c82d1  <-- 3 facts merged:
+      - On 1 February 2023, Gina said Gina was over 
+      - Gated UPDATE | id=1d4c82d1 | fact="On 1 February 2023, Gina said the 
+      - Gated UPDATE | id=1d4c82d1 | fact="On 1 February 2023, Gina said the 
+
+  note cae7555e  <-- 3 facts merged:
+      - Gated UPDATE | id=cae7555e | fact="Jon values Gina's ongoing support."
+      - Gated UPDATE | id=cae7555e | fact="Jon finds Gina's determination and success 
+      - Gated UPDATE | id=cae7555e | fact="Jon is grateful for Gina's help with 
+
+  note aa93ef48  <-- 2 facts merged:
+      - Gated UPDATE | id=aa93ef48 | fact="On 25 May 2023, Melanie said that Melanie's 
+      - Gated UPDATE | id=aa93ef48 | fact="Melanie went to the beach with Melanie's 
+
+=== SEARCH for facts relevant to failing questions ===
+
+[idx3/85 adoption research]
+  specific adoption'
+
+[idx94/101 bowl]
+  Gated UPDATE | id=03ebfb0d | fact="A friend made Caroline's hand-painted bowl 
+
+[idx97 workshop]
+  Gated NOOP | sim=0.956 | fact='Caroline found the LGBTQ+ counseling workshop 
+
+[idx46 ally]
+  Gated UPDATE | id=d4e47a2f | fact='Melanie and her children especially enjoy 
+
+[idx37/55 sunset]
+  to their sunset-an'
+
+[idx11 home country]
+  distilled=11  answer='Her home country'
+
+[idx37/114 sunflower]
+  distilled=11  answer='A sunflower.'
+
+[idx11 Sweden]
+  distilled=11  answer='Sweden.'
+
+[idx110 dog-face cup]
+  distilled=11  answer='A cup decorated with a dog face.'
