@@ -74,6 +74,30 @@ def test_parse_session_datetime() -> None:
     assert iso2 == "2024-01-15T10:30:00Z"
 
 
+def test_parse_session_datetime_is_canonical_and_aware() -> None:
+    """FastASEM must use asem.temporal's parser, not a local copy.
+
+    Regression guard: this module used to define its own ``parse_session_datetime``
+    whose stray ``from .temporal import ...`` line was trapped inside its docstring.
+    That duplicate returned NAIVE datetimes (asem.temporal returns UTC-aware ones)
+    and silently fell back to ``datetime.now()`` for a full ``[Session N — date]``
+    header, so ingested notes could get the wrong session date.
+    """
+    import asem.temporal as temporal
+
+    # The name must BE the canonical implementation — no local duplicate.
+    assert parse_session_datetime is temporal.parse_session_datetime
+
+    dt, iso = parse_session_datetime("1:56 pm on 8 May, 2023")
+    assert dt.tzinfo is not None, "naive datetimes break cross-system date arithmetic"
+    assert iso == "2023-05-08T13:56:00Z"
+
+    # A full session header resolves to the header's date (never to "now").
+    hdr_dt, hdr_iso = parse_session_datetime("[Session 1 — 1:56 pm on 8 May, 2023]")
+    assert hdr_dt == dt
+    assert hdr_iso == iso
+
+
 def test_config_presets() -> None:
     cfg_fast = ASEMConfig.load("fast_eval")
     assert cfg_fast.preset == "fast_eval"
