@@ -44,7 +44,7 @@ class ASEMSystem:
     # Track whether this conversation has been pre-ingested
     _pre_ingested: bool = False
 
-    def ingest(self, content: str) -> None:
+    def ingest(self, content: str, session_date: Optional[str] = None, session_id: Optional[str] = None) -> None:
         """Write a single turn into the memory bank without answering.
 
         Used for session-aware pre-ingestion: all conversation turns for a
@@ -52,27 +52,45 @@ class ASEMSystem:
         """
         self._logger.debug("ASEMSystem.ingest | content={!r}", content[:120])
         try:
-            self.pipeline.write_path(content, datetime.utcnow())
+            self.pipeline.write_path(content, timestamp=None, session_date=session_date, session_id=session_id)
         except Exception as exc:
             self._logger.opt(exception=exc).error(
                 "ASEMSystem.ingest | write_path failed | content={!r}", content[:80])
             raise
 
-    def ingest_session(self, turns: List[str], session_label: str) -> List[Note]:
+    def ingest_session(
+        self,
+        turns: List[str],
+        session_label: str,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> List[Note]:
         """Ingest all turns from one session as a batch through S1→S2→S3.
 
         Args:
             turns: List of dialogue turn texts (e.g., '[Caroline] Hey! ...')
             session_label: Session identifier with date (e.g.,
                 'session_1 — 1:56 pm on 8 May, 2023')
+            session_date: Optional date string
+            session_id: Optional session id string
 
         Returns:
             List of notes created or updated during ingestion.
         """
-        self._logger.info("ASEMSystem.ingest_session | session={!r} | turns={} | bank_size={}",
-                         session_label, len(turns), self.bank_size)
+        from asem.temporal import parse_session_datetime
+        dt_obj, date_str = parse_session_datetime(session_date or session_label)
+        actual_date = session_date or date_str
+        actual_id = session_id or session_label
+        self._logger.info("ASEMSystem.ingest_session | session={!r} | date={!r} | turns={} | bank_size={}",
+                         session_label, actual_date, len(turns), self.bank_size)
         try:
-            notes = self.pipeline.write_batch(turns, session_label, datetime.utcnow())
+            notes = self.pipeline.write_batch(
+                turns,
+                label=session_label,
+                timestamp=dt_obj,
+                session_date=actual_date,
+                session_id=actual_id,
+            )
         except Exception as exc:
             self._logger.opt(exception=exc).error(
                 "ASEMSystem.ingest_session | write_batch failed | session={!r}", session_label)
@@ -81,7 +99,8 @@ class ASEMSystem:
         return notes
 
     def ingest_conversation(
-        self, session_batches: List[Tuple[str, List[str]]]
+        self,
+        session_batches: Any,
     ) -> List[Note]:
         """Ingest a conversation session-by-session, each session fully batched.
 
@@ -89,23 +108,39 @@ class ASEMSystem:
         Cross-chunk link evolution runs once at the end.
 
         Args:
-            session_batches: List of (session_label, turns) for all sessions.
+            session_batches: List of (session_label, turns), List of session dicts, or List of turn strings.
 
         Returns:
             List of all notes created or updated.
         """
-        total_turns = sum(len(t) for _, t in session_batches)
-        self._logger.info("ASEMSystem.ingest_conversation | sessions={} | total_turns={} | bank_size={}",
-                         len(session_batches), total_turns, self.bank_size)
-
+        if not session_batches:
+            return []
+        first_item = session_batches[0]
         all_notes: List[Note] = []
-        for i, (label, turns) in enumerate(session_batches):
-            self._logger.info("ingest_conversation | session {}/{}: {!r} ({} turns)",
-                            i + 1, len(session_batches), label, len(turns))
-            notes = self.pipeline.write_batch(turns, label, datetime.utcnow())
+
+        if isinstance(first_item, dict):
+            self._logger.info("ASEMSystem.ingest_conversation | sessions(dict)={} | bank_size={}",
+                             len(session_batches), self.bank_size)
+            for i, s in enumerate(session_batches):
+                turns = s.get("turns", [])
+                s_date = s.get("date") or s.get("session_date")
+                s_id = s.get("session_id", f"session_{i+1}")
+                label = f"{s_id} — {s_date}" if s_date else s_id
+                notes = self.ingest_session(turns, session_label=label, session_date=s_date, session_id=s_id)
+                all_notes.extend(notes)
+        elif isinstance(first_item, (tuple, list)):
+            self._logger.info("ASEMSystem.ingest_conversation | session_batches(tuple)={} | bank_size={}",
+                             len(session_batches), self.bank_size)
+            for i, (label, turns) in enumerate(session_batches):
+                notes = self.ingest_session(turns, session_label=label)
+                all_notes.extend(notes)
+        elif isinstance(first_item, str):
+            self._logger.info("ASEMSystem.ingest_conversation | turns(str)={} | bank_size={}",
+                             len(session_batches), self.bank_size)
+            notes = self.ingest_session(session_batches, session_label="dialogue")
             all_notes.extend(notes)
-            self._logger.info("ingest_conversation | session {}/{} done | bank_size={}",
-                            i + 1, len(session_batches), self.bank_size)
+        else:
+            raise TypeError(f"Unsupported session_batches type: {type(first_item)}")
 
         self._pre_ingested = True
         return all_notes
@@ -184,17 +219,63 @@ class ASEMSystemV2:
     # ---- private --------------------------------------------------------
     _ingested: bool = False
 
-    def ingest_conversation(self, dialogue_turns: List[str]) -> int:
-        """Pre-ingest all dialogue turns ONCE before any QA queries.
+    def ingest_conversation(
+        self,
+        dialogue_turns: Any,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> int:
+        """Pre-ingest conversation turns or sessions ONCE before any QA queries.
+
+        Accepts:
+            - List[Dict[str, Any]]: [{"session_id": ..., "date": ..., "turns": [...]}, ...]
+            - List[Tuple[str, List[str]]]: [(session_label, turns), ...]
+            - List[str]: dialogue turns (with optional session_date/session_id args)
 
         Returns the number of notes created.
         """
-        from asem.batch_ingestion import BatchIngestor
-        notes = self.batch_ingestor.ingest_conversation(
-            dialogue_turns, self.pipeline.memory_bank,
-        )
+        if not dialogue_turns:
+            return 0
+        from asem.temporal import parse_session_datetime
+
+        first_item = dialogue_turns[0]
+        total_notes = 0
+
+        if isinstance(first_item, dict):
+            for i, s in enumerate(dialogue_turns):
+                turns = s.get("turns", [])
+                s_date = s.get("date") or s.get("session_date")
+                s_id = s.get("session_id", f"session_{i+1}")
+                notes = self.batch_ingestor.ingest_conversation(
+                    dialogue_turns=turns,
+                    memory_bank=self.pipeline.memory_bank,
+                    session_date=s_date,
+                    session_id=s_id,
+                )
+                total_notes += len(notes)
+        elif isinstance(first_item, (tuple, list)):
+            for label, turns in dialogue_turns:
+                dt_obj, date_str = parse_session_datetime(label)
+                notes = self.batch_ingestor.ingest_conversation(
+                    dialogue_turns=turns,
+                    memory_bank=self.pipeline.memory_bank,
+                    session_date=date_str,
+                    session_id=label,
+                )
+                total_notes += len(notes)
+        elif isinstance(first_item, str):
+            notes = self.batch_ingestor.ingest_conversation(
+                dialogue_turns=dialogue_turns,
+                memory_bank=self.pipeline.memory_bank,
+                session_date=session_date,
+                session_id=session_id,
+            )
+            total_notes += len(notes)
+        else:
+            raise TypeError(f"Unsupported dialogue_turns type: {type(first_item)}")
+
         self._ingested = True
-        return len(notes)
+        return total_notes
 
     def answer(self, query: str, history: List[str] = None) -> str:
         """Retrieve + answer from the pre-built knowledge graph.
@@ -208,6 +289,11 @@ class ASEMSystemV2:
             self.ingest_conversation(history)
         used_notes, answer = self.pipeline.read_path(query)
         return answer
+
+    def reset(self) -> None:
+        """Clear the pipeline's memory bank between conversations."""
+        self._ingested = False
+        self.pipeline.memory_bank.clear()
 
 
 @dataclass
