@@ -66,6 +66,123 @@ python scripts/run_phase_benchmark.py --phase retrieve --tag shared `
     --config configs/models/qwen3_4b_api.yaml
 ```
 
+---
+
+## Running the two phases: data in, artifacts out
+
+### Where the data comes from (both phases)
+
+Every input is resolved relative to the repository root:
+
+| Input | Flag | Default | What it provides |
+|-------|------|---------|------------------|
+| LoCoMo dataset | `--input` | `datasets/locomo/locomo10.json` | 10 conversations; per-session turns (`conversation.session_<n>`) and dates (`session_<n>_date_time`), plus the QA pairs |
+| Model registry | `--registry` | `configs/models/registry.yaml` | tag → config path map, and the groups used by `--models-group` |
+| Backbone config | `--ingest-config` / `--config` | `configs/models/qwen2.5_1.5b_hf.yaml` | model id, backend, and all retrieval hyperparameters |
+| API credentials | — | `.env` at repo root | `OPENAI_API_KEY`, `OPENAI_BASE_URL` (loaded automatically; only needed by `*_api` configs) |
+
+The runner derives three things **in memory** — none of them are written to disk:
+
+1. `load_raw_dataset(input)` → the raw LoCoMo records used for session/turn extraction.
+2. `convert_locomo10_to_eval(input, limit)` → flat QA items; each carries
+   `session_id = "locomo_<idx>"`, which becomes the per-conversation directory name.
+3. `group_by_conversation(eval_items)` → one group per conversation = **one ingest job**.
+
+### The `--tag` is the experiment key
+
+`--tag` (default `shared`, or the config's `phase.bank_tag`) is the single string that
+binds the two phases into one experiment. Phase A writes under `<bank_root>/<tag>/`, and
+Phase B reads that same directory and writes results prefixed with `<tag>__`. To run a
+second, independent experiment — a different ingest backbone, a different system set —
+just pick a new tag and nothing is shared or overwritten.
+
+### Artifacts written
+
+```
+data/benchmarks/
+├── ingested_banks/<tag>/                         # ← PHASE A OUTPUT (frozen experiment)
+│   ├── manifest.json                             #   ingest config, per-conv note counts,
+│   │                                             #   new link edges, elapsed time
+│   └── <System>/<locomo_000N>/<bank>.sqlite      #   one bank per system per conversation
+│
+├── retrieval_work/<tag>/<model>/<System>/<locomo_000N>/<bank>.sqlite
+│                                                 # ← PHASE B SCRATCH (per-run copy)
+│
+└── results/phased/                               # ← PHASE B OUTPUT
+    ├── <tag>__<model>.json                       #   metrics for one retrieval backbone
+    ├── <tag>__sweep.json                         #   all backbones of a multi-model sweep
+    ├── <tag>__sweep_table.md                     #   rendered markdown comparison table
+    └── preds/<tag>__<model>__<System>.jsonl      #   per-QA predictions (inspect failures)
+```
+
+With the defaults, one `--tag shared` experiment therefore lives entirely under three
+fixed roots: `data/benchmarks/ingested_banks/shared/`,
+`data/benchmarks/retrieval_work/shared/<model>/`, and `data/benchmarks/results/phased/`.
+
+### Bank filenames per system
+
+Phase B locates each bank by the filename its builder creates (`BANK_FILE_NAMES` in
+`eval/systems.py`):
+
+| System | Bank file | Notes |
+|--------|-----------|-------|
+| `ASEM` | `asem.sqlite` | turn-by-turn v1 |
+| `ASEMv2` | `asem_v2.sqlite` | batch ingestion |
+| `FastASEM` | `fast_asem.sqlite` | SLAFI ingestion |
+| `SimRetrieval` | `simretrieval.sqlite` | dense retrieval baseline |
+| `AtomicLinking` | `atomiclinking.sqlite` | |
+| `RLManagerOnly` | `rlmanageronly.sqlite` | |
+| `ValueRetrievalOnly` | `valueretrievalonly.sqlite` | **writes while answering** (q-updates) |
+| `NoMemory`, `FullContext` | — | bankless; skipped by the ingest phase |
+
+### Overriding the storage layout
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `--bank-root` | `data/benchmarks/ingested_banks` | Phase A root; Phase B reads from here |
+| `--results-dir` | `data/benchmarks/results/phased` | Phase B JSON/Markdown/prediction output |
+| `--work-root` | `data/benchmarks/retrieval_work` | Where per-run bank copies are made |
+| `--no-work-copy` | off | Answer against the ingested banks in place (**mutating systems will modify them**) |
+
+### Interrupted runs resume; they do not restart
+
+Phase B appends one JSON line per answered QA pair to
+`preds/<tag>__<model>__<System>.jsonl` and, on start-up, reloads any file that already
+exists to learn which QA indices are done. Re-running the exact same retrieval command
+therefore **continues** where it stopped instead of re-answering everything.
+
+Two consequences worth knowing:
+
+* Changing `--metrics` and re-running is safe — metrics are recomputed from the reloaded
+  predictions, no LLM calls are repeated.
+* To genuinely re-run a backbone, delete its prediction files first
+  (`Remove-Item data/benchmarks/results/phased/preds/<tag>__<model>__*.jsonl`), otherwise
+  the old answers are silently reused.
+
+Banks are resolved per conversation, so a partially-ingested tag still works: systems with
+complete banks are answered, and `--allow-missing-banks` turns the per-conversation
+`FileNotFoundError` into a warning + skip.
+
+### Recommended full run
+
+```powershell
+$env:KMP_DUPLICATE_LIB_OK="TRUE"     # Windows + faiss/torch
+conda activate memory-r1
+
+# Phase A — one bank tree for the whole experiment
+python scripts/run_phase_benchmark.py --phase ingest --tag shared `
+    --ingest-config configs/models/qwen2.5_1.5b_hf.yaml `
+    --systems FastASEM ASEMv2 ASEM SimRetrieval ValueRetrievalOnly
+
+# Inspect what was built before spending retrieval budget
+Get-Content data/benchmarks/ingested_banks/shared/manifest.json
+
+# Phase B — swap only the backbone
+python scripts/run_phase_benchmark.py --phase retrieve --tag shared `
+    --models-group all --systems FastASEM ASEMv2 `
+    --metrics em rougeL --per-category
+```
+
 ### Environment notes (Windows / conda `memory-r1`)
 
 * `torch` is **CPU-only** (2.9.1); 4B local inference is slow — prefer the `*_api`
@@ -80,3 +197,53 @@ The retrieval phase copies every bank into
 that legitimately write while answering (e.g. `ValueRetrievalOnly`'s q-updates)
 cannot contaminate the ingested banks or other models' runs. Disable with
 `--no-work-copy` (not recommended for sweeps).
+---
+
+# Static banks (`static/memory_banks`) — ingest once, evaluate many
+
+The phase runner above and the **static-bank pipeline** solve the same problem
+in two ways. The phase runner re-derives its banks under
+`data/benchmarks/ingested_banks/`; the static pipeline freezes them under a
+tracked repo-root `static/` tree so they are explicit, inspectable long-lived
+artifacts shared by every evaluation.
+
+| | Phase benchmark | Static banks |
+|---|---|---|
+| Ingest entry point | `scripts/run_phase_benchmark.py --phase ingest` | `scripts/build_static_banks.py` |
+| Eval entry point | `scripts/run_phase_benchmark.py --phase retrieve` | `scripts/run_static_eval.py` |
+| Bank root | `data/benchmarks/ingested_banks` | `static/memory_banks/<dataset>/<tag>` |
+| Metrics | `em`, `rougeL`, `bertscore_f1` | `em`, `em_loose`, `f1`, `rougeL`, `bertscore_f1`, `judge` |
+| Baselines | opt-in via `--systems` | `FullContext` + `NoMemory` included by default |
+| Docs | this file | `static/README.md` |
+
+```powershell
+# Phase A — build the banks ONCE (idempotent, resumable, error-isolated)
+python scripts/build_static_banks.py --tag deepseek `
+    --ingest-config configs/models/deepseek_api.yaml
+
+# Phase B — full LoCoMo QA from the frozen banks, incl. the baselines
+python scripts/run_static_eval.py --tag deepseek `
+    --config configs/models/deepseek_api.yaml `
+    --judge-config configs/models/judge_api.yaml `
+    --metrics em f1 rougeL bertscore_f1 judge
+
+# Or run the ready-made command list
+bash run_static_experiments.sh
+```
+
+Configs added for this workflow:
+
+| Tag | Config | Purpose |
+|-----|--------|---------|
+| `deepseek_api` | `deepseek_api.yaml` | Default ingest + answer backbone (DeepSeek via the endpoint in `.env`) |
+| `judge_api` | `judge_api.yaml` | LLM-as-a-judge grading, kept separate from the answered system |
+
+> **`max_tokens` must cover reasoning + output.** The DeepSeek v4 models think
+> before answering, and reasoning tokens count against `max_tokens`. Too small a
+> budget returns `finish_reason="length"` with **empty content**, which yields a
+> bank with 0 notes. `deepseek-chat` emits no reasoning tokens and is the
+> cheapest option for bulk ingestion.
+
+`judge_api` is never used to build a bank; it exists so grading can be swapped
+independently (and so the registry validator still sees one uniform embedder).
+`--judge-config` defaults to the answer backbone when omitted.

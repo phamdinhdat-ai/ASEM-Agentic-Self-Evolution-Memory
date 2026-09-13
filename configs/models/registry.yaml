@@ -52,9 +52,34 @@ models:
     model_id: "Qwen/Qwen3-4B"
     config: "configs/models/qwen3_4b_api.yaml"
 
+  # ---- static-bank defaults (see configs/models/README.md and static/README.md)
+  # DeepSeek is the backbone actually used for ingestion, answering, and
+  # (via judge_api) LLM-as-a-judge grading. `model` in these configs MUST be a
+  # name the endpoint in .env serves; check with models.list().
+  deepseek_api:
+    size_b: 0.0
+    backend: "langchain"
+    model_id: "deepseek-v4-flash"
+    config: "configs/models/deepseek_api.yaml"
+
+  judge_api:
+    size_b: 0.0
+    backend: "langchain"
+    model_id: "deepseek-v4-flash"
+    config: "configs/models/judge_api.yaml"
+
+  # Kept for the api.xah.io endpoint; unused by the DeepSeek pipeline.
+  gpt54_api:
+    size_b: 0.0
+    backend: "langchain"
+    model_id: "gpt-5.4"
+    config: "configs/models/gpt54_api.yaml"
+
 # Convenience groups usable with --models-group
 groups:
   hf_small: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf"]
   api_small: ["qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api"]
+  api_proxy: ["deepseek_api"]
   all: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf",
-        "qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api"]
+        "qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api",
+        "deepseek_api"]
