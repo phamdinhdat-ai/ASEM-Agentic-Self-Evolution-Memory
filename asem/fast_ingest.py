@@ -11,11 +11,10 @@ session with:
 from __future__ import annotations
 
 import ast
-from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 import uuid
 
 import numpy as np
@@ -25,53 +24,18 @@ from .llm_validator import LLMRetryHandler
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .note import LinkRecord, Note, _try_extract_json
+from .temporal import parse_session_datetime
 
 _log = get_logger("SLAFI.ingest")
 
 
-def parse_session_datetime(timestamp_str: str) -> Tuple[datetime, Optional[str]]:
-    """Convert human-readable timestamps to (datetime, ISO-8601 string).
-
-    Examples:
-        "1:56 pm on 8 May, 2023" -> (datetime(2023, 5, 8, 13, 56), "2023-05-08T13:56:00Z")
-    """
-    if not timestamp_str or not timestamp_str.strip():
-        now = datetime.now(timezone.utc)
-        return now, now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    raw = timestamp_str.strip()
-    # Try direct ISO format
-    try:
-        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        return dt, dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-    except ValueError:
-        pass
-
-    # Try "1:56 pm on 8 May, 2023"
-    try:
-        parts = raw.lower().split(" on ")
-        if len(parts) == 2:
-            time_part = parts[0].strip()
-            date_part = parts[1].strip().replace(",", "")
-            datetime_str = f"{date_part} {time_part}"
-            for fmt in [
-                "%d %B %Y %I:%M %p",
-                "%d %b %Y %I:%M %p",
-                "%B %d %Y %I:%M %p",
-                "%b %d %Y %I:%M %p",
-                "%Y-%m-%d %I:%M %p",
-            ]:
-                try:
-                    dt = datetime.strptime(datetime_str, fmt)
-                    return dt, dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-                except ValueError:
-                    continue
-    except Exception:
-        pass
-
-    # Fallback to current UTC
-    now = datetime.now(timezone.utc)
-    return now, now.strftime("%Y-%m-%dT%H:%M:%SZ")
+# NOTE: this module used to define its own parse_session_datetime. A stray
+# "from .temporal import ..." line had been swallowed by that function's
+# docstring, so the duplicate was the one that actually ran — and it silently
+# (a) returned NAIVE datetimes where asem.temporal returns UTC-aware ones, and
+# (b) fell back to datetime.now() for a full "[Session N — <date>]" header,
+# because it lacked the header unwrapping. The canonical parser is imported at
+# the top of this module; do not reintroduce a local copy.
 
 
 _EXTRACTION_SYSTEM_PROMPT = """You are an expert memory extraction agent.

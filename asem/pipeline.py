@@ -33,21 +33,43 @@ class ASEMPipeline:
     utility_updater: UtilityUpdater
     write_gate: WriteGate = field(default_factory=WriteGate)
 
-    def write_path(self, content: str, timestamp: datetime) -> Optional[Note]:
+    def write_path(
+        self,
+        content: str,
+        timestamp: Optional[datetime] = None,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+        entities: Optional[List[str]] = None,
+        speaker: Optional[str] = None,
+    ) -> Optional[Note]:
         _log.info("WRITE path | content={!r}", content[:80])
+        from .temporal import parse_session_datetime
+        if timestamp is None:
+            dt_obj, date_str = parse_session_datetime(session_date or content)
+            timestamp = dt_obj or datetime.utcnow()
+            if not session_date:
+                session_date = date_str
         # Lazy embedding: z (raw content) is always computed for the gate and
         # similarity search; the content+K+G+X embedding is only computed for
         # notes that are actually written (embed budget).
-        note = self.note_constructor.build(content, timestamp, embed_e=False)
+        note = self.note_constructor.build(
+            content,
+            timestamp=timestamp,
+            embed_e=False,
+            session_date=session_date,
+            session_id=session_id,
+            entities=entities,
+            speaker=speaker,
+        )
         _log.debug("S1 note | id={}  K={}  G={}", note.id, note.K, note.G)
 
-        # B4 — only pass top-k similar notes to Memory Manager, not all notes.
+        # B4 -- only pass top-k similar notes to Memory Manager, not all notes.
         # This caps the S2 prompt at ~2000 tokens regardless of bank size.
         existing = self.memory_bank.ann_search(note.z, k=self.retriever.k2)
         if not existing:
             existing = self.memory_bank.list_notes()[: self.retriever.k2]
 
-        # NGMC Tier 0 — deterministic write gate. Only the ambiguous band pays
+        # NGMC Tier 0 -- deterministic write gate. Only the ambiguous band pays
         # the S2 LLM cost; clearly-novel turns -> ADD, near-duplicates -> NOOP.
         gate_op, _max_sim = self.write_gate.propose(note, existing)
         if gate_op is not None:
@@ -56,8 +78,10 @@ class ASEMPipeline:
         else:
             op, target = self.memory_manager.select_op(content, existing)
             self.write_gate.record_ambiguous_llm(op)
-        _log.info("S2 manager | op={}  target_id={}  candidates={}  bank_size={}",
-                  op.value, target.id if target else None, len(existing), self.memory_bank.size())
+        _log.info(
+            "S2 manager | op={}  target_id={}  candidates={}  bank_size={}",
+            op.value, target.id if target else None, len(existing), self.memory_bank.size(),
+        )
 
         if op == Op.ADD:
             self.note_constructor.complete_embedding(note)
@@ -77,7 +101,10 @@ class ASEMPipeline:
         if op == Op.DELETE:
             if target is not None:
                 self.memory_bank.delete(target.id)
-            _log.success("WRITE done | DELETE  id={}  bank_size={}", target.id if target else "N/A", self.memory_bank.size())
+            _log.success(
+                "WRITE done | DELETE  id={}  bank_size={}",
+                target.id if target else "N/A", self.memory_bank.size(),
+            )
             return None
 
         _log.info("WRITE done | NOOP  bank_size={}", self.memory_bank.size())
@@ -131,23 +158,48 @@ class ASEMPipeline:
         return answer, profiler
 
     def write_batch(
-        self, contents: List[str], label: str, timestamp: datetime
+        self,
+        contents: List[str],
+        label: str,
+        timestamp: Optional[datetime] = None,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> List[Note]:
-        """Ingest many turns through S1→S2→S3 with one batched S1 LLM call.
+        """Ingest many turns through S1->S2->S3 with one batched S1 LLM call.
 
         Note construction runs in a single batched call (fewer LLM round-
         trips), then the Memory Manager and Link Evolver run per note.
         Returns the notes that were written (ADD/UPDATE).
         """
-        _log.info("WRITE batch | label={!r} turns={} timestamp={}",
-                  label, len(contents), timestamp)
-        notes = self.note_constructor.build_batch(contents, timestamp, embed_e=False)
+        from .temporal import parse_session_datetime
+        if not session_date:
+            dt_obj, date_str = parse_session_datetime(label)
+            if date_str:
+                session_date = date_str
+            if timestamp is None:
+                timestamp = dt_obj
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+        if not session_id:
+            session_id = label
+
+        _log.info(
+            "WRITE batch | label={!r} turns={} timestamp={} session_date={!r}",
+            label, len(contents), timestamp, session_date,
+        )
+        notes = self.note_constructor.build_batch(
+            contents,
+            timestamp=timestamp,
+            embed_e=False,
+            session_date=session_date,
+            session_id=session_id,
+        )
         written: List[Note] = []
         for note in notes:
             existing = self.memory_bank.ann_search(note.z, k=self.retriever.k2)
             if not existing:
                 existing = self.memory_bank.list_notes()[: self.retriever.k2]
-            # NGMC Tier 0 — deterministic write gate (see write_path).
+            # NGMC Tier 0 -- deterministic write gate (see write_path).
             gate_op, _max_sim = self.write_gate.propose(note, existing)
             if gate_op is not None:
                 op, target = gate_op, None
@@ -168,8 +220,10 @@ class ASEMPipeline:
             elif op == Op.DELETE:
                 if target is not None:
                     self.memory_bank.delete(target.id)
-        _log.success("WRITE batch done | label={!r} notes={} written={} bank_size={}",
-                     label, len(notes), len(written), self.memory_bank.size())
+        _log.success(
+            "WRITE batch done | label={!r} notes={} written={} bank_size={}",
+            label, len(notes), len(written), self.memory_bank.size(),
+        )
         return written
 
     def cross_chunk_link_evolve(self) -> int:
@@ -207,15 +261,21 @@ class ASEMPipeline:
     def _merge_update(target: Optional[Note], note: Note) -> Note:
         if target is None:
             return note
+        merged_entities = list(dict.fromkeys((target.entities or []) + (note.entities or [])))
         return Note(
             id=target.id,
             c=note.c,
-            t=note.t,
+            t=note.t if note.t is not None else target.t,
             K=note.K,
             G=note.G,
             X=note.X,
-            e=note.e,
+            e=note.e if note.e is not None else target.e,
             L=target.L,
-            z=note.z,
+            z=note.z if note.z is not None else target.z,
             q=target.q,
+            session_id=note.session_id or target.session_id,
+            session_date=note.session_date or target.session_date,
+            timestamp_iso=note.timestamp_iso or target.timestamp_iso,
+            entities=merged_entities if merged_entities else None,
+            speaker=note.speaker or target.speaker,
         )

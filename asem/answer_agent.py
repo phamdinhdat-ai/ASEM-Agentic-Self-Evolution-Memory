@@ -111,6 +111,11 @@ class AnswerAgent:
         context = "\n".join([
             f"- {note.c}" for note in candidates
         ])
+        context_items = []
+        for note in candidates:
+            date_prefix = f"[{note.session_date}] " if note.session_date else (f"[{note.t.strftime('%d %B %Y')}] " if note.t else "")
+            context_items.append(f"- {date_prefix}{note.c}")
+        context = "\n".join(context_items)
         prompt = self.baseline_prompt_template.format(query=query, context=context)
         return self._generate_resilient(prompt).strip()
 
@@ -139,5 +144,7 @@ class AnswerAgent:
             "content": note.c,
             "utility": note.q,
             "session_date": note.session_date,
+            "timestamp_iso": note.timestamp_iso or (note.t.isoformat() if note.t else None),
             "entities": note.entities,
+            "speaker": note.speaker,
         }

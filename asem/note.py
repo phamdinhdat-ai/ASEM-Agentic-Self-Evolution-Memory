@@ -20,6 +20,7 @@ from .llm_validator import (
     validate_note_fields,
 )
 from .logging_utils import get_logger
+from .temporal import extract_session_header, parse_session_datetime
 
 _logger = get_logger(__name__)
 
@@ -188,16 +189,62 @@ class NoteConstructor:
         return LLMRetryHandler(self.backend.generate, max_retries=self.max_retries)
 
     def build(
-        self, content: str, timestamp: datetime, embed_e: bool = True
+        self,
+        content: str,
+        timestamp: Optional[datetime | str] = None,
+        embed_e: bool = True,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+        entities: Optional[List[str]] = None,
+        speaker: Optional[str] = None,
     ) -> Note:
-        """Build a note. When ``embed_e=False`` the content+K+G+X embedding
-        is deferred (``note.e`` is None) — call :meth:`complete_embedding`
-        before storing. ``z`` (raw-content embedding) is always computed so
-        the write gate and similarity search can run without the extra embed.
+        """Build a note with temporal grounding.
+
+        When ``embed_e=False`` the content+K+G+X embedding is deferred
+        (``note.e`` is None) - call :meth:`complete_embedding` before storing.
+        ``z`` (raw-content embedding) is always computed so the write gate and
+        similarity search can run without the extra embed.
         """
         _logger.debug("NoteConstructor.build | content={!r}", content[:120])
 
-        prompt = self.prompt_template.format(content=content)
+        # 1. Resolve temporal datetime and session metadata
+        dt_obj: datetime
+        iso_str: Optional[str] = None
+
+        if session_date:
+            dt_obj, iso_str = parse_session_datetime(session_date)
+        elif isinstance(timestamp, str):
+            dt_obj, iso_str = parse_session_datetime(timestamp)
+            session_date = timestamp
+        elif isinstance(timestamp, datetime):
+            dt_obj = timestamp
+            iso_str = dt_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+            session_date = dt_obj.strftime("%d %B %Y")
+        else:
+            # Check if content has session header e.g. [Session 1 - 8 May 2023]
+            header_num, header_date = extract_session_header(content)
+            if header_date:
+                dt_obj, iso_str = parse_session_datetime(header_date)
+                session_date = header_date
+                if header_num and not session_id:
+                    session_id = f"session_{header_num}"
+            else:
+                dt_obj, iso_str = parse_session_datetime(None)
+
+        # 2. Extract speaker attribution from content if not explicitly provided
+        if not speaker:
+            spk_match = re.match(r"^\s*\[([A-Za-z0-9_\s-]+)\]", content)
+            if spk_match:
+                speaker = spk_match.group(1).strip()
+
+        # 3. Format prompt template with temporal context if available
+        fmt_kwargs: Dict[str, Any] = {"content": content}
+        if "{session_date}" in self.prompt_template:
+            fmt_kwargs["session_date"] = session_date or (dt_obj.strftime("%d %B %Y") if dt_obj else "")
+        if "{timestamp}" in self.prompt_template:
+            fmt_kwargs["timestamp"] = iso_str or (dt_obj.isoformat() if dt_obj else "")
+        prompt = self.prompt_template.format(**fmt_kwargs)
+
         retry = self._retry()
         if retry is not None:
             data, _attempt = retry.invoke(
@@ -210,8 +257,20 @@ class NoteConstructor:
         K, G, X = self._fields_from_dict(data)
 
         if not K and not G and not X:
-            _logger.warning("NoteConstructor.build | empty parse result for content={!r} | raw={!r}",
-                           content[:80], raw[:100])
+            _logger.warning(
+                "NoteConstructor.build | empty parse result for content={!r}",
+                content[:80],
+            )
+
+        # Extract entities from LLM response if present
+        extracted_entities: List[str] = []
+        if isinstance(data, dict) and "entities" in data and isinstance(data["entities"], list):
+            extracted_entities = [str(e).strip() for e in data["entities"] if str(e).strip()]
+        note_entities = list(entities if entities is not None else extracted_entities)
+
+        # Extract speaker from LLM response if present
+        if isinstance(data, dict) and data.get("speaker") and not speaker:
+            speaker = str(data["speaker"]).strip()
 
         e_text = " ".join([content, " ".join(K), " ".join(G), X])
         e_vec = self.backend.embed(e_text) if embed_e else None
@@ -220,7 +279,7 @@ class NoteConstructor:
         note = Note(
             id=str(uuid.uuid4()),
             c=content,
-            t=timestamp,
+            t=dt_obj,
             K=K,
             G=G,
             X=X,
@@ -228,13 +287,20 @@ class NoteConstructor:
             L=[],
             z=z_vec,
             q=self.q0,
+            session_id=session_id,
+            session_date=session_date,
+            timestamp_iso=iso_str,
+            entities=note_entities,
+            speaker=speaker,
         )
-        _logger.debug("NoteConstructor.build → note {} | K={} G={} X={!r}",
-                      note.id, K[:3], G[:3], X[:80])
+        _logger.debug(
+            "NoteConstructor.build -> note {} | date={} K={} G={} X={!r}",
+            note.id, note.session_date, K[:3], G[:3], X[:80],
+        )
         return note
 
     def complete_embedding(self, note: Note) -> Note:
-        """Compute the note's content+K+G+X embedding if not yet computed.
+        """Compute the note\'s content+K+G+X embedding if not yet computed.
 
         Used with ``embed_e=False`` so notes that are never written (NOOP /
         DELETE) never pay for the embedding.
@@ -245,22 +311,55 @@ class NoteConstructor:
         return note
 
     def build_batch(
-        self, contents: List[str], timestamp: datetime, embed_e: bool = True
+        self,
+        contents: List[str],
+        timestamp: Optional[datetime | str] = None,
+        embed_e: bool = True,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> List[Note]:
-        """Build notes for multiple turns in a single LLM call.
+        """Build notes for multiple turns in a single LLM call with temporal grounding.
 
         Args:
             contents: List of content strings (one per turn).
-            timestamp: Base timestamp for all notes.
+            timestamp: Base timestamp for all notes (datetime or string).
             embed_e: If False, the content+K+G+X embeddings are deferred
                 (``note.e`` is None); call :meth:`complete_embedding` before
                 storing. ``z`` embeddings are always computed.
+            session_date: Explicit human-readable session date.
+            session_id: Optional session identifier.
 
         Returns:
             List of Note objects, one per content item.
         """
         n = len(contents)
         _logger.info("NoteConstructor.build_batch | turns={}", n)
+
+        # 1. Resolve session date and timestamp
+        dt_obj: datetime
+        iso_str: Optional[str] = None
+
+        if session_date:
+            dt_obj, iso_str = parse_session_datetime(session_date)
+        elif isinstance(timestamp, str):
+            dt_obj, iso_str = parse_session_datetime(timestamp)
+            session_date = timestamp
+        elif isinstance(timestamp, datetime):
+            dt_obj = timestamp
+            iso_str = dt_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+            session_date = dt_obj.strftime("%d %B %Y")
+        else:
+            # Inspect first turn for session header
+            header_num, header_date = None, None
+            if contents:
+                header_num, header_date = extract_session_header(contents[0])
+            if header_date:
+                dt_obj, iso_str = parse_session_datetime(header_date)
+                session_date = header_date
+                if header_num and not session_id:
+                    session_id = f"session_{header_num}"
+            else:
+                dt_obj, iso_str = parse_session_datetime(None)
 
         # Build the batch prompt with numbered turns
         turns_lines = []
@@ -273,7 +372,14 @@ class NoteConstructor:
             template = (_PROMPTS_DIR / "P1_batch_note_construction.txt").read_text(
                 encoding="utf-8"
             )
-        prompt = template.format(turns_text=turns_text)
+
+        fmt_kwargs: Dict[str, Any] = {"turns_text": turns_text}
+        if "{session_date}" in template:
+            fmt_kwargs["session_date"] = session_date or (dt_obj.strftime("%d %B %Y") if dt_obj else "")
+        if "{timestamp}" in template:
+            fmt_kwargs["timestamp"] = iso_str or (dt_obj.isoformat() if dt_obj else "")
+        prompt = template.format(**fmt_kwargs)
+
         retry = self._retry()
         if retry is not None:
             data, _attempt = retry.invoke(
@@ -294,10 +400,23 @@ class NoteConstructor:
             e_vec = self.backend.embed(e_text) if embed_e else None
             z_vec = self.backend.embed(content)
 
+            # Extract speaker from turn header if available
+            speaker = None
+            spk_match = re.match(r"^\s*\[([A-Za-z0-9_\s-]+)\]", content)
+            if spk_match:
+                speaker = spk_match.group(1).strip()
+
+            # Extract entities if item in data is a dict containing entities
+            turn_entities: List[str] = []
+            if isinstance(data, list) and i < len(data) and isinstance(data[i], dict):
+                turn_entities = [str(e).strip() for e in data[i].get("entities", []) if str(e).strip()]
+                if not speaker and data[i].get("speaker"):
+                    speaker = str(data[i]["speaker"]).strip()
+
             note = Note(
                 id=str(uuid.uuid4()),
                 c=content,
-                t=timestamp,
+                t=dt_obj,
                 K=K,
                 G=G,
                 X=X,
@@ -305,10 +424,18 @@ class NoteConstructor:
                 L=[],
                 z=z_vec,
                 q=self.q0,
+                session_id=session_id,
+                session_date=session_date,
+                timestamp_iso=iso_str,
+                entities=turn_entities,
+                speaker=speaker,
             )
             notes.append(note)
 
-        _logger.info("NoteConstructor.build_batch → {} notes", len(notes))
+        _logger.info(
+            "NoteConstructor.build_batch -> {} notes (session_date={!r})",
+            len(notes), session_date,
+        )
         return notes
 
     @staticmethod
@@ -325,10 +452,11 @@ class NoteConstructor:
         """Parse K, G, X from a single-note JSON LLM output."""
         data = _try_extract_json(raw, expect_array=False)
         if not isinstance(data, dict):
-            _logger.warning("NoteConstructor._parse_note_fields | JSON parse failed, raw={!r}",
-                           raw[:200])
+            _logger.warning(
+                "NoteConstructor._parse_note_fields | JSON parse failed, raw={!r}",
+                raw[:200],
+            )
             return ([], [], "")
-
         return self._fields_from_dict(data)
 
     def _parse_batch_result(
@@ -339,12 +467,12 @@ class NoteConstructor:
         Falls back to empty fields for missing/unparseable items.
         """
         data = _try_extract_json(raw, expect_array=True)
-
         if not isinstance(data, list):
-            _logger.warning("NoteConstructor._parse_batch_result | JSON parse failed, raw={!r}",
-                           raw[:200])
+            _logger.warning(
+                "NoteConstructor._parse_batch_result | JSON parse failed, raw={!r}",
+                raw[:200],
+            )
             return [([], [], "")] * expected_count
-
         return self._parse_batch_list(data, expected_count)
 
     @staticmethod

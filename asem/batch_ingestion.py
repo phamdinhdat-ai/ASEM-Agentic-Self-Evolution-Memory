@@ -35,6 +35,7 @@ from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .memory_manager import Op
 from .note import LinkRecord, Note
+from .temporal import extract_session_header, parse_session_datetime
 
 _log = get_logger("batch_ingest")
 
@@ -149,6 +150,8 @@ class BatchIngestor:
         self,
         dialogue_turns: List[str],
         memory_bank: MemoryBank,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> List[Note]:
         """Ingest all dialogue turns from a conversation into the memory bank.
 
@@ -156,6 +159,8 @@ class BatchIngestor:
             dialogue_turns: Ordered list of formatted dialogue turn strings
                 (e.g. ``"[Caroline] I went to the store."``).
             memory_bank: The memory bank to write into.
+            session_date: Optional human-readable session date string.
+            session_id: Optional session identifier.
 
         Returns:
             List of newly created (or updated) Note objects.
@@ -165,27 +170,53 @@ class BatchIngestor:
             return []
 
         dialogue_text = "\n".join(dialogue_turns)
+        # Auto-detect session date and ID if not explicitly provided
+        if not session_date:
+            for turn in dialogue_turns[:2]:
+                h_num, h_date = extract_session_header(turn)
+                if h_date:
+                    session_date = h_date
+                    if h_num and not session_id:
+                        session_id = f"session_{h_num}"
+                    break
+
+        dt_obj, iso_str = parse_session_datetime(session_date)
+
+        # Prepend explicit session date header if not already present
+        turns_to_ingest = list(dialogue_turns)
+        if session_date and not any("Session Date:" in t or session_date in t for t in turns_to_ingest[:2]):
+            turns_to_ingest.insert(0, f"[Session Date: {session_date}]")
+
+        dialogue_text = "\n".join(turns_to_ingest)
         _log.info(
-            "Batch ingestion started | turns={}  chars={}",
-            len(dialogue_turns),
+            "Batch ingestion started | turns={}  chars={}  session_date={!r}",
+            len(turns_to_ingest),
             len(dialogue_text),
+            session_date,
         )
 
         # Step 1 — Extract all notes from the dialogue
-        extracted = self._extract_notes(dialogue_text)
+        extracted = self._extract_notes(dialogue_text, session_date=session_date)
         if not extracted:
             _log.warning("No notes extracted from dialogue")
             return []
 
-        # Step 2 — Embed all extracted notes
-        raw_notes = self._embed_notes(extracted)
+        # Step 2 — Embed all extracted notes with temporal grounding
+        raw_notes = self._embed_notes(
+            extracted,
+            dt_obj=dt_obj,
+            iso_str=iso_str,
+            session_date=session_date,
+            session_id=session_id,
+        )
         _log.info("Extracted {} raw notes", len(raw_notes))
 
         # --- Detailed note listing ---
         for i, n in enumerate(raw_notes):
             _log.debug(
-                "  note[{}] | K=[{}]  G=[{}]  X={!r}",
+                "  note[{}] | date={} | K=[{}]  G=[{}]  X={!r}",
                 i,
+                n.session_date,
                 ", ".join(n.K[:5]) if n.K else "—",
                 ", ".join(n.G[:3]) if n.G else "—",
                 n.X[:100],
@@ -247,9 +278,16 @@ class BatchIngestor:
     # Step 1 — Batch note extraction
     # ------------------------------------------------------------------
 
-    def _extract_notes(self, dialogue_text: str) -> List[Dict[str, Any]]:
+    def _extract_notes(
+        self,
+        dialogue_text: str,
+        session_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Extract all atomic facts from the full dialogue in one LLM call."""
-        prompt = self._extraction_prompt.format(dialogue=dialogue_text)
+        fmt_kwargs: Dict[str, Any] = {"dialogue": dialogue_text}
+        if "{session_date}" in self._extraction_prompt:
+            fmt_kwargs["session_date"] = session_date or ""
+        prompt = self._extraction_prompt.format(**fmt_kwargs)
         raw = ""
         retry = self._retry()
         if retry is not None:
@@ -285,7 +323,7 @@ class BatchIngestor:
         results: List[Dict[str, Any]] = []
         for line in dialogue_text.split("\n"):
             line = line.strip()
-            if not line or len(line) < 10:
+            if not line or len(line) < 10 or line.startswith("[Session Date:"):
                 continue
             results.append({
                 "content": line,
@@ -299,8 +337,18 @@ class BatchIngestor:
     # Step 2 — Embed extracted notes
     # ------------------------------------------------------------------
 
-    def _embed_notes(self, extracted: List[Dict[str, Any]]) -> List[Note]:
-        """Create Note objects with embeddings for each extracted fact."""
+    def _embed_notes(
+        self,
+        extracted: List[Dict[str, Any]],
+        dt_obj: Optional[datetime] = None,
+        iso_str: Optional[str] = None,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> List[Note]:
+        """Create Note objects with embeddings and temporal grounding."""
+        if dt_obj is None:
+            dt_obj, iso_str = parse_session_datetime(session_date)
+
         notes: List[Note] = []
         dropped = 0
         for item in extracted:
@@ -313,14 +361,22 @@ class BatchIngestor:
                 dropped += 1
                 continue
 
+            entities = [str(e).strip() for e in item.get("entities", []) if str(e).strip()]
+            speaker = str(item.get("speaker", "")).strip() or None
+            if not speaker:
+                spk_match = re.match(r"^\s*\[([A-Za-z0-9_\s-]+)\]", c)
+                if spk_match:
+                    speaker = spk_match.group(1).strip()
+
             # Joint embedding (matches NoteConstructor.build)
-            e_vec = self._backend.embed(" ".join([c, " ".join(K), " ".join(G), X]))
+            e_text = " ".join([c, " ".join(K), " ".join(G), X])
+            e_vec = self._backend.embed(e_text)
             z_vec = self._backend.embed(c)
 
             note = Note(
                 id=str(uuid.uuid4()),
                 c=c,
-                t=datetime.utcnow(),
+                t=dt_obj,
                 K=K,
                 G=G,
                 X=X,
@@ -328,6 +384,11 @@ class BatchIngestor:
                 L=[],
                 z=z_vec,
                 q=self._q0,
+                session_id=session_id,
+                session_date=session_date,
+                timestamp_iso=iso_str,
+                entities=entities,
+                speaker=speaker,
             )
             notes.append(note)
         if dropped:
@@ -432,17 +493,23 @@ class BatchIngestor:
             elif op == "UPDATE" and target_id:
                 target = memory_bank.get_note(str(target_id))
                 if target is not None:
+                    merged_entities = list(dict.fromkeys(target.entities + note.entities))
                     merged = Note(
                         id=target.id,
                         c=note.c,
-                        t=note.t,
-                        K=note.K,
-                        G=note.G,
+                        t=note.t if note.session_date else target.t,
+                        K=list(dict.fromkeys(target.K + note.K)),
+                        G=list(dict.fromkeys(target.G + note.G)),
                         X=note.X,
                         e=note.e,
                         L=target.L,
                         z=note.z,
                         q=target.q,
+                        session_id=note.session_id or target.session_id,
+                        session_date=note.session_date or target.session_date,
+                        timestamp_iso=note.timestamp_iso or target.timestamp_iso,
+                        entities=merged_entities,
+                        speaker=note.speaker or target.speaker,
                     )
                     memory_bank.add(merged)
                     added.append(merged)
