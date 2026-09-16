@@ -1,0 +1,286 @@
+{
+  "FastASEM": {
+    "locomo_0000": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0000\\fast_asem.sqlite",
+      "notes": 282,
+      "link_edges": 3754,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5664768,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0001": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0001\\fast_asem.sqlite",
+      "notes": 271,
+      "link_edges": 3695,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5406720,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0002": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0002\\fast_asem.sqlite",
+      "notes": 384,
+      "link_edges": 5124,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 7663616,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0003": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0003\\fast_asem.sqlite",
+      "notes": 375,
+      "link_edges": 5247,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 7553024,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0004": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0004\\fast_asem.sqlite",
+      "notes": 379,
+      "link_edges": 5175,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 7585792,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0005": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0005\\fast_asem.sqlite",
+      "notes": 354,
+      "link_edges": 4940,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 7086080,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0006": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0006\\fast_asem.sqlite",
+      "notes": 402,
+      "link_edges": 5445,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 8056832,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0007": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0007\\fast_asem.sqlite",
+      "notes": 413,
+      "link_edges": 5555,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 8294400,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0008": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0008\\fast_asem.sqlite",
+      "notes": 311,
+      "link_edges": 4364,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 6234112,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0009": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\FastASEM\\locomo_0009\\fast_asem.sqlite",
+      "notes": 333,
+      "link_edges": 4630,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 6676480,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    }
+  },
+  "ASEM": {
+    "locomo_0000": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0000\\asem.sqlite",
+      "notes": 206,
+      "link_edges": 1936,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 4075520,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0001": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0001\\asem.sqlite",
+      "notes": 123,
+      "link_edges": 1220,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 2428928,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0002": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0002\\asem.sqlite",
+      "notes": 297,
+      "link_edges": 2767,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5857280,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0003": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0003\\asem.sqlite",
+      "notes": 265,
+      "link_edges": 2350,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5189632,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0004": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0004\\asem.sqlite",
+      "notes": 302,
+      "link_edges": 2744,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5935104,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0005": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0005\\asem.sqlite",
+      "notes": 267,
+      "link_edges": 2550,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5230592,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0006": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0006\\asem.sqlite",
+      "notes": 339,
+      "link_edges": 2870,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 6586368,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0007": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0007\\asem.sqlite",
+      "notes": 320,
+      "link_edges": 2801,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 6230016,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0008": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0008\\asem.sqlite",
+      "notes": 206,
+      "link_edges": 1898,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 4042752,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0009": {
+      "path": "static/memory_banks\\locomo10\\ds_nothink\\ASEM\\locomo_0009\\asem.sqlite",
+      "notes": 270,
+      "link_edges": 2558,
+      "new_edges": 0,
+      "status": "skipped",
+      "bytes": 5316608,
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    }
+  }
+}

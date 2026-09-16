@@ -1,0 +1,53 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "deepseek",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/deepseek_api.yaml",
+  "config_sha256": "f5c88c5603ca78757c9033e2aad087dffa47dd2859da5e56513b24c000d5b441",
+  "model": "deepseek-v4-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "ASEM",
+    "FastASEM"
+  ],
+  "created_at": "2026-09-13T10:44:10",
+  "updated_at": "2026-09-13T11:07:40",
+  "elapsed_sec": 1409.44,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {
+        "FastASEM": {
+          "notes": 487,
+          "link_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\deepseek\\FastASEM\\locomo_0000\\fast_asem.sqlite",
+          "bytes": 9814016,
+          "elapsed_sec": 1392.89
+        }
+      }
+    }
+  ],
+  "totals": {
+    "conversations": 1,
+    "banks_ok": 1,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "FastASEM": 487
+    }
+  },
+  "run": {
+    "built": 1,
+    "skipped": 0,
+    "errors": 0,
+    "notes": 487,
+    "discarded_partial": 0,
+    "interrupted": true
+  }
+}

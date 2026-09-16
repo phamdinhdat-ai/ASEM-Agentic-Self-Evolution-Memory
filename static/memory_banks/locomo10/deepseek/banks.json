@@ -1,0 +1,11 @@
+{
+  "FastASEM": {
+    "locomo_0000": {
+      "path": "static/memory_banks\\locomo10\\deepseek\\FastASEM\\locomo_0000\\fast_asem.sqlite",
+      "notes": 487,
+      "link_edges": 0,
+      "status": "ok",
+      "bytes": 9814016
+    }
+  }
+}
