@@ -10,10 +10,13 @@ For EACH turn below, extract:
 - Output EXACTLY ONE object per turn, in the same order as the turns.
 - If a turn is a greeting or has no factual content, still output an object — use an empty keywords list and describe it factually.
 - Do NOT merge turns. Do NOT skip turns. Do NOT add turns.
+- RESOLVE RELATIVE TIME: When turns or session headers contain dates (e.g., `[Session Date: ...]` or `[Session 1 — ...]`), resolve relative time expressions ("yesterday", "last week", "next month", "last year", "last Saturday") into explicit absolute dates in the description.
 
 ## Reasoning steps (think through these BEFORE outputting the JSON)
 Step 1: Read turn 1, extract its facts, and write its object.
 Step 2: Repeat for each remaining turn in order.
+Step 1: Check any session date/time context.
+Step 2: Read each turn, extract its facts, resolve any relative dates to absolute dates, and write its object.
 Step 3: Check that the number of objects equals the number of turns.
 
 ## Output Format
@@ -30,14 +33,19 @@ Reasoning: Turn 1: job at Acme Corp. Turn 2: remote engineering role in Hanoi. T
 [{{"keywords": ["sarah", "job", "acme corp"], "tags": ["professional"], "description": "Sarah started a new job at Acme Corp."}}, {{"keywords": ["software engineer", "remote", "hanoi"], "tags": ["professional", "location"], "description": "Sarah's role is remote software engineering based in Hanoi."}}]
 
 Example 2 (greeting turn):
+Example 2 (with session date resolving relative time):
 Turns:
 [Turn 1] [Mike] Hey, how are you?
+[Turn 1] [Session Date: 8 May 2023]
 [Turn 2] [Mike] I moved to Berlin last month.
 Reasoning: Turn 1 has no facts — minimal object. Turn 2 has the move fact.
 [{{"keywords": [], "tags": ["fact"], "description": "Mike greeted the conversation partner."}}, {{"keywords": ["mike", "berlin", "move"], "tags": ["personal", "location", "temporal"], "description": "Mike moved to Berlin last month."}}]
+Reasoning: Turn 1 provides session date. Turn 2 "last month" resolves to April 2023.
+[{{"keywords": ["session", "date"], "tags": ["temporal"], "description": "The conversation occurred on 8 May 2023."}}, {{"keywords": ["mike", "berlin", "move"], "tags": ["personal", "location", "temporal"], "description": "In April 2023, Mike moved to Berlin."}}]
 
 ## Common Mistakes (NEVER do these)
 WRONG: Outputting fewer objects than turns, or merging two turns into one object.
+WRONG: Outputting fewer objects than turns, or leaving relative dates unresolved when a session date is provided.
 → Every turn must have its own object, in order.
 
 ## Constraints

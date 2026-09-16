@@ -1,0 +1,58 @@
+answer:
+  direct_mode: true
+  include_dates: true
+  max_context_notes: 8
+  max_tokens: 512
+  temperature: 0.0
+hyperparameters:
+  alpha: 0.1
+  delta: 0.3
+  k: 5
+  k1: 20
+  k2: 5
+  lambda: 0.4
+  q0: 0.5
+inference:
+  backend: huggingface
+  huggingface:
+    device_map: auto
+    embedder_name: sentence-transformers/all-MiniLM-L6-v2
+    load_in_4bit: false
+    max_new_tokens: 512
+    model_name_or_path: Qwen/Qwen2.5-1.5B-Instruct
+    pipeline_task: text-generation
+    return_full_text: false
+    temperature: 0.0
+    torch_dtype: auto
+ingestion:
+  lazy_evolution: true
+  link_tau: 0.35
+  max_notes_per_session: 20
+  mode: session_batch
+link_tau: 0.35
+llm_retry:
+  max_retries: 0
+logging:
+  level: INFO
+  log_file: null
+phase:
+  bank_tag: shared
+  ingest_config: null
+  mode: combined
+preset: custom
+retriever:
+  bm25_weight: 0.8
+  dense_weight: 1.0
+  entity_weight: 0.6
+  hop_decay: 0.7
+  max_hops: 2
+  mode: rrf
+  rrf_k: 60
+  temporal_weight: 0.5
+  use_bm25: true
+  use_entity_filter: true
+  use_temporal_boost: true
+write_gate:
+  enabled: true
+  tau_high: 0.45
+  tau_redund: 0.92

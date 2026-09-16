@@ -137,7 +137,9 @@ class Note:
             "session_id": self.session_id,
             "session_date": self.session_date,
             "timestamp_iso": self.timestamp_iso,
-            "entities": list(self.entities),
+            # `or []` keeps this total: legacy notes may still carry
+            # entities=None (they were persisted as JSON null).
+            "entities": list(self.entities or []),
             "speaker": self.speaker,
         }
 
@@ -157,7 +159,8 @@ class Note:
             session_id=data.get("session_id"),
             session_date=data.get("session_date"),
             timestamp_iso=data.get("timestamp_iso"),
-            entities=list(data.get("entities", [])),
+            # `or []` tolerates `"entities": null` payloads written by older code.
+            entities=list(data.get("entities") or []),
             speaker=data.get("speaker"),
         )
 
@@ -409,7 +412,9 @@ class NoteConstructor:
             # Extract entities if item in data is a dict containing entities
             turn_entities: List[str] = []
             if isinstance(data, list) and i < len(data) and isinstance(data[i], dict):
-                turn_entities = [str(e).strip() for e in data[i].get("entities", []) if str(e).strip()]
+                # `or []` guards an explicit `"entities": null` from the LLM.
+                turn_entities = [str(e).strip() for e in (data[i].get("entities") or [])
+                                 if str(e).strip()]
                 if not speaker and data[i].get("speaker"):
                     speaker = str(data[i]["speaker"]).strip()
 
@@ -443,8 +448,9 @@ class NoteConstructor:
         """Extract (K, G, X) from a parsed note dict (or empty fields)."""
         if not isinstance(data, dict):
             return ([], [], "")
-        K = list(data.get("keywords", []))
-        G = list(data.get("tags", []))
+        # `or []` guards explicit `null` values from the LLM for any list field.
+        K = list(data.get("keywords") or [])
+        G = list(data.get("tags") or [])
         X = str(data.get("description", ""))
         return (K, G, X)
 
@@ -486,8 +492,9 @@ class NoteConstructor:
         results: List[Tuple[List[str], List[str], str]] = []
         for item in data:
             if isinstance(item, dict):
-                K = list(item.get("keywords", []))
-                G = list(item.get("tags", []))
+                # `or []` guards explicit `null` values from the LLM.
+                K = list(item.get("keywords") or [])
+                G = list(item.get("tags") or [])
                 X = str(item.get("description", ""))
                 results.append((K, G, X))
             else:

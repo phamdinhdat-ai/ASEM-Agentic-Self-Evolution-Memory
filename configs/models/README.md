@@ -236,7 +236,18 @@ Configs added for this workflow:
 | Tag | Config | Purpose |
 |-----|--------|---------|
 | `deepseek_api` | `deepseek_api.yaml` | Default ingest + answer backbone (DeepSeek via the endpoint in `.env`) |
+| `deepseek_openai` | `deepseek_openai.yaml` | Same endpoint/model, but via the **native `openai` SDK client** (`backend: "openai"`) instead of LangChain's `ChatOpenAI` |
 | `judge_api` | `judge_api.yaml` | LLM-as-a-judge grading, kept separate from the answered system |
+
+The two DeepSeek configs are interchangeable: both use the same embedder factory, so
+**banks built by either one can be mixed** in the same tag. Pick per run:
+
+```bash
+# LangChain path
+python scripts/build_static_banks.py --tag ds_lc --ingest-config configs/models/deepseek_api.yaml
+# Native openai SDK path
+python scripts/build_static_banks.py --tag ds_oa --ingest-config configs/models/deepseek_openai.yaml
+```
 
 > **`max_tokens` must cover reasoning + output.** The DeepSeek v4 models think
 > before answering, and reasoning tokens count against `max_tokens`. Too small a

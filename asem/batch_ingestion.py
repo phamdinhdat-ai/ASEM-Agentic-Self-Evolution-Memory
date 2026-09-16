@@ -361,7 +361,8 @@ class BatchIngestor:
                 dropped += 1
                 continue
 
-            entities = [str(e).strip() for e in item.get("entities", []) if str(e).strip()]
+            # `or []` guards an explicit `"entities": null` from the LLM.
+            entities = [str(e).strip() for e in (item.get("entities") or []) if str(e).strip()]
             speaker = str(item.get("speaker", "")).strip() or None
             if not speaker:
                 spk_match = re.match(r"^\s*\[([A-Za-z0-9_\s-]+)\]", c)
@@ -493,7 +494,9 @@ class BatchIngestor:
             elif op == "UPDATE" and target_id:
                 target = memory_bank.get_note(str(target_id))
                 if target is not None:
-                    merged_entities = list(dict.fromkeys(target.entities + note.entities))
+                    merged_entities = list(dict.fromkeys(
+                        (target.entities or []) + (note.entities or [])
+                    ))
                     merged = Note(
                         id=target.id,
                         c=note.c,

@@ -127,9 +127,10 @@ class FastSessionIngestor:
             if not fact or len(fact) < 5:
                 continue
 
-            entities = [str(e).strip() for e in item.get("entities", []) if str(e).strip()]
-            keywords = [str(k).strip() for k in item.get("keywords", []) if str(k).strip()]
-            tags = [str(t).strip() for t in item.get("tags", ["dialogue"]) if str(t).strip()]
+            # `or []` guards explicit `null` values from the LLM for any list field.
+            entities = [str(e).strip() for e in (item.get("entities") or []) if str(e).strip()]
+            keywords = [str(k).strip() for k in (item.get("keywords") or []) if str(k).strip()]
+            tags = [str(t).strip() for t in (item.get("tags") or ["dialogue"]) if str(t).strip()]
             speaker = str(item.get("speaker", "")).strip() or None
 
             # Joint semantic embedding string
@@ -188,11 +189,13 @@ class FastSessionIngestor:
                 if top_ex.speaker:
                     speaker_names.add(top_ex.speaker.lower())
                 overlap = {
-                    e for e in (set(note.entities) & set(top_ex.entities))
+                    e for e in (set(note.entities or []) & set(top_ex.entities or []))
                     if e.lower() not in speaker_names
                 }
                 if overlap:
-                    merged_entities = list(dict.fromkeys(top_ex.entities + note.entities))
+                    merged_entities = list(dict.fromkeys(
+                        (top_ex.entities or []) + (note.entities or [])
+                    ))
                     merged_keywords = list(dict.fromkeys(top_ex.K + note.K))
                     merged_tags = list(dict.fromkeys(top_ex.G + note.G))
                     # APPEND the new fact into the description instead of

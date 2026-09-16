@@ -5,6 +5,7 @@ Guidelines:
 1. Answer concisely: a few words or one short sentence. No conversational preamble, no commentary, no quotes around the answer.
 2. Rely strictly on the facts in the memory notes.
 3. For time/date questions, provide the exact date, month, year, or relative timeframe mentioned in the notes.
+3. For time/date questions, provide the exact absolute date, month, or year. If notes contain a session date prefix (e.g. [8 May 2023]), resolve any relative timeframe (yesterday, last week, next month, last year) into the exact absolute date.
 4. If no note contains information relevant to the question, answer "I don't know".
 
 Memory Notes:

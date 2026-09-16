@@ -11,9 +11,14 @@ single ingestion result can back any number of retrieval backbones.
 
 Guarantees
 ----------
-* **Idempotent / resumable**: a ``(system, conversation)`` pair whose bank is
-  non-empty is skipped. Re-running the same command continues instead of
-  restarting. ``force=True`` deletes and rebuilds instead.
+* **Idempotent / resumable**: a ``(system, conversation)`` pair is skipped only
+  when the manifest records it as finished (``status: "ok"``/``"skipped"``) AND
+  its bank file is non-empty. A bank left half-written by an interruption is
+  detected and rebuilt from scratch, so an incomplete memory graph can never be
+  mistaken for a complete one. ``force=True`` always rebuilds.
+* **Auditable**: each bank records the config it was built with, so a tag that
+  mixes two ingest configurations (e.g. thinking on, then thinking off) is
+  visible in ``manifest.json`` instead of silently mislabelled.
 * **Error-isolated**: a failure while building one bank is recorded in the
   manifest as ``status: "error"`` with a traceback and the run continues
   (unless ``fail_fast=True``), so one bad conversation cannot waste hours.
@@ -68,14 +73,19 @@ def sha256_file(path: str) -> str:
 
 
 def model_name_from_config(config_path: str) -> str:
+    """Model id from a config's inference block (backend-agnostic).
+
+    Each backend names its model differently — ``model`` for the API backends,
+    ``model_name_or_path`` for HuggingFace — so read the block selected by
+    ``backend`` instead of assuming "langchain".
+    """
     import yaml
 
     with open(config_path, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh) or {}
     inf = cfg.get("inference", {}) or {}
-    if inf.get("backend") == "huggingface":
-        return str((inf.get("huggingface") or {}).get("model_name_or_path", "?"))
-    return str((inf.get("langchain") or {}).get("model", "?"))
+    block = inf.get(inf.get("backend")) or {}
+    return str(block.get("model") or block.get("model_name_or_path") or "?")
 
 
 def embedder_name_from_config(config_path: str) -> str:
@@ -86,6 +96,28 @@ def embedder_name_from_config(config_path: str) -> str:
     inf = cfg.get("inference", {}) or {}
     block = inf.get(inf.get("backend"), {}) or {}
     return str(block.get("embedder_name", ""))
+
+
+def thinking_from_config(config_path: str) -> Optional[Dict[str, Any]]:
+    """Thinking/reasoning setting of a config, for provenance.
+
+    Returns the raw ``thinking`` block when present (e.g.
+    ``{"type": "disabled"}``), else ``{"reasoning_effort": ...}``, else
+    ``{"enable_reasoning": ...}``, else ``None`` (model default = thinking on).
+    """
+    import yaml
+
+    with open(config_path, "r", encoding="utf-8") as fh:
+        cfg = yaml.safe_load(fh) or {}
+    inf = cfg.get("inference", {}) or {}
+    block = inf.get(inf.get("backend"), {}) or {}
+    if block.get("thinking") is not None:
+        return {"thinking": block["thinking"]}
+    if block.get("reasoning_effort") is not None:
+        return {"reasoning_effort": block["reasoning_effort"]}
+    if block.get("enable_reasoning") is not None:
+        return {"enable_reasoning": block["enable_reasoning"]}
+    return None
 
 
 def count_notes(db_file: str) -> int:
@@ -101,6 +133,40 @@ def count_notes(db_file: str) -> int:
             conn.close()
     except sqlite3.Error:
         return 0
+
+
+def count_links(db_file: str) -> int:
+    """Number of typed link edges in a bank, read from SQLite without FAISS.
+
+    ``finalize_system()`` reports only the edges created by the post-ingestion
+    finalize pass, and that pass exists for ASEM v1 alone — FastASEM builds its
+    links during ingestion. Recording that value made every FastASEM bank look
+    link-less (`link_edges: 0`) even when it was densely connected, so the
+    figure is now read from the ``L`` column instead. It counts both the current
+    ``LinkRecord`` dicts and the legacy flat-ID strings.
+    """
+    if not db_file or not os.path.exists(db_file) or os.path.getsize(db_file) == 0:
+        return 0
+    try:
+        conn = sqlite3.connect(f"file:{db_file}?mode=ro", uri=True)
+        try:
+            rows = conn.execute(
+                "SELECT L FROM notes WHERE L IS NOT NULL AND L != '[]'"
+            ).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return 0
+
+    total = 0
+    for (raw,) in rows:
+        try:
+            items = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(items, list):
+            total += len(items)
+    return total
 
 
 def remove_bank_files(db_file: str) -> None:
@@ -190,7 +256,12 @@ def recompute_totals(manifest: Dict[str, Any]) -> None:
 
 
 def bank_index(manifest: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """``{System: {conversation_id: {path, notes, link_edges, status, bytes}}}``."""
+    """``{System: {conversation_id: {path, notes, link_edges, status, bytes}}}``.
+
+    ``link_edges`` is the total number of typed edges in the bank. ``new_edges``
+    counts only those the finalize pass added (ASEM v1 cross-chunk linking);
+    it is 0 for systems that link during ingestion.
+    """
     index: Dict[str, Dict[str, Any]] = {}
     for conv in manifest.get("conversations", []):
         for name, state in (conv.get("systems") or {}).items():
@@ -198,8 +269,11 @@ def bank_index(manifest: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
                 "path": state.get("bank", ""),
                 "notes": int(state.get("notes") or 0),
                 "link_edges": int(state.get("link_edges") or 0),
+                "new_edges": int(state.get("new_edges") or 0),
                 "status": state.get("status"),
                 "bytes": state.get("bytes", 0),
+                "config_sha256": state.get("config_sha256"),
+                "thinking": state.get("thinking"),
             }
     return index
 
@@ -214,8 +288,13 @@ def _ingest_one(
     bank_dir: str,
     sessions: Sequence[Any],
     backend: Any,
+    bank_file_path: str = "",
 ) -> Dict[str, int]:
-    """Build a single (system, conversation) bank in-process. Raises on failure."""
+    """Build a single (system, conversation) bank in-process. Raises on failure.
+
+    Returns ``notes``, ``link_edges`` (total edges now in the bank, comparable
+    across systems) and ``new_edges`` (those created by the finalize pass).
+    """
     from eval.phase_runner import (
         build_eval_system,
         close_system,
@@ -227,11 +306,16 @@ def _ingest_one(
     system = build_eval_system(name, config_path, bank_dir, backend=backend)
     try:
         ingest_system(system, name, sessions)
-        link_edges = finalize_system(system)
+        new_edges = finalize_system(system)
         size = system_bank_size(system)
     finally:
         close_system(system)
-    return {"notes": int(size), "link_edges": int(link_edges)}
+
+    # Count AFTER closing, so every system is measured the same way (the
+    # finalize pass only exists for ASEM v1; the others link while ingesting).
+    # `max` keeps the total honest if the file is unreadable.
+    edges = max(count_links(bank_file_path), int(new_edges))
+    return {"notes": int(size), "link_edges": edges, "new_edges": int(new_edges)}
 
 
 def build_static_banks(
@@ -279,29 +363,89 @@ def build_static_banks(
     manifest_path = os.path.join(tag_dir, "manifest.json")
     index_path = os.path.join(tag_dir, "banks.json")
 
+    cfg_sha = sha256_file(ingest_config)
+    cfg_model = model_name_from_config(ingest_config) if os.path.exists(ingest_config) else ""
+    cfg_thinking = thinking_from_config(ingest_config) if os.path.exists(ingest_config) else None
+
     manifest = load_manifest(manifest_path)
     if manifest is None:
         manifest = new_manifest(dataset, tag, bank_root, input_path, ingest_config)
-    else:
-        previous_cfg = manifest.get("config_sha256")
-        if previous_cfg and previous_cfg != sha256_file(ingest_config):
-            logger.warning(
-                "Banks under tag {!r} were built with a DIFFERENT ingest config "
-                "({} -> {}). Existing banks will be reused as-is unless you pass --force.",
-                tag, manifest.get("ingest_config"), ingest_config,
-            )
+
+    # The tag's config BEFORE this run. Used to attribute banks that were written
+    # before per-bank provenance existed (otherwise a re-used bank would be
+    # mislabelled with whatever config was passed today).
+    prev_tag_cfg = manifest.get("ingest_config")
+    prev_tag_sha = manifest.get("config_sha256")
+    prev_tag_model = manifest.get("model")
+    prev_tag_thinking = None
+    for _h in (manifest.get("config_history") or []):
+        if _h.get("config_sha256") == prev_tag_sha:
+            prev_tag_thinking = _h.get("thinking")
+            break
+    if prev_tag_thinking is None and prev_tag_cfg and os.path.exists(str(prev_tag_cfg)):
+        prev_tag_thinking = thinking_from_config(str(prev_tag_cfg))
+
+    if prev_tag_sha and prev_tag_sha != cfg_sha:
+        logger.warning(
+            "Tag {!r} already holds banks built with a DIFFERENT ingest config "
+            "({} -> {}). Existing banks are reused as-is, so this tag will MIX "
+            "both configurations — each bank records its own config, and the "
+            "split is listed in `config_history`. Prefer a fresh --tag for a "
+            "clean comparison, or --force to rebuild everything on one config.",
+            tag, prev_tag_cfg, ingest_config,
+        )
+
     manifest["dataset"] = dataset
     manifest["tag"] = tag
     manifest["bank_root"] = bank_root
     manifest["ingest_config"] = ingest_config
-    manifest["config_sha256"] = sha256_file(ingest_config)
-    manifest["model"] = (
-        model_name_from_config(ingest_config) if os.path.exists(ingest_config) else ""
-    )
+    manifest["config_sha256"] = cfg_sha
+    manifest["model"] = cfg_model
     manifest["embedder_name"] = (
         embedder_name_from_config(ingest_config) if os.path.exists(ingest_config) else ""
     )
     manifest["systems"] = sorted(set(manifest.get("systems", [])) | set(systems))
+
+    # Every distinct configuration used against this tag, so a mixed tag is
+    # visible rather than mislabelled as the most recent config.
+    history = manifest.setdefault("config_history", [])
+    if not any(h.get("config_sha256") == cfg_sha for h in history):
+        history.append({
+            "config_sha256": cfg_sha,
+            "ingest_config": ingest_config,
+            "model": cfg_model,
+            "thinking": cfg_thinking,
+            "first_used": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+
+    # Stamped on every NEWLY built bank so you can tell which settings produced it.
+    bank_meta: Dict[str, Any] = {
+        "ingest_config": ingest_config,
+        "config_sha256": cfg_sha,
+        "model": cfg_model,
+        "thinking": cfg_thinking,
+    }
+
+    def _reuse_meta(previous: Dict[str, Any]) -> Dict[str, Any]:
+        """Provenance for a bank that is being REUSED (skipped), not rebuilt.
+
+        Per-bank fields are authoritative; for banks written before per-bank
+        provenance existed, fall back to the tag's config at the time — which is
+        the previous config, not the one being added in this run.
+        """
+        if previous.get("config_sha256"):
+            return {
+                "ingest_config": previous.get("ingest_config"),
+                "config_sha256": previous.get("config_sha256"),
+                "model": previous.get("model"),
+                "thinking": previous.get("thinking"),
+            }
+        return {
+            "ingest_config": prev_tag_cfg,
+            "config_sha256": prev_tag_sha,
+            "model": prev_tag_model,
+            "thinking": prev_tag_thinking,
+        }
 
     def _save() -> None:
         recompute_totals(manifest)
@@ -356,16 +500,25 @@ def build_static_banks(
                 complete = previous.get("status") in ("ok", "skipped") and existing > 0
 
                 if complete and not force:
+                    # Re-read both counts from the bank: earlier runs recorded
+                    # `link_edges: 0` for every non-ASEM system, and a skipped
+                    # bank is the only chance to repair that stale figure.
+                    edges = count_links(bfile)
                     entry["systems"][name] = {
+                        **_reuse_meta(previous),
                         "notes": existing,
-                        "link_edges": int(previous.get("link_edges") or 0),
+                        "link_edges": edges if edges else int(previous.get("link_edges") or 0),
+                        "new_edges": int(previous.get("new_edges") or 0),
                         "status": "skipped",
                         "bank": bfile,
                         "bytes": os.path.getsize(bfile),
                         "elapsed_sec": 0.0,
                     }
                     run["skipped"] += 1
-                    logger.info("  [{}] skipped — already complete ({} notes)", name, existing)
+                    logger.info(
+                        "  [{}] skipped — already complete ({} notes, {} edges)",
+                        name, existing, edges,
+                    )
                     _save()
                     continue
 
@@ -384,7 +537,7 @@ def build_static_banks(
 
                 t0 = time.perf_counter()
                 try:
-                    result = _ingest_one(name, ingest_config, bdir, sessions, backend)
+                    result = _ingest_one(name, ingest_config, bdir, sessions, backend, bfile)
                 except KeyboardInterrupt:
                     raise
                 except Exception as exc:  # noqa: BLE001
@@ -393,8 +546,10 @@ def build_static_banks(
                         "  [{}] FAILED on {} after {:.1f}s", name, conversation_id, elapsed
                     )
                     entry["systems"][name] = {
+                        **bank_meta,
                         "notes": 0,
                         "link_edges": 0,
+                        "new_edges": 0,
                         "status": "error",
                         "error": f"{type(exc).__name__}: {exc}",
                         "traceback": traceback.format_exc(limit=12),
@@ -420,16 +575,18 @@ def build_static_banks(
                     run["notes"] += notes
 
                 entry["systems"][name] = {
+                    **bank_meta,
                     "notes": notes,
                     "link_edges": result["link_edges"],
+                    "new_edges": result["new_edges"],
                     "status": status,
                     "bank": bfile,
                     "bytes": os.path.getsize(bfile) if os.path.exists(bfile) else 0,
                     "elapsed_sec": round(elapsed, 2),
                 }
                 logger.info(
-                    "  [{}] {} notes | {} new edges | {:.1f}s",
-                    name, notes, result["link_edges"], elapsed,
+                    "  [{}] {} notes | {} edges ({} new this pass) | {:.1f}s",
+                    name, notes, result["link_edges"], result["new_edges"], elapsed,
                 )
                 _save()
 

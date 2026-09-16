@@ -203,6 +203,49 @@ def validate_memory_ops(data: Any, num_notes: int = -1) -> ValidationResult:
     return ValidationResult.ok(cleaned)
 
 
+def validate_memory_op(data: Any) -> ValidationResult:
+    """Validate a SINGLE memory-op decision: op in {ADD,UPDATE,DELETE,NOOP}.
+
+    This is the single-note counterpart of :func:`validate_memory_ops`.
+    ``P_memory_manager.txt`` asks the model for one JSON *object*
+    (``{"op": ..., "target_id": ...}``), so the array-shaped validator must
+    NOT be used on that path — it rejects every well-formed response with
+    "expected a JSON array of decision objects, got dict", which burns the
+    retry budget and (when the follow-up correction nudges the model into
+    emitting an array) silently discards the LLM's decision in favour of the
+    heuristic fallback.
+
+    A one-element array is unwrapped for robustness.
+    """
+    if isinstance(data, list):
+        if len(data) != 1:
+            return ValidationResult.fail(
+                [f"expected a single decision object, got an array of "
+                 f"{len(data)} entries"], data)
+        data = data[0]
+
+    if not isinstance(data, dict):
+        return ValidationResult.fail(
+            [f"expected a JSON object decision, got {type(data).__name__}"], data)
+
+    errors: List[str] = []
+    op = str(data.get("op", "")).upper()
+    target_id = data.get("target_id")
+
+    if op not in MEMORY_OPS:
+        errors.append(f"invalid op {op!r} — must be one of {sorted(MEMORY_OPS)}")
+    if op in {"UPDATE", "DELETE"} and not isinstance(target_id, str):
+        errors.append(f"{op!r} requires a string 'target_id'")
+
+    cleaned = {
+        "op": op if op in MEMORY_OPS else "ADD",
+        "target_id": target_id,
+    }
+    if errors:
+        return ValidationResult.fail(errors, cleaned)
+    return ValidationResult.ok(cleaned)
+
+
 def validate_batch_notes(data: Any, expected_count: int = -1,
                          require_content: bool = False) -> ValidationResult:
     """Validate an array of note dicts (batch extraction / batch evolution).

@@ -14,21 +14,22 @@ grounding, deterministic gating, multi-channel RRF retrieval, and direct tempora
 | Builder | `build_asem_v2_system()` | `build_fast_asem_system()` |
 | Retriever | `asem/enhanced_retriever.py` → `EnhancedHybridRetriever` | `asem/retriever.py` → `HybridRetriever` (RRF mode) |
 | Answer prompt | `_RETRIEVAL_PROMPT` (distil mode) | `data/prompts/P_temporal_qa.txt` (direct mode) |
-| Note schema | base 9 fields | base 9 + `session_id`, `session_date`, `timestamp_iso`, `entities`, `speaker` |
+| Note schema | base 9 fields + the same 5 temporal/entity fields, filled from turn headers | base 9 + 5 fields, filled from explicit session metadata |
 | Config | generic | `configs/presets/sota_benchmark.yaml` |
 
 ---
 
 ## 1. TL;DR — what changed and why
 
-ASEMv2 was **correct but slow and temporally blind**. FastASEM keeps the same five-stage
-pipeline skeleton but replaces the three most expensive / lossy stages:
+ASEMv2 was **correct but slow, and blind to relative time**. FastASEM keeps the same
+five-stage pipeline skeleton but replaces the three most expensive / lossy stages:
 
 1. **Ingestion:** 3 LLM calls/session → **1 LLM call/session** + deterministic (<1 ms)
    gating and graph weaving.
-2. **Temporal grounding:** notes now carry the **session date** and the extraction prompt
-   **resolves relative time to absolute dates** ("last week" → "7 May 2023"). This is the
-   single biggest accuracy win.
+2. **Temporal grounding:** ASEMv2 now *stamps* the session date onto notes, but its
+   extraction prompt never asks the model to **resolve relative time to absolute dates**
+   ("last week" → "7 May 2023"). That resolution step — not the timestamp field itself —
+   is the single biggest accuracy win.
 3. **Retrieval:** single dense-similarity + utility blend → **multi-channel RRF**
    (dense + BM25 + entity + temporal-boost) with link traversal.
 4. **Answering:** distillation mode → **direct mode** with a temporal-aware QA prompt and
@@ -66,7 +67,7 @@ injection, and **how ingestion is driven**:
 The two system wrappers differ in their ingestion entry point:
 
 ```python
-# ASEMv2 — flat turn list, NO session dates
+# ASEMv2 — flat turn list; the date must be inferred from in-band turn headers
 class ASEMSystemV2:
     def ingest_conversation(self, dialogue_turns: List[str]) -> int: ...
 
@@ -76,8 +77,11 @@ class FastASEMSystem:
         # each session = {"turns": [...], "date": "8 May 2023", "session_id": "sess_3"}
 ```
 
-This API change is what makes temporal grounding possible: FastASEM receives the
-**session timestamp** at ingestion time, whereas ASEMv2 discards it.
+ASEMv2 is no longer date-blind: `ingest_conversation()` calls `extract_session_header()`
+on the first turns, derives `session_date` / `session_<n>`, and parses it with
+`parse_session_datetime()`. The remaining asymmetry is **where the date comes from** —
+ASEMv2 must guess it from in-band headers and silently degrades to a no-date ingest when
+they are absent, whereas FastASEM is *handed* the timestamp by the caller.
 
 ---
 
@@ -138,30 +142,45 @@ This is the single most impactful change. It has three cooperating parts:
 relative time into absolute dates, and (c) stamp every note with the session date so
 retrieval and answering can use it.
 
-#### (a) The ASEMv2 defect — wall-clock stamping, no session date
+#### (a) The residual ASEMv2 defect — the date is stamped but never resolved
 
-ASEMv2's `BatchIngestor` never receives a session date. Its `ingest_conversation()` takes a
-flat `List[str]` of turns and `_embed_notes()` stamps each note with the *current*
-wall-clock time:
+> **Update.** ASEMv2's `BatchIngestor` used to stamp notes with wall-clock time and discard
+> the session date entirely. It now auto-detects the date from turn headers and populates
+> the same five temporal fields as FastASEM. What it still does **not** do is ask the LLM
+> to rewrite relative expressions, so the relative phrase survives verbatim in `c`.
+
+ASEMv2's `ingest_conversation()` takes a flat `List[str]` of turns, detects the session
+header, parses it, and `_embed_notes()` stamps each note with the **session** time plus the
+extended metadata:
 
 ```python
 # asem/batch_ingestion.py — _embed_notes()
 note = Note(
     id=str(uuid.uuid4()),
     c=c,
-    t=datetime.utcnow(),          # <-- wall-clock "now", NOT the session date
+    t=dt_obj,                     # session date, parsed from the turn header
     K=K, G=G, X=X,
     e=e_vec, L=[], z=z_vec, q=self._q0,
-    # no session_id / session_date / timestamp_iso / entities / speaker
+    session_id=session_id,
+    session_date=session_date,
+    timestamp_iso=iso_str,        # ISO-8601
+    entities=entities,
+    speaker=speaker,
 )
 ```
 
-Consequences:
+Consequences — narrower than before, but still material:
 - A turn "I went to the support group **last week**" (from a session dated 8 May 2023) is
-  stored with `t = <run date>` and the relative phrase "last week" intact in `c`.
-- There is no `session_date` field, so the retriever has nothing to boost on and the answer
-  agent has no absolute date to surface. It echoes "last week", which fails against the
-  LoCoMo reference "7 May 2023".
+  now stored with `t = 2023-05-08` and a usable `session_date`, **but the content string
+  still reads "last week"**. The retriever can boost on the date; the answer agent can
+  surface it; the note's own text still cannot answer "when exactly?".
+- ASEMv2's extraction prompt (`P4_batch_note_extraction.txt`) declares only `{dialogue}`.
+  `_extract_notes()` *supports* a `{session_date}` placeholder, but no template supplies
+  one, and the prompt carries no relative→absolute instruction. The date therefore reaches
+  the model only as an injected `[Session Date: ...]` line inside the dialogue, which is a
+  weak anchor compared with FastASEM's explicit CRITICAL RULE 2.
+- When turn headers are missing or unparseable, `session_date` stays `None` and the fields
+  fall back to empty — a variability that FastASEM's explicit API removes.
 
 #### (b) FastASEM — parse the session timestamp
 
@@ -222,7 +241,9 @@ Extract all key factual statements from this session:"""
 `[Caroline] I went to the LGBTQ support group last week, it was really helpful.`
 
 - ASEMv2 stores: `c = "Caroline went to the LGBTQ support group last week"`,
-  `t = <run date>`, no `session_date`.
+  `t = 2023-05-08`, `session_date = "8 May 2023"` — the date is now present, but the
+  relative phrase is unresolved, which is exactly what the Temporal-Reasoning EM gap
+  reflects.
 - FastASEM stores: `c = "On 1 May 2023, Caroline went to the LGBTQ support group."`,
   `t = 2023-05-08`, `session_date = "8 May 2023"`,
   `timestamp_iso = "2023-05-08T13:56:00Z"`, `entities = ["Caroline", "LGBTQ support group"]`,
@@ -281,16 +302,26 @@ Problems with this design:
   see the true duplicate and tends to ADD.
 - **Non-deterministic.** Same input can yield different ops across runs (temperature,
   sampling), so the bank is not reproducible.
-- **UPDATE overwrites.** `_execute_ops()` replaces the target's `c/K/G/X/e` with the new
-  note's values, **losing the original fact**:
+- **UPDATE still overwrites the content.** `_execute_ops()` now unions `K`/`G`/`entities`
+  and preserves temporal continuity, but `c`, `X`, `e`, and `z` are replaced by the new
+  note's values, so the **original fact text is lost**:
 
 ```python
 # asem/batch_ingestion.py — _execute_ops(), UPDATE branch
 merged = Note(
     id=target.id,
-    c=note.c,        # <-- original target.c is discarded
-    t=note.t, K=note.K, G=note.G, X=note.X, e=note.e,
+    c=note.c,                                      # <-- original target.c is discarded
+    t=note.t if note.session_date else target.t,   # temporal continuity
+    K=list(dict.fromkeys(target.K + note.K)),      # unioned, not replaced
+    G=list(dict.fromkeys(target.G + note.G)),
+    X=note.X,
+    e=note.e,
     L=target.L, z=note.z, q=target.q,
+    session_id=note.session_id or target.session_id,
+    session_date=note.session_date or target.session_date,
+    timestamp_iso=note.timestamp_iso or target.timestamp_iso,
+    entities=merged_entities,                      # unioned
+    speaker=note.speaker or target.speaker,
 )
 ```
 
@@ -374,9 +405,17 @@ ASEMv2's `_batch_link()` gathers each added note's top-10 ANN neighbors (capped 
 neighbor payloads for the prompt) and asks the LLM to emit free-form
 `{source, target, relation}` triples. The relation vocabulary is open-ended
 (`validate_link_array(..., allow_unknown_relations=True)`), so the LLM may invent
-semantic/causal/temporal relations. It is then applied bidirectionally and cross-session
-links are counted. This is a third LLM call per session, is non-deterministic, and is
-bounded by the 20-neighbor prompt cap.
+semantic/causal/temporal relations. Each triple is written as a typed
+`LinkRecord(target_id, relation)` on **both** endpoints, deduped by target id, and
+classified per relation via `is_cross = (src_is_new XOR tgt_is_new)`, yielding the
+`(total_links, cross_session_links)` pair. Endpoints are mutated on an in-memory
+`all_note_map` so links written earlier in the same pass are not clobbered.
+
+This remains a third LLM call per session, is non-deterministic, and is bounded by the
+20-neighbor prompt cap. Two accounting caveats apply: `UPDATE`-merged notes keep the
+target's pre-existing id yet still appear in `added_notes`, so links touching them are
+misclassified as cross-session (the reported metric is an upper bound), and `link_count`
+counts relations processed rather than links actually created.
 
 #### FastASEM: two deterministic edge rules
 
@@ -434,8 +473,9 @@ of producing an empty bank.
 
 ## 4. Note schema enrichment
 
-`asem/note.py` gained five optional fields (lines 118–122) that FastASEM populates and
-ASEMv2 leaves `None`:
+`asem/note.py` gained five optional fields (lines 118–122). **Both** ingestion paths now
+populate them: FastASEM from explicit session metadata, ASEMv2 from auto-detected turn
+headers.
 
 ```python
 session_id:    Optional[str] = None   # which session the note came from
@@ -457,10 +497,11 @@ code that consumes it:
 | `entities` | SLAFI rule 5 | `search_by_entities` (gate + retrieval + weaving) | entity channel; speaker-excluded dedup; `same-entity` edges |
 | `speaker` | SLAFI rule 1 | gate (speaker-excluded overlap), `direct_answer` | preserves atomicity; pronoun-resolved facts |
 
-Because the fields are optional with `None`/empty defaults, ASEMv2 banks (which never set
-them) remain fully backward-compatible — the new retrieval channels simply find nothing to
-boost when the fields are absent, which is exactly why ASEMv2's temporal performance is
-weak.
+Because the fields are optional with `None`/empty defaults, banks ingested before this
+change remain fully backward-compatible (SQLite rows simply deserialize the new fields as
+`None`/`[]`). Note that the fields are necessary but not sufficient for temporal
+performance: ASEMv2 now populates them, yet its unresolved relative phrases and
+`distil`-mode answering still leave the Temporal-Reasoning gap described in §3.2.
 
 ---
 
@@ -779,7 +820,8 @@ benchmark's exact-match scoring rather than a defect.
 - **Reproducibility** — deterministic gating and weaving mean the same input yields the
   same bank, which ASEMv2's LLM ops could not guarantee.
 - **No information loss on UPDATE** — append-not-overwrite keeps the original fact visible.
-- **Temporal capability** — the single largest accuracy gain (Temporal EM 2.7 → 43.2).
+- **Temporal capability** — the single largest accuracy gain (Temporal EM 2.7 → 43.2),
+  driven by resolving relative time at extraction, not merely by the date field.
 
 ---
 
@@ -795,18 +837,26 @@ call. Each algorithm is given for both systems.
 ALGORITHM ASEMv2-INGEST(turns, M)
   dialogue ← join(turns)
 
+  # ---- Step 0: session header detection (in-band) ----
+  (h_num, session_date) ← extract_session_header(first turns)   # may be ∅
+  if session_date ∉ dialogue: prepend "[Session Date: " + session_date + "]"
+  (dt_obj, iso_str) ← parse_session_datetime(session_date)
+
   # ---- Step 1: batch note extraction (LLM call #1) ----
   facts ← LLM( P4_extraction_prompt(dialogue) )        # [{content,keywords,tags,description}]
+  #   P4 declares only {dialogue}; a {session_date} slot is supported but unused
   if facts = ∅: facts ← fallback_per_line(dialogue)
 
-  # ---- Step 2: embed notes (NO session date) ----
+  # ---- Step 2: embed notes (session date STAMPED, relative time unresolved) ----
   notes ← []
   for f in facts:
       c ← f.content
       e ← embed( c + f.keywords + f.tags + f.description )   # joint embedding
       z ← embed( c )                                          # intent embedding
-      notes.append( Note(c, t=NOW_UTC, K=f.keywords, G=f.tags,
-                         X=f.description, e, z, q=q0) )      # t = wall-clock "now"
+      notes.append( Note(c, t=dt_obj, K=f.keywords, G=f.tags,
+                         X=f.description, e, z, q=q0,
+                         session_id, session_date, timestamp_iso=iso_str,
+                         entities, speaker) )                 # t = SESSION date
 
   # ---- Step 3: batch memory ops (LLM call #2) ----
   existing_payload ← first 20 notes of M
@@ -818,21 +868,27 @@ ALGORITHM ASEMv2-INGEST(turns, M)
   for (i, op) in ops:
       n ← notes[i]
       if op = ADD:            M.add(n); added.append(n)
-      elif op = UPDATE:       M.add( overwrite(M.get(target_id), n) )   # loses original c
+      elif op = UPDATE:       M.add( merge(M.get(target_id), n) )  # c/X/e/z replaced,
+                                                                   # K/G/entities unioned
       elif op = DELETE:       M.delete(target_id)
       elif op = NOOP:         pass
 
   # ---- Step 5: batch link generation (LLM call #3) ----
   neighbors ← top-10 ANN of each added note (≤20 payloads)
   rels ← LLM( P6_link_prompt(added, neighbors) )            # [{source,target,relation}]
-  for (s,t,rel) in rels: add_bidirectional_edge(s, t, rel)
+  for (s,t,rel) in rels:
+      upsert LinkRecord(target_id=t, relation=rel) on s      # deduped, bidirectional
+      upsert LinkRecord(target_id=s, relation=rel) on t
+      is_cross ← (s ∈ new_ids) XOR (t ∈ new_ids)             # per-relation classification
+  # persist every mutated endpoint through the retained all_note_map
 
   # ---- Step 6: rebuild FAISS index once ----
   M.rebuild_index()
   return added
 ```
 
-**Cost:** 3 LLM calls/session; non-deterministic; UPDATE overwrites; DELETE destructive.
+**Cost:** 3 LLM calls/session; non-deterministic; UPDATE replaces the content; DELETE
+destructive; session date stamped but relative expressions left unresolved.
 
 ### 11.2 Ingestion — FastASEM (`FastSessionIngestor.ingest_session`)
 
@@ -1007,7 +1063,10 @@ temporal-boost term in Phase A is what makes "when" questions work, and it is ef
 
 - `asem/fast_ingest.py` — `FastSessionIngestor`, `parse_session_datetime`,
   `_EXTRACTION_SYSTEM_PROMPT`, `_weave_graph_links`, deterministic gate.
-- `asem/batch_ingestion.py` — `BatchIngestor` (ASEMv2 path, for reference).
+- `asem/batch_ingestion.py` — `BatchIngestor` (ASEMv2 path: temporally-grounded batch
+  ingest, typed bidirectional links, cross-session link accounting).
+- `asem/temporal.py` — `extract_session_header`, `parse_session_datetime` (shared by both
+  ingestion paths).
 - `asem/note.py` (lines 118–160) — new note fields + (de)serialization.
 - `asem/retriever.py` — `HybridRetriever` (RRF / BM25 / entity / temporal).
 - `asem/enhanced_retriever.py` — `EnhancedHybridRetriever` (ASEMv2 path).

@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any, List, Optional, Tuple
 
 from .backends.base import InferenceBackend
-from .llm_validator import LLMRetryHandler, validate_memory_ops
+from .llm_validator import LLMRetryHandler, validate_memory_op
 from .logging_utils import get_logger
 from .note import Note, _try_extract_json
 
@@ -43,7 +43,7 @@ class MemoryManager:
             data, _attempt = retry.invoke(
                 prompt,
                 parse_fn=lambda raw: _try_extract_json(raw, expect_array=False),
-                validate_fn=validate_memory_ops,
+                validate_fn=validate_memory_op,
             )
             op, target_id = self._parse_decision_data(data)
         else:

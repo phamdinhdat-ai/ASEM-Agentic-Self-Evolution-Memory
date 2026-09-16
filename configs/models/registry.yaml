@@ -62,6 +62,14 @@ models:
     model_id: "deepseek-v4-flash"
     config: "configs/models/deepseek_api.yaml"
 
+  # Same endpoint/model as deepseek_api, but via the native openai SDK client
+  # (no ChatOpenAI wrapper). Banks built by either config are interchangeable.
+  deepseek_openai:
+    size_b: 0.0
+    backend: "openai"
+    model_id: "deepseek-v4-flash"
+    config: "configs/models/deepseek_openai.yaml"
+
   judge_api:
     size_b: 0.0
     backend: "langchain"
@@ -79,7 +87,7 @@ models:
 groups:
   hf_small: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf"]
   api_small: ["qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api"]
-  api_proxy: ["deepseek_api"]
+  api_proxy: ["deepseek_api", "deepseek_openai"]
   all: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf",
         "qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api",
         "deepseek_api"]

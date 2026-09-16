@@ -31,9 +31,14 @@ inference:
   langchain:
     provider: "openai"
     model: "deepseek-v4-flash"
-    temperature: 0.0
+    temperature: 0.3
     max_tokens: 4096
     enable_reasoning: false
+    # Thinking control is supported on this (LangChain) path too — same keys:
+    #   thinking:         {type: "enabled" | "disabled"}
+    #   reasoning_effort: "low" | "high" | "max"
+    # Left off here so banks stay consistent with runs already ingested;
+    # `deepseek_openai.yaml` ships with `thinking: {type: disabled}`.
     embedder_provider: "huggingface"
     embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
 

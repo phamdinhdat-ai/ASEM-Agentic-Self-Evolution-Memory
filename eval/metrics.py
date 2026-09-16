@@ -334,19 +334,29 @@ def compute_metrics(
     return results
 
 
-def per_category_metrics(
+def per_group_metrics(
     preds: Sequence[Any],
     refs: Sequence[Any],
-    categories: Sequence[str],
+    keys: Sequence[str],
     metric_names: Sequence[str],
     em_loose_flags: Optional[Sequence[float]] = None,
     bertscore_scores: Optional[Sequence[float]] = None,
     judge_flags: Optional[Sequence[Optional[bool]]] = None,
 ) -> Dict[str, Dict[str, float]]:
-    """Group by category label and compute :func:`compute_metrics` per group."""
+    """Group by an arbitrary label and compute :func:`compute_metrics` per group.
+
+    ``keys[i]`` labels the pair ``(preds[i], refs[i])`` — a category name for
+    :func:`per_category_metrics`, a conversation id for the per-conversation
+    breakdown. Empty labels collapse into ``"unknown"`` and the result is keyed
+    by sorted group label.
+
+    The optional per-item score arrays are sliced in lock-step with the group,
+    so a metric computed once for a whole system (BERTScore, the LLM judge) is
+    never recomputed just to get a breakdown.
+    """
     buckets: Dict[str, Dict[str, List[Any]]] = {}
-    for i, cat in enumerate(categories):
-        bucket = buckets.setdefault(str(cat) or "unknown", {"preds": [], "refs": [], "loose": [], "bert": [], "judge": []})
+    for i, key in enumerate(keys):
+        bucket = buckets.setdefault(str(key) or "unknown", {"preds": [], "refs": [], "loose": [], "bert": [], "judge": []})
         bucket["preds"].append(preds[i])
         bucket["refs"].append(refs[i])
         if em_loose_flags is not None:
@@ -357,8 +367,8 @@ def per_category_metrics(
             bucket["judge"].append(judge_flags[i])
 
     out: Dict[str, Dict[str, float]] = {}
-    for cat, bucket in sorted(buckets.items()):
-        out[cat] = compute_metrics(
+    for key, bucket in sorted(buckets.items()):
+        out[key] = compute_metrics(
             bucket["preds"],
             bucket["refs"],
             metric_names,
@@ -369,7 +379,29 @@ def per_category_metrics(
     return out
 
 
+def per_category_metrics(
+    preds: Sequence[Any],
+    refs: Sequence[Any],
+    categories: Sequence[str],
+    metric_names: Sequence[str],
+    em_loose_flags: Optional[Sequence[float]] = None,
+    bertscore_scores: Optional[Sequence[float]] = None,
+    judge_flags: Optional[Sequence[Optional[bool]]] = None,
+) -> Dict[str, Dict[str, float]]:
+    """Group by category label and compute :func:`compute_metrics` per group."""
+    return per_group_metrics(
+        preds,
+        refs,
+        categories,
+        metric_names,
+        em_loose_flags=em_loose_flags,
+        bertscore_scores=bertscore_scores,
+        judge_flags=judge_flags,
+    )
+
+
 __all__ = [
+    "per_group_metrics",
     "CANONICAL_METRICS",
     "METRIC_ALIASES",
     "MODEL_METRICS",

@@ -6,29 +6,7 @@ from typing import Any, Dict
 
 import numpy as np
 
-from .base import InferenceBackend
-
-
-def _content_to_text(content: Any) -> str:
-    """Normalize a chat response's ``content`` field to a plain string.
-
-    Some models/proxies (e.g. OpenAI-format content parts) return
-    ``content`` as a list of blocks — ``[{"type": "text", "text": ...}]`` —
-    instead of a plain string. Concatenating the text parts keeps the
-    backend contract (``generate() -> str``) intact so downstream JSON
-    parsers see the raw response text.
-    """
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for part in content:
-            if isinstance(part, str):
-                parts.append(part)
-            elif isinstance(part, dict) and part.get("type") == "text":
-                parts.append(str(part.get("text", "")))
-        return "\n".join(parts)
-    return str(content)
+from .base import InferenceBackend, build_thinking_body, content_to_text as _content_to_text
 
 
 class LangChainBackend(InferenceBackend):
@@ -117,13 +95,12 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
             kwargs["base_url"] = base_url
         if api_key:
             kwargs["api_key"] = api_key
-        enable_reasoning = cfg.get("enable_reasoning", cfg.get("reasoning", False))
-        if enable_reasoning:
-            kwargs["extra_body"] = {
-                "chat_template_kwargs": {
-                    "enable_thinking": True
-                }
-            }
+        # Thinking / reasoning control: the OpenAI-compatible
+        # `thinking: {type: enabled|disabled}` toggle and `reasoning_effort`,
+        # plus the legacy chat_template_kwargs.enable_thinking form.
+        extra_body = build_thinking_body(cfg)
+        if extra_body:
+            kwargs["extra_body"] = extra_body
         return ChatOpenAI(**kwargs)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic

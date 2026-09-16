@@ -43,6 +43,7 @@ from eval.metrics import (
     metric_needs_bertscore,
     metric_needs_judge,
     per_category_metrics,
+    per_group_metrics,
     rouge_l,
     token_f1,
 )
@@ -179,13 +180,20 @@ class SystemState:
         cats = [str(self.records[i].get("category_name", "unknown")) for i in self.order]
         return preds, refs, cats
 
+    def conversation_labels(self) -> List[str]:
+        """Conversation id per answered QA pair, aligned with ``metric_arrays``."""
+        return [
+            str(self.records[i].get("conversation_id") or "unknown") for i in self.order
+        ]
+
 
 def _aggregate_state(
     state: SystemState,
     metric_names: Sequence[str],
     per_category: bool,
+    per_conversation: bool = False,
 ) -> Dict[str, Any]:
-    """Compute overall + per-category metrics from a system's accumulated state."""
+    """Compute overall + per-category + per-conversation metrics from state."""
     preds, refs, cats = state.metric_arrays()
     loose = [float(state.records[i].get("em_loose") or 0.0) for i in state.order]
 
@@ -218,6 +226,13 @@ def _aggregate_state(
             preds, refs, cats, metric_names,
             em_loose_flags=loose, bertscore_scores=bert, judge_flags=judge,
         )
+    if per_conversation:
+        # Same slicing as per_category, keyed by conversation id instead — this
+        # is what makes an "evaluate each conversation" run auditable.
+        entry["per_conversation"] = per_group_metrics(
+            preds, refs, state.conversation_labels(), metric_names,
+            em_loose_flags=loose, bertscore_scores=bert, judge_flags=judge,
+        )
     return entry
 
 
@@ -236,7 +251,12 @@ _METRIC_HEADERS = {
 
 
 def render_report_table(results: Dict[str, Any], metric_names: Sequence[str]) -> str:
-    """Markdown table: rows = systems, columns = metrics, plus per-category tables."""
+    """Markdown: overall table (rows = systems) + per-category and per-conversation tables.
+
+    The per-conversation section is emitted only when the results carry a
+    ``per_conversation`` block, so a run made with ``--no-per-conversation``
+    produces exactly the markdown it produced before the feature existed.
+    """
     metrics = canonical_metrics(metric_names)
     cols = [m for m in metrics if m in _METRIC_HEADERS]
 
@@ -265,7 +285,64 @@ def render_report_table(results: Dict[str, Any], metric_names: Sequence[str]) ->
                 if not bucket:
                     continue
                 cells = [f"{bucket.get(m, 0.0):.4f}" for m in cols]
-                lines.append(f"| {name} | {bucket.get('n', 0)} | " + " | ".join(cells) + " |")
+                lines.append(f"| {name} | {int(bucket.get('n', 0))} | " + " | ".join(cells) + " |")
+
+    if _per_conversation_ids(results):
+        lines.append("\n## Per-conversation")
+        for name, entry in results.get("systems", {}).items():
+            bucket_all = entry.get("per_conversation") or {}
+            if not bucket_all:
+                continue
+            lines.append(f"\n**{name}**")
+            lines.append("| Conversation | n | " + " | ".join(_METRIC_HEADERS[m] for m in cols) + " |")
+            lines.append("|" + "---|" * (len(cols) + 2))
+            for conv in sorted(bucket_all):
+                bucket = bucket_all[conv] or {}
+                cells = [f"{bucket.get(m, 0.0):.4f}" for m in cols]
+                lines.append(
+                    f"| {conv} | {int(bucket.get('n', 0))} | " + " | ".join(cells) + " |"
+                )
+    return "\n".join(lines)
+
+
+def _per_conversation_ids(results: Dict[str, Any]) -> List[str]:
+    """Union of every conversation id appearing in any system's breakdown."""
+    ids: set = set()
+    for entry in (results.get("systems") or {}).values():
+        ids.update((entry.get("per_conversation") or {}).keys())
+    return sorted(ids)
+
+
+def render_per_conversation_matrix(
+    results: Dict[str, Any],
+    metric_names: Sequence[str],
+) -> str:
+    """One conversation × system matrix per metric, for the whole-tag comparison.
+
+    The per-system tables in :func:`render_report_table` show how one system
+    varies across conversations; these matrices show which system wins in each
+    conversation, which is the view needed to judge whether an aggregate gap is
+    consistent or driven by one conversation. Missing cells render as an em dash
+    (a system that has no bank for that conversation is not scored as zero).
+    """
+    metrics = canonical_metrics(metric_names)
+    cols = [m for m in metrics if m in _METRIC_HEADERS]
+    systems = list((results.get("systems") or {}).keys())
+    convs = _per_conversation_ids(results)
+    if not cols or not systems or not convs:
+        return ""
+
+    lines: List[str] = []
+    for metric in cols:
+        lines.append(f"\n**{_METRIC_HEADERS[metric]}**")
+        lines.append("| Conversation | " + " | ".join(systems) + " |")
+        lines.append("|" + "---|" * (len(systems) + 1))
+        for conv in convs:
+            cells: List[str] = []
+            for name in systems:
+                bucket = (results["systems"][name].get("per_conversation") or {}).get(conv)
+                cells.append("—" if not bucket else f"{bucket.get(metric, 0.0):.4f}")
+            lines.append(f"| {conv} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -290,10 +367,12 @@ def run_static_eval(
     out_path: Optional[str] = None,
     log_path: Optional[str] = None,
     per_category: bool = True,
+    per_conversation: bool = False,
     require_banks: bool = True,
     work_root: Optional[str] = None,
     model_tag: Optional[str] = None,
     limit: Optional[int] = None,
+    conversations: Optional[Sequence[str]] = None,
     full_context_dates: bool = False,
     max_full_context_turns: int = 0,
     resume: bool = True,
@@ -308,12 +387,19 @@ def run_static_eval(
         bank_root: Directory holding ``<tag>/<System>/<conv>/<bank>.sqlite``.
         work_root: When set, each bank is copied here before opening so the
             frozen static banks are never written.
+        conversations: When set, only these conversation ids are answered (the
+            filter runs before ``limit``). Re-running with a different subset
+            resumes from the same per-system prediction files, so a
+            conversation-at-a-time workflow never re-answers anything.
+        per_conversation: Also record ``systems[name]["per_conversation"]``, the
+            metric breakdown per conversation id.
         resume: Reload previously written predictions/scores and skip done items.
         abort_after_consecutive_errors: Abort the current system after this many
             consecutive answer failures (0 disables the guard).
 
     Returns:
-        Result dict with ``systems[name]["overall"|"per_category"|"n"]``.
+        Result dict with ``systems[name]["overall"|"per_category"|
+        "per_conversation"|"n"]`` and the list of ``conversations`` covered.
     """
     from eval.phase_runner import build_backend_from_config, model_tag_from_config
 
@@ -335,7 +421,20 @@ def run_static_eval(
 
         judge = LLMJudge(backend=judge_backend, max_retries=judge_max_retries)
 
-    selected = list(groups)[:limit] if limit else list(groups)
+    selected = list(groups)
+    if conversations:
+        wanted = {str(c) for c in conversations}
+        selected = [
+            g for g in selected if str(g[0].get("session_id", "")) in wanted
+        ]
+        logger.info(
+            "Conversation filter: {} of {} conversation(s) selected ({})",
+            len(selected), len(groups), ", ".join(wanted) or "-",
+        )
+    if limit:
+        # Applied after the conversation filter, so a subset run still answers
+        # the conversations the caller asked for rather than the first N overall.
+        selected = selected[:limit]
     states: Dict[str, SystemState] = {name: SystemState(name=name) for name in systems}
 
     if preds_dir:
@@ -397,9 +496,13 @@ def run_static_eval(
                 "bank_root": bank_root,
                 "work_copy": bool(work_root),
                 "n_qa": total_pairs,
+                "conversations": [str(g[0].get("session_id", "")) for g in selected],
                 "elapsed_sec": round(time.perf_counter() - t0, 2),
                 "systems": {
-                    n: _aggregate_state(states[n], metrics, per_category) for n in systems
+                    n: _aggregate_state(
+                        states[n], metrics, per_category, per_conversation
+                    )
+                    for n in systems
                 },
             }
 
@@ -642,6 +745,7 @@ def _norm_eq(pred: Any, ref: Any) -> bool:
 __all__ = [
     "SystemState",
     "build_context_baseline",
+    "render_per_conversation_matrix",
     "render_report_table",
     "run_static_eval",
 ]

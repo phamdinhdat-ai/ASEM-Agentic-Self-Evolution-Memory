@@ -276,6 +276,9 @@ class ASEMPipeline:
             session_id=note.session_id or target.session_id,
             session_date=note.session_date or target.session_date,
             timestamp_iso=note.timestamp_iso or target.timestamp_iso,
-            entities=merged_entities if merged_entities else None,
+            # Must stay a list: `Note.entities` is a list field, and a None here
+            # used to be persisted as the JSON literal "null", which came back
+            # as None and blew up `to_dict()` with "NoneType is not iterable".
+            entities=merged_entities,
             speaker=note.speaker or target.speaker,
         )

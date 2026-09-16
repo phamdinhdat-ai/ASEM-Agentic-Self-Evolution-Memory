@@ -475,7 +475,7 @@ class MemoryBank:
             "session_id": note.session_id,
             "session_date": note.session_date,
             "timestamp_iso": note.timestamp_iso,
-            "entities": json.dumps(note.entities),
+            "entities": json.dumps(note.entities or []),
             "speaker": note.speaker,
         }
 
@@ -513,9 +513,30 @@ class MemoryBank:
             session_id=row["session_id"] if "session_id" in keys else None,
             session_date=row["session_date"] if "session_date" in keys else None,
             timestamp_iso=row["timestamp_iso"] if "timestamp_iso" in keys else None,
-            entities=json.loads(row["entities"]) if "entities" in keys and row["entities"] else [],
+            entities=self._decode_entities(row["entities"]) if "entities" in keys else [],
             speaker=row["speaker"] if "speaker" in keys else None,
         )
+
+    @staticmethod
+    def _decode_entities(raw: Any) -> List[str]:
+        """Decode the ``entities`` column, tolerating legacy ``null`` payloads.
+
+        Notes written before the entities/None fix were stored as the JSON
+        literal ``"null"``. ``json.loads`` returns ``None`` for those, so a
+        naive truthiness check passes a ``None`` through and the note crashes
+        later in ``Note.to_dict()`` ("NoneType object is not iterable") — e.g.
+        inside ``MemoryBank.update()`` when the Link Evolver writes back ``L``.
+        Anything that is not a JSON array of values decodes to ``[]``.
+        """
+        if not raw:
+            return []
+        try:
+            decoded = json.loads(raw)
+        except (TypeError, ValueError):
+            return []
+        if not isinstance(decoded, list):
+            return []
+        return [str(item) for item in decoded if item is not None]
 
     def bm25_search(self, query: str, k: int = 10) -> List[Tuple[float, Note]]:
         """Fast in-memory BM25 keyword matching against (c, K, G, X, entities)."""

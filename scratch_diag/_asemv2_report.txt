@@ -1,0 +1,51 @@
+﻿Parsed 2 sessions from the mini dataset:
+  session 1: date='1:56 pm on 8 May, 2023' turns=2
+  session 2: date='2:00 pm on 9 May, 2023' turns=1
+
+>>> ASEMv2: bank size=2, link edges=0
+    prompt kinds seen: ['extract', 'memory_ops', 'link', 'extract', 'memory_ops', 'link']
+    [PASS] dialogue section present ('## Conversation')
+    [PASS] session date text reaches the prompt ('1:56 pm on 8 May, 2023')
+    [PASS] session header number reaches the prompt
+    [PASS] all 2 session-1 turns reach the prompt (2/2)
+    extraction calls: 2 (one per session: 2)
+
+============================================================================================
+ASEMv2: 2 notes
+============================================================================================
+#  session_id  session_date              timestamp_iso         t                          tz    speaker  content
+0  session_1   1:56 pm on 8 May, 2023    2023-05-08T13:56:00Z  2023-05-08 13:56:00+00:00  UTC   Alice    [Alice] Alice adopted a dog named Budd
+1  session_2   2:00 pm on 9 May, 2023    2023-05-09T14:00:00Z  2023-05-09 14:00:00+00:00  UTC   Alice    [Alice] Alice adopted a dog named Budd
+
+  [PASS] every note has session_id + session_date
+  [PASS] session_date matches each session, in order
+  [PASS] timestamp_iso == parse(session_date)
+  [PASS] t is timezone-aware
+  [PASS] t and timestamp_iso agree
+
+  distinct session_id   : ['session_1', 'session_2']
+  distinct session_date : ['1:56 pm on 8 May, 2023', '2:00 pm on 9 May, 2023']
+  distinct timestamp_iso: ['2023-05-08T13:56:00Z', '2023-05-09T14:00:00Z']
+
+>>> FastASEM: bank size=1, link edges=0
+    prompt kinds seen: ['extract-fast', 'extract-fast']
+    [n/a ] dialogue section present ('## Conversation')
+    [PASS] session date text reaches the prompt ('1:56 pm on 8 May, 2023')
+    [FAIL] session header number reaches the prompt
+    [PASS] all 2 session-1 turns reach the prompt (2/2)
+    extraction calls: 2 (one per session: 2)
+
+============================================================================================
+FastASEM: 1 notes
+============================================================================================
+#  session_id  session_date              timestamp_iso         t                          tz    speaker  content
+0  s1          1:56 pm on 8 May, 2023    2023-05-08T13:56:00Z  2023-05-08 13:56:00+00:00  UTC   Alice    Alice adopted a dog named Buddy.
+
+  [PASS] every note has session_id + session_date
+  [PASS] timestamp_iso == parse(session_date)
+  [PASS] t is timezone-aware
+  [PASS] t and timestamp_iso agree
+
+  distinct session_id   : ['s1']
+  distinct session_date : ['1:56 pm on 8 May, 2023']
+  distinct timestamp_iso: ['2023-05-08T13:56:00Z']

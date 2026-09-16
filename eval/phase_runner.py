@@ -421,10 +421,10 @@ def model_tag_from_config(config_path: str) -> str:
     with open(config_path, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh) or {}
     inf = cfg.get("inference", {}) or {}
-    if inf.get("backend") == "huggingface":
-        model_id = (inf.get("huggingface") or {}).get("model_name_or_path", "model")
-    else:
-        model_id = (inf.get("langchain") or {}).get("model", "model")
+    # Backend-agnostic: each backend's block names its model differently
+    # (``model`` for the API backends, ``model_name_or_path`` for HuggingFace).
+    block = inf.get(inf.get("backend")) or {}
+    model_id = block.get("model") or block.get("model_name_or_path") or "model"
     return _slug(model_id)
 
 

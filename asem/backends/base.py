@@ -3,9 +3,58 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import numpy as np
+
+
+def content_to_text(content: Any) -> str:
+    """Normalize a chat response's ``content`` field to a plain string.
+
+    Some models/proxies return ``content`` as a list of blocks —
+    ``[{"type": "text", "text": ...}]`` — instead of a plain string.
+    Concatenating the text parts keeps the backend contract
+    (``generate() -> str``) intact so downstream JSON parsers see raw text.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and part.get("type") == "text":
+                parts.append(str(part.get("text", "")))
+        return "\n".join(parts)
+    return str(content)
+
+
+def build_thinking_body(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Request-body fields that control the model's thinking / reasoning.
+
+    The API uses the OpenAI-compatible format::
+
+        thinking:          {"type": "enabled" | "disabled"}    # toggle
+        reasoning_effort:  "low" | "high" | "max"              # effort
+
+    ``enable_reasoning: true`` is also honoured, for the older vLLM/Qwen
+    ``chat_template_kwargs.enable_thinking`` convention. ``extra_body`` is merged
+    last, so a config can always hand-write a raw override.
+
+    These are not native openai-SDK parameters, so backends pass them through
+    ``extra_body`` — which also works on SDK versions that don't know them.
+    """
+    body: Dict[str, Any] = {}
+    thinking = cfg.get("thinking")
+    if thinking is not None:
+        body["thinking"] = thinking
+    effort = cfg.get("reasoning_effort")
+    if effort is not None:
+        body["reasoning_effort"] = effort
+    if cfg.get("enable_reasoning", cfg.get("reasoning", False)):
+        body.setdefault("chat_template_kwargs", {})["enable_thinking"] = True
+    body.update(cfg.get("extra_body") or {})
+    return body
 
 
 class InferenceBackend(ABC):

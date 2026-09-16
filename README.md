@@ -24,7 +24,9 @@ Two architectures are available:
 
 ```
 asem/                   Core library
-  batch_ingestion.py      v2: batch session ingestion (3 LLM calls/session)
+  batch_ingestion.py      v2: batch session ingestion (3 LLM calls/session,
+                          temporally grounded, typed bidirectional links)
+  temporal.py             Session header detection + date/ISO parsing
   enhanced_retriever.py   v2: graph-enhanced retrieval (communities, PageRank, N-hop)
   visualizer.py           Memory graph visualization (interactive HTML + PNG)
   retriever.py            v1: hybrid retrieval (ANN + value-aware re-rank)
@@ -81,6 +83,52 @@ The entire multi-turn session dialogue is sent to the LLM in **3 batch calls**:
 
 **LLM call reduction**: 419 turns → **3 calls** (99.8% ↓)
 
+#### Batch ingestion is temporally grounded and relation-typed
+
+The ingest path was extended so that a batch session is not just a bag of notes,
+but a *dated, typed subgraph* wired into the existing memory network. Six changes
+define the current architecture:
+
+| # | Change | Where | Effect |
+|---|--------|-------|--------|
+| 1 | **Session detection** — `extract_session_header()` reads the session number/date from the first turns; `session_id` falls back to `session_<n>` | `ingest_conversation()` | Session identity is derived from the data, not passed in by the caller |
+| 2 | **Date parsing** — `parse_session_datetime()` maps the human-readable stamp (`"8 May 2023"`) to `(datetime, ISO-8601)` | `asem/temporal.py` | Gives notes a real event time; retriever gets an absolute-time signal |
+| 3 | **Header injection** — `[Session Date: <date>]` is prepended to the dialogue when absent. `_extract_notes()` *also* supports a `{session_date}` placeholder, filled only when the template declares it | `ingest_conversation()`, `_extract_notes()` | The date reaches the LLM through the injected header today, because `P4_batch_note_extraction.txt` declares only `{dialogue}`. The placeholder is a dormant opt-in: no template currently uses it, and templates without it are unaffected |
+| 4 | **Grounded note construction** — every note is stamped with `t = session datetime` (not wall-clock), plus `session_id`, `session_date`, `timestamp_iso`, `entities`, and `speaker` (regex fallback from `[Speaker] ...`) | `_embed_notes()` | Notes are anchorable in time and attributable to a speaker |
+| 5 | **Typed bidirectional links** — `_batch_link()` writes `LinkRecord(target_id, relation)` on *both* endpoints, deduped by `target_id`, preserving the LLM-identified relation (`semantic` / `causal` / `temporal` / `extends` / `contradicts` / `same-topic`) | `_batch_link()` | Replaces the legacy flat-ID `L` list where the relation label was discarded |
+| 6 | **Cross-session accounting** — each relation is classified once via `is_cross = (src_is_new XOR tgt_is_new)`; the step returns `(link_count, cross_session_links)` and logs total / cross / intra | `_batch_link()` | Makes "how much did this session bind into earlier memory?" a measurable quantity |
+
+Link persistence uses an in-memory `all_note_map` built **once** before the write
+loop. All endpoints are mutated on those retained objects and flushed with
+`memory_bank.update(id, {"L": ...})`, so earlier links written in the same pass are
+never clobbered by a later one.
+
+**Temporal continuity on `UPDATE`** — when the LLM decides `UPDATE`, the merged note
+takes `t = note.t if note.session_date else target.t`, unions `K` / `G` / `entities`,
+carries over `target.L` and `target.q`, and prefers the new session's `session_id`,
+`session_date`, and `timestamp_iso`. Evidence from an earlier session is therefore
+revised rather than duplicated, while keeping its original timestamps when the new
+fact is undated.
+
+**Downstream consumption** — `HybridRetriever` applies a temporal boost keyed on
+`session_date` / `timestamp_iso`, and the answer context prefixes each note with
+`[<session_date>]`, so the ingest-side grounding is actually used at read time.
+
+#### Known caveats in the current link accounting
+
+- **`UPDATE` notes are counted as "new".** `_execute_ops()` returns the merged note,
+  whose `id` equals the pre-existing `target.id`, into `added_notes`. Because
+  `new_ids` is derived from that list, a link between a revised old note and another
+  old note is classified `cross_session`. Reported cross-session numbers are
+  therefore an **upper bound**, and revised notes are excluded from the neighbour
+  candidate set.
+- **`link_count` counts relations processed, not links newly created.** The dedupe
+  guard skips the append when a link already exists, but the counter (and its
+  `cross_session` share) still increments.
+- The binding is one `memory_bank.update()` per endpoint per relation, so a session
+  with many relations performs 2N read-modify-write passes rather than a single
+  batched flush (`MemoryBank.add_many()`).
+
 ### Phase 2: Enhanced Graph Retrieval (`asem/enhanced_retriever.py`)
 
 Retrieval augmented with global graph structure:
@@ -115,6 +163,51 @@ python scripts/run_asem_v2.py \
 python scripts/run_asem_v2.py --systems ASEMv2 --per-category
 ```
 
+### Two-phase benchmark (`scripts/run_phase_benchmark.py`)
+
+`run_asem_v2.py` ingests and answers in one process. To compare **backbones** — sizes,
+local HF vs. hosted API — ingest once and then retrieve many times, so the only variable
+is the retrieval model:
+
+```powershell
+conda activate memory-r1      # project env; base python lacks the deps
+$env:KMP_DUPLICATE_LIB_OK="TRUE"
+
+# Phase A — build and persist one bank tree for the whole experiment
+python scripts/run_phase_benchmark.py --phase ingest --tag shared `
+    --ingest-config configs/models/qwen2.5_1.5b_hf.yaml `
+    --systems FastASEM ASEMv2
+
+# Phase B — reuse that tree, swap only the backbone
+python scripts/run_phase_benchmark.py --phase retrieve --tag shared `
+    --models-group hf_small --systems FastASEM ASEMv2 `
+    --metrics em rougeL --per-category
+```
+
+**Inputs** — the dataset (`--input`, default `datasets/locomo/locomo10.json`), the model
+registry (`--registry`, default `configs/models/registry.yaml`), the backbone config
+(`--ingest-config` / `--config`), and `.env` for API credentials. Conversations come from
+`conversation.session_<n>` plus `session_<n>_date_time`; QA items are grouped by
+conversation, and each group is one ingest job.
+
+**Outputs** — `--tag` is the experiment key binding both phases, so a single tag keeps
+everything in one place:
+
+| Phase | Path | Contents |
+|-------|------|----------|
+| A | `data/benchmarks/ingested_banks/<tag>/manifest.json` | ingest config, per-conversation note counts, new link edges, elapsed time |
+| A | `data/benchmarks/ingested_banks/<tag>/<System>/<locomo_000N>/<bank>.sqlite` | one bank per system per conversation |
+| B | `data/benchmarks/retrieval_work/<tag>/<model>/...` | per-run working copy, so the ingested banks stay pristine |
+| B | `data/benchmarks/results/phased/<tag>__<model>.json` | metrics for one backbone |
+| B | `data/benchmarks/results/phased/<tag>__sweep_table.md`, `__sweep.json` | multi-model comparison |
+| B | `data/benchmarks/results/phased/preds/<tag>__<model>__<System>.jsonl` | per-QA predictions |
+
+Roots are overridable with `--bank-root`, `--results-dir`, and `--work-root`. Channel
+quality depends on the ingest phase: `--allow-missing-banks` logs a warning and skips any
+system whose bank was never built, so check the manifest before a sweep. Full flag
+reference, per-system bank filenames, and the one-embedder rule are in
+[`configs/models/README.md`](configs/models/README.md).
+
 ### Architecture comparison
 
 | Metric | v1 (turn-by-turn) | v2 (batch) |
@@ -124,6 +217,10 @@ python scripts/run_asem_v2.py --systems ASEMv2 --per-category
 | Retrieval signals | 2 (sim + q) | 5 (sim + q + community + centrality + multi-hop) |
 | FAISS rebuilds per conversation | ~419 | ~1 |
 | Deduplication | ❌ (re-ingests every QA) | ✅ (pre-ingest once) |
+| Note timestamps | wall clock (run date) | session event date + ISO |
+| Link representation | flat target IDs, relation lost | typed `LinkRecord` on both endpoints |
+| Cross-session link metric | ❌ | ✅ `(total, cross_session)` per session |
+| `UPDATE` semantics | overwrite | merge + temporal continuity |
 
 ### New prompt templates
 
@@ -132,6 +229,10 @@ python scripts/run_asem_v2.py --systems ASEMv2 --per-category
 | `data/prompts/P4_batch_note_extraction.txt` | Extract all atomic facts from multi-turn dialogue |
 | `data/prompts/P5_batch_memory_ops.txt` | Batch ADD/UPDATE/DELETE/NOOP decisions |
 | `data/prompts/P6_batch_link_generation.txt` | Batch pairwise relationship identification |
+
+> `P4` may optionally declare a `{session_date}` placeholder to receive the parsed
+> session date directly; `_extract_notes()` fills it only when present, so the
+> template is free to stay on `{dialogue}` alone.
 
 ---
 
