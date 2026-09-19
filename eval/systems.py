@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import os
+import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import yaml
@@ -183,7 +184,7 @@ class ASEMSystem:
                     raise
 
         try:
-            used_notes, answer = self.pipeline.read_path(query)
+            used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
         except Exception as exc:
             self._logger.opt(exception=exc).error(
                 "ASEMSystem.answer | read_path failed for query={!r}", query[:120])
@@ -287,7 +288,7 @@ class ASEMSystemV2:
         # If not yet ingested and history is provided, auto-ingest
         if not self._ingested and history:
             self.ingest_conversation(history)
-        used_notes, answer = self.pipeline.read_path(query)
+        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
         return answer
 
     def reset(self) -> None:
@@ -331,7 +332,7 @@ class FastASEMSystem:
         return total_notes
 
     def answer(self, query: str, history: List[str] = None) -> str:
-        used_notes, answer = self.pipeline.read_path(query)
+        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
         return answer
 
     def reset(self) -> None:
@@ -392,6 +393,22 @@ _RETRIEVAL_PROMPT_DATED = (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+# The dataset wraps every question as "Conversation between X and Y. Question: …".
+# That wrapper is redundant for the ASEM family — the bank is per-conversation,
+# so the speaker names are already in the notes — and it measurably hurts
+# retrieval: it dominates the query embedding and floods the entity/BM25
+# channels with the two character names.
+_QUERY_PREFIX_RE = re.compile(
+    r"^\s*Conversation between\s+[^.]+\.\s*(?:Question:\s*)?", re.IGNORECASE
+)
+
+
+def strip_query_prefix(query: str) -> str:
+    """Drop the dataset's 'Conversation between X and Y. Question:' wrapper."""
+    stripped = _QUERY_PREFIX_RE.sub("", query or "").strip()
+    return stripped or (query or "")
+
 
 def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as handle:
@@ -488,11 +505,14 @@ def build_asem_system(
         k1=hp["k1"], k2=hp["k2"],
         delta=hp["delta"], lambda_weight=hp["lambda"],
     )
+    ans_cfg = cfg.get("answer", {}) or {}
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
+        max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
+        context_window=int(ans_cfg.get("context_window") or 0) or None,
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -518,6 +538,9 @@ def build_asem_system(
         answer_agent=answer_agent,
         utility_updater=utility_updater,
         write_gate=write_gate,
+        recovery_enabled=bool(ans_cfg.get("recovery_enabled", True)),
+        recovery_k2=int(ans_cfg.get("recovery_k2", 12)),
+        recovery_delta=float(ans_cfg.get("recovery_delta", 0.15)),
     )
 
     return ASEMSystem(pipeline=pipeline)
@@ -532,6 +555,7 @@ def build_asem_v2_system(
     cfg = _load_config(config_path)
     backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
+    ans_cfg = cfg.get("answer", {}) or {}
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
     link_prompt = _load_text("data/prompts/P2_link_generation.txt")
@@ -582,6 +606,8 @@ def build_asem_v2_system(
         prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
+        max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
+        context_window=int(ans_cfg.get("context_window") or 0) or None,
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -820,6 +846,8 @@ def build_fast_asem_system(
         baseline_prompt_template=qa_prompt,
         direct_mode=ans_cfg.direct_mode,
         max_retries=max_retries,
+        max_tokens=int(ans_cfg.max_tokens or 0) or None,
+        context_window=int(ans_cfg.context_window or 0) or None,
     )
     utility_updater = UtilityUpdater(
         backend=backend,
