@@ -3,7 +3,6 @@ You are analyzing a multi-turn conversation to build a memory knowledge graph. E
 ## Task
 For each atomic fact, output a JSON object with:
 - **content**: The exact text of the dialogue turn containing this fact (preserve speaker labels)
-- **content**: The dialogue turn containing this fact (preserve speaker label)
 - **keywords**: 3-5 key terms from this fact (lowercase, specific — no stopwords)
 - **tags**: 1-3 categorical labels from this list: personal, professional, technical, event, preference, fact, question, plan, relationship, location, temporal, health, travel, pet, observation, opinion
 - **description**: A 1-2 sentence factual summary of what was learned, in third person
@@ -13,59 +12,44 @@ For each atomic fact, output a JSON object with:
 ## Rules
 1. Extract EVERY distinct piece of information — do not merge facts from different turns
 2. If a turn contains multiple distinct facts, create separate entries (one per fact)
-3. Preserve temporal information (dates, times, sequences) in the description
-4. Include speaker attribution in the content
-3. RESOLVE RELATIVE TIME TO ABSOLUTE DATES: If a session date is provided in the conversation or session header (e.g., `[Session 1 — 8 May, 2023]` or `[Session Date: ...]`), convert EVERY relative time expression ("yesterday", "last week", "next month", "last year", "last Saturday") into an absolute date resolved against that session date in the description. Always state the resolved absolute date explicitly.
-4. Include speaker attribution in the content and speaker field
-5. If a fact is mentioned again in a later turn, extract it only ONCE (the first time it appears)
+3. RESOLVE RELATIVE TIME TO ABSOLUTE DATES: If a session date is provided in the conversation or session header (e.g., `[Session 1 — 8 May, 2023]` or `[Session Date: ...]`), convert EVERY relative time expression ("yesterday", "last week", "next month", "last year", "last Saturday") into an absolute date resolved against that session date, and state the resolved absolute date explicitly in the description.
+4. Include speaker attribution in the content and in the speaker field
+5. Fill entities with the named people, locations, and organizations mentioned in the fact
+6. If a fact is mentioned again in a later turn, extract it only ONCE (the first time it appears)
 
 ## Reasoning steps (think through these BEFORE outputting the JSON)
-Step 1: Read the whole conversation and list every distinct fact in order.
-Step 2: For each fact, decide which turn it came from and copy that turn's text as content.
-Step 3: For each fact, choose 3-5 keywords and 1-3 tags.
-Step 4: Write the description as a self-contained third-person sentence.
 Step 1: Check the session date from the header to establish the temporal baseline.
 Step 2: Read the conversation and list every distinct fact in order.
-Step 3: For each fact, copy the turn text, pick keywords, tags, entities, and speaker.
+Step 3: For each fact, copy the turn text, and pick keywords, tags, entities, and speaker.
 Step 4: Write the description as a self-contained sentence with resolved absolute dates.
 
 ## Output Format
 Your response must be ONLY the following JSON array (no markdown fences, no commentary):
-[{{"content": "[Speaker] ...", "keywords": [...], "tags": [...], "description": "..."}}, ...]
 [{{"content": "[Speaker] ...", "keywords": [...], "tags": [...], "description": "...", "entities": [...], "speaker": "..."}}, ...]
 
 ## Examples
 
-Example 1 (two turns, one fact each):
 Example 1 (two turns, session date provided):
 Conversation:
-[Sarah] I just started a new job at Acme Corp.
 [Session Date: 8 May 2023]
 [Sarah] I just started a new job at Acme Corp yesterday.
 [Sarah] It's a software engineering role, remote from Hanoi.
-Reasoning: Turn 1 has one fact (new job at Acme Corp). Turn 2 adds one fact (remote software engineering role in Hanoi). Two entries.
-[{{"content": "[Sarah] I just started a new job at Acme Corp.", "keywords": ["sarah", "job", "acme corp"], "tags": ["professional"], "description": "Sarah started a new job at Acme Corp."}}, {{"content": "[Sarah] It's a software engineering role, remote from Hanoi.", "keywords": ["software engineer", "remote", "hanoi"], "tags": ["professional", "location"], "description": "Sarah's new role is remote software engineering based in Hanoi."}}]
-Reasoning: Session date is 8 May 2023. "yesterday" resolves to 7 May 2023.
+Reasoning: Session date is 8 May 2023. "yesterday" resolves to 7 May 2023. Two entries.
 [{{"content": "[Sarah] I just started a new job at Acme Corp yesterday.", "keywords": ["sarah", "job", "acme corp"], "tags": ["professional", "temporal"], "description": "On 7 May 2023, Sarah started a new job at Acme Corp.", "entities": ["Sarah", "Acme Corp"], "speaker": "Sarah"}}, {{"content": "[Sarah] It's a software engineering role, remote from Hanoi.", "keywords": ["software engineer", "remote", "hanoi"], "tags": ["professional", "location"], "description": "Sarah's new role is remote software engineering based in Hanoi.", "entities": ["Sarah", "Hanoi"], "speaker": "Sarah"}}]
 
 Example 2 (one turn with multiple facts — split into separate entries):
 Conversation:
 [Session Date: 15 June 2023]
 [John] My sister Emma is getting married next June. I need to save money for the wedding gift.
-Reasoning: Two distinct facts in one turn: (1) Emma's wedding next June, (2) John's plan to save money. Two entries.
-[{{"content": "[John] My sister Emma is getting married next June.", "keywords": ["john", "emma", "wedding", "june"], "tags": ["personal", "event", "relationship", "temporal"], "description": "John's sister Emma is getting married next June."}}, {{"content": "[John] I need to save money for the wedding gift.", "keywords": ["saving", "wedding gift"], "tags": ["personal", "plan"], "description": "John plans to save money for the wedding gift."}}]
 Reasoning: Two distinct facts in one turn: (1) Emma's wedding next June (June 2024), (2) John's plan to save money. Two entries.
 [{{"content": "[John] My sister Emma is getting married next June.", "keywords": ["john", "emma", "wedding", "june"], "tags": ["personal", "event", "relationship", "temporal"], "description": "John's sister Emma is getting married in June 2024.", "entities": ["John", "Emma"], "speaker": "John"}}, {{"content": "[John] I need to save money for the wedding gift.", "keywords": ["saving", "wedding gift"], "tags": ["personal", "plan"], "description": "John plans to save money for Emma's wedding gift.", "entities": ["John", "Emma"], "speaker": "John"}}]
 
-Example 3 (repeated fact — extract only once):
-Example 3 (relative time resolved against session date):
+Example 3 (repeated fact, relative time resolved against session date):
 Conversation:
 [Session Date: 8 May 2023]
 [Mike] I moved to Berlin last month.
 [Mike] Yeah, Berlin. I'm still unpacking.
-Reasoning: "Moved to Berlin" appears twice — keep only the first occurrence.
-[{{"content": "[Mike] I moved to Berlin last month.", "keywords": ["mike", "berlin", "move"], "tags": ["personal", "location", "temporal"], "description": "Mike moved to Berlin last month."}}]
-Reasoning: Session is 8 May 2023. "last month" resolves to April 2023.
+Reasoning: "Moved to Berlin" appears twice — keep only the first occurrence. Session is 8 May 2023, so "last month" resolves to April 2023.
 [{{"content": "[Mike] I moved to Berlin last month.", "keywords": ["mike", "berlin", "move"], "tags": ["personal", "location", "temporal"], "description": "In April 2023, Mike moved to Berlin.", "entities": ["Mike", "Berlin"], "speaker": "Mike"}}]
 
 ## Common Mistakes (NEVER do these)
@@ -76,9 +60,8 @@ WRONG: Storing unresolved relative time like "Mike moved to Berlin last month" w
 
 ## Constraints
 - Output ONLY the JSON array. Do NOT include any commentary, markdown fences, or extra text.
-- Every entry must have all four keys: content, keywords, tags, description.
+- Every entry must have all six fields: content, keywords, tags, description, entities, speaker.
 - If the conversation is short, the output array will be small — that is expected.
-- Every entry must have all fields: content, keywords, tags, description, entities, speaker.
 
 ## Conversation
 {dialogue}

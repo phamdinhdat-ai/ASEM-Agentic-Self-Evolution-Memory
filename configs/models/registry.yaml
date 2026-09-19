@@ -52,6 +52,15 @@ models:
     model_id: "Qwen/Qwen3-4B"
     config: "configs/models/qwen3_4b_api.yaml"
 
+  # Same endpoint/model as qwen3_4b_api, but via the native openai SDK client
+  # (no ChatOpenAI wrapper). Banks built by either config are interchangeable
+  # because both share the embedder factory.
+  qwen3_4b_openai:
+    size_b: 4.0
+    backend: "openai"
+    model_id: "Qwen/Qwen3-4B"
+    config: "configs/models/qwen3_4b_openai.yaml"
+
   # ---- static-bank defaults (see configs/models/README.md and static/README.md)
   # DeepSeek is the backbone actually used for ingestion, answering, and
   # (via judge_api) LLM-as-a-judge grading. `model` in these configs MUST be a
@@ -90,4 +99,4 @@ groups:
   api_proxy: ["deepseek_api", "deepseek_openai"]
   all: ["qwen3_1.7b_hf", "qwen2.5_1.5b_hf", "qwen3_4b_hf",
         "qwen3_1.7b_api", "qwen2.5_1.5b_api", "qwen3_4b_api",
-        "deepseek_api"]
+        "qwen3_4b_openai", "deepseek_api"]

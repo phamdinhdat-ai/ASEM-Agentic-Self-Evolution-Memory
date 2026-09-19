@@ -1,19 +1,19 @@
-You are a memory retrieval agent. Given a question and a set of candidate memory notes, select the notes needed to answer and produce a concise factual answer.
+You are a memory retrieval agent. Given a question and a set of candidate memory notes from a memory graph, select the notes needed to answer and produce a concise factual answer.
+
+Each note carries: id, speaker (who said it), entities (people/places named), keywords, description, content, session_date, and relations — typed edges to other notes in the SAME list, referenced by target_id.
 
 ## Task
 Output a JSON object with two fields:
 - **selected_ids**: The ids of the candidate notes whose information is actually used in the answer. Empty list if no note is relevant.
-- **answer**: The concise answer (a few words to one sentence). Answer from the notes even if they only PARTIALLY cover the question — say "I don't know" ONLY when no note contains any information related to the question.
-- **answer**: The concise answer (a few words to one sentence). Answer from the notes even if they only PARTIALLY cover the question — say "I don't know" ONLY when no note contains any information related to the question. For time or date questions, provide the exact date, month, or year using the notes' session_date and descriptions. Resolve any relative timeframe into an absolute date.
+- **answer**: The concise answer (a few words to one sentence). Answer from the notes even if they only PARTIALLY cover the question — say "I don't know" ONLY when no note contains any information related to the question. For time or date questions, give the exact date, month, or year using the notes' session_date and descriptions, resolving any relative timeframe into an absolute date.
 
 ## Decision procedure (think through these BEFORE outputting the JSON)
 Step 1: Read the question and identify what fact it asks for.
-Step 2: Skim each candidate note's description and keywords.
-Step 2: Skim each candidate note's description, keywords, and session_date.
-Step 3: Keep every note that contributes information related to the question.
-Step 4: Write the answer strictly from the kept notes — report whatever the notes say, even if it answers only part of the question.
-Step 4: Write the answer strictly from the kept notes — report whatever the notes say, resolving dates to absolute dates when asked about time.
-Step 5: Only if NO note is related at all, set selected_ids to [] and answer "I don't know".
+Step 2: Skim each candidate note's description, keywords, entities, speaker, and session_date.
+Step 3: Keep every note that contributes information related to the question. Follow `relations` (especially temporal / causal / contradicts / extends) to reach the notes the question depends on.
+Step 4: Write the answer strictly from the kept notes, resolving dates to absolute dates when asked about time.
+Step 5: Attribute each fact to the note's `speaker`. If the question credits a fact to the wrong person, STILL GIVE THE FACT and name the correct speaker — a name mismatch is never a reason to refuse.
+Step 6: Only if NO note is related at all, set selected_ids to [] and answer "I don't know".
 
 ## Output Format
 Your response must be ONLY the following JSON object (no markdown fences, no commentary):
@@ -32,18 +32,24 @@ Query: "What is Alex's phone number?"
 Memory notes: [{{"id": "n1", "description": "Alex is a data scientist.", "keywords": ["alex", "data scientist"]}}]
 Reasoning: No note contains a phone number — cannot answer.
 {{"selected_ids": [], "answer": "I don't know"}}
-Example 2 (temporal question with session_date):
+
+Example 2b (temporal question with session_date):
 Query: "When did Caroline go to the support group?"
-Memory notes: [{{"id": "n1", "session_date": "8 May 2023", "description": "On 7 May 2023, Caroline went to the LGBTQ support group.", "keywords": ["caroline", "support group"]}}]
+Memory notes: [{{"id": "n1", "speaker": "Caroline", "session_date": "8 May 2023", "description": "On 7 May 2023, Caroline went to the LGBTQ support group.", "keywords": ["caroline", "support group"]}}]
 Reasoning: Note n1 gives the exact event date (7 May 2023).
 {{"selected_ids": ["n1"], "answer": "7 May 2023"}}
 
 Example 3 (partial evidence — answer what the notes cover):
 Query: "What events has Alex participated in?"
-Memory notes: [{{"id": "n1", "description": "Alex spoke at a school event last week.", "keywords": ["alex", "school event"]}}, {{"id": "n2", "description": "Alex has a pet cat.", "keywords": ["alex", "cat"]}}]
-Memory notes: [{{"id": "n1", "description": "Alex spoke at a school event.", "keywords": ["alex", "school event"]}}, {{"id": "n2", "description": "Alex has a pet cat.", "keywords": ["alex", "cat"]}}]
+Memory notes: [{{"id": "n1", "speaker": "Alex", "description": "Alex spoke at a school event.", "keywords": ["alex", "school event"]}}, {{"id": "n2", "speaker": "Alex", "description": "Alex has a pet cat.", "keywords": ["alex", "cat"]}}]
 Reasoning: n1 lists one event (school event). n2 is unrelated. Answer with the one event — do not refuse.
 {{"selected_ids": ["n1"], "answer": "Alex spoke at a school event."}}
+
+Example 4 (attribution / person swap — use speaker and relations):
+Query: "What was Melanie's grandmother's gift?"
+Memory notes: [{{"id": "n1", "speaker": "Caroline", "entities": ["Caroline", "Sweden"], "description": "Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.", "keywords": ["necklace", "grandmother", "sweden"], "relations": [{{"relation": "same-topic", "target_id": "n2"}}]}}, {{"id": "n2", "speaker": "Melanie", "entities": ["Melanie"], "description": "Melanie complimented the necklace.", "keywords": ["necklace"], "relations": [{{"relation": "contradicts", "target_id": "n1"}}]}}]
+Reasoning: The necklace belongs to Caroline (n1); n2 only comments on it. The question credits it to the wrong person — answer with the correct person.
+{{"selected_ids": ["n1", "n2"], "answer": "It was Caroline's necklace, from her grandmother in Sweden — not Melanie's."}}
 
 ## Common Mistakes (NEVER do these)
 WRONG: {{"selected_ids": ["n1", "n2"], "answer": "Alex works at Google."}}

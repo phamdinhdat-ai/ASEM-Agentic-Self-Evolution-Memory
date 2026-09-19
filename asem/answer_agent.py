@@ -62,8 +62,67 @@ class AnswerAgent:
     baseline_prompt_template: str
     direct_mode: bool = False
     max_retries: int = 0
+    # Per-call output cap. Without this the backend's client-wide `max_tokens`
+    # is used, which on a small-context model (e.g. an 8192-token window) can
+    # leave too little room for the prompt and cause a hard HTTP 400.
+    max_tokens: Optional[int] = None
+    # The model's total context window. The rendered prompt is trimmed so that
+    # `prompt + max_tokens <= context_window`. None disables trimming.
+    context_window: Optional[int] = None
 
-    def _generate_resilient(self, prompt: str) -> str:
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """Cheap token estimate (~4 chars/token).
+
+        Deliberately conservative: it only decides how many low-ranked notes to
+        drop, and dropping one low-ranked note is harmless while failing to drop
+        one causes a hard 400 on a small-context model.
+        """
+        return max(1, len(text) // 4)
+
+    def _fit(self, candidates: List[Note], render) -> Tuple[str, List[Note]]:
+        """Render a prompt that fits ``context_window`` minus ``max_tokens``.
+
+        Drops the LOWEST-ranked candidate (last in retrieval order) until the
+        prompt fits, always keeping at least one note.
+        """
+        kept = list(candidates)
+        prompt = render(kept)
+        if not self.context_window:
+            return prompt, kept
+        budget = int(self.context_window) - int(self.max_tokens or 0)
+        while len(kept) > 1 and self._estimate_tokens(prompt) > budget:
+            kept.pop()
+            prompt = render(kept)
+        est = self._estimate_tokens(prompt)
+        if est > budget:
+            _log.warning(
+                "Answer prompt still ~{} tokens after trimming to 1 note "
+                "(budget {} = context_window {} - max_tokens {}). Raise the "
+                "model context window or lower max_tokens.",
+                est, budget, self.context_window, int(self.max_tokens or 0),
+            )
+        elif len(kept) < len(candidates):
+            _log.debug(
+                "Prompt budget: kept {}/{} notes (~{} tokens, budget {})",
+                len(kept), len(candidates), est, budget,
+            )
+        return prompt, kept
+
+    def _generate(self, prompt: str, max_tokens: Optional[int] = None) -> str:
+        """Generate, using a per-call output cap when the backend supports it."""
+        if not max_tokens:
+            return self.backend.generate(prompt)
+        try:
+            return self.backend.generate(prompt, max_tokens=max_tokens)
+        except TypeError as exc:
+            # Backend/wrapper without per-call kwargs — fall back to its default.
+            if "unexpected keyword" in str(exc) or "positional argument" in str(exc):
+                _log.debug("Backend ignores per-call max_tokens: {}", exc)
+                return self.backend.generate(prompt)
+            raise
+
+    def _generate_resilient(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Generate with retry on transient network errors (DNS blips, etc.).
 
         The direct/baseline answer paths call ``backend.generate`` directly
@@ -74,7 +133,7 @@ class AnswerAgent:
         attempts = max(1, self.max_retries + 1)
         for attempt in range(attempts):
             try:
-                return self.backend.generate(prompt)
+                return self._generate(prompt, max_tokens)
             except Exception as exc:  # noqa: BLE001
                 if _is_transient_network_error(exc) and attempt < attempts - 1:
                     backoff = min(2 ** attempt, 15)
@@ -100,14 +159,16 @@ class AnswerAgent:
             answer = self.direct_answer(query, candidates)
             return candidates, answer
 
-        prompt = self.prompt_template.format(
-            query=query,
-            candidates=json.dumps([self._note_payload(n) for n in candidates]),
-        )
-        if notice:
+        def render(notes: List[Note]) -> str:
+            body = self.prompt_template.format(
+                query=query,
+                candidates=json.dumps([self._note_payload(n) for n in notes]),
+            )
             # Second-chance pass: the previous answer was a refusal, so say so
             # and make the model re-read a wider candidate set.
-            prompt = f"{notice}\n\n{prompt}"
+            return f"{notice}\n\n{body}" if notice else body
+
+        prompt, candidates = self._fit(candidates, render)
         if self.max_retries > 0:
             retry = LLMRetryHandler(self.backend.generate, max_retries=self.max_retries)
             data, _attempt = retry.invoke(
@@ -117,7 +178,7 @@ class AnswerAgent:
             )
             parsed = self._parse_response_data(data)
         else:
-            raw = self.backend.generate(prompt)
+            raw = self._generate(prompt, self.max_tokens)
             parsed = self._parse_response(raw)
         if parsed is None:
             _log.warning("Distil JSON parse failed, falling back to all candidates")
@@ -143,6 +204,16 @@ class AnswerAgent:
         if not candidates:
             return "I don't know"
 
+        prompt, _ = self._fit(
+            candidates,
+            lambda notes: self.baseline_prompt_template.format(
+                query=query, context=self._render_graph_context(notes)
+            ),
+        )
+        return self._generate_resilient(prompt, max_tokens=self.max_tokens).strip()
+
+    def _render_graph_context(self, candidates: List[Note]) -> str:
+        """Render notes as numbered graph nodes (speaker / entities / relations)."""
         # Chronologically sort notes, then number them so relation edges can
         # reference other notes inside the SAME context block.
         sorted_notes = sorted(candidates, key=lambda n: n.t if n.t else datetime.min)
@@ -177,21 +248,16 @@ class AnswerAgent:
 
             context_items.append("\n".join(lines))
 
-        context = "\n".join(context_items)
-        prompt = self.baseline_prompt_template.format(query=query, context=context)
-        return self._generate_resilient(prompt).strip()
+        return "\n".join(context_items)
 
     def _baseline_answer(self, query: str, candidates: List[Note]) -> str:
-        context = "\n".join([
-            f"- {note.c}" for note in candidates
-        ])
         context_items = []
         for note in candidates:
             date_prefix = f"[{note.session_date}] " if note.session_date else (f"[{note.t.strftime('%d %B %Y')}] " if note.t else "")
             context_items.append(f"- {date_prefix}{note.c}")
         context = "\n".join(context_items)
         prompt = self.baseline_prompt_template.format(query=query, context=context)
-        return self._generate_resilient(prompt).strip()
+        return self._generate_resilient(prompt, max_tokens=self.max_tokens).strip()
 
     def _parse_response(self, raw: str) -> Tuple[List[str], str] | None:
         data = _try_extract_json(raw, expect_array=False)

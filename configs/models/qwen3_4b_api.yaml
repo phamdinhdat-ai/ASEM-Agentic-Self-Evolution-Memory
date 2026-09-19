@@ -54,6 +54,9 @@ answer:
   include_dates: true
   max_context_notes: 8
   max_tokens: 512
+  # Served window. The answer prompt is trimmed so prompt + max_tokens fits
+  # here — otherwise a long prompt 400s (6145 + 2048 > 8192).
+  context_window: 8192
   temperature: 0.0
 
 ingestion:

@@ -53,6 +53,10 @@ class AnswerConfig:
     max_context_notes: int = 8
     max_tokens: int = 512
     temperature: float = 0.1
+    # Model context window. When set, the answer prompt is trimmed so that
+    # `prompt + max_tokens <= context_window` (prevents hard HTTP 400s on
+    # small-context backbones). None = no trimming.
+    context_window: Optional[int] = None
     # Second-chance retrieval when the first answer is an "I don't know".
     recovery_enabled: bool = True
     recovery_k2: int = 12
@@ -163,6 +167,7 @@ class ASEMConfig:
                 max_context_notes=ans.get("max_context_notes", 8),
                 max_tokens=ans.get("max_tokens", 512),
                 temperature=ans.get("temperature", 0.1),
+                context_window=ans.get("context_window"),
                 recovery_enabled=ans.get("recovery_enabled", True),
                 recovery_k2=ans.get("recovery_k2", 12),
                 recovery_delta=ans.get("recovery_delta", 0.15),

@@ -68,11 +68,14 @@ class LangChainBackend(InferenceBackend):
             def __init__(self, inner):
                 self._inner = inner
 
-            def invoke(self, prompt: str):
-                return self._inner.invoke([HumanMessage(content=prompt)])
+            def invoke(self, prompt: str, **kwargs):
+                # Pass through per-call overrides (e.g. ``max_tokens``) so a
+                # caller can budget output against a small context window
+                # instead of being stuck with the client-wide default.
+                return self._inner.invoke([HumanMessage(content=prompt)], **kwargs)
 
-            async def ainvoke(self, prompt: str):
-                return await self._inner.ainvoke([HumanMessage(content=prompt)])
+            async def ainvoke(self, prompt: str, **kwargs):
+                return await self._inner.ainvoke([HumanMessage(content=prompt)], **kwargs)
 
             async def astream(self, prompt: str):
                 async for chunk in self._inner.astream([HumanMessage(content=prompt)]):
