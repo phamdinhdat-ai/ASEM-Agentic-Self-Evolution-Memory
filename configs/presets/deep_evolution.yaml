@@ -44,6 +44,7 @@ answer:
   direct_mode: false  # uses two-phase distillation
   include_dates: true
   max_context_notes: 6
+  content_char_limit: 200
   max_tokens: 512
   temperature: 0.1
 

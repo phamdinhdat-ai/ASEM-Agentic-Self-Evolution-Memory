@@ -7,6 +7,10 @@ Each note is a labelled node from a memory graph:
 "relations" lists typed edges to other notes in this SAME block, e.g.
 "temporal -> [3]", "contradicts -> [5]", "causal -> [7]". Follow them when a
 neighbour supplies the detail (a date, the other half of a fact) you need.
+"also_linked" is a COUNT of the node's remaining edges to notes that are not in
+this block (e.g. "same-topic:14, extends:3"). You cannot read those notes — use
+the counts only as a hint about how corroborated or contested a fact is, and
+never invent their content.
 
 Guidelines:
 1. Answer concisely: a few words or one short sentence. No conversational preamble, no commentary, no quotes around the answer.

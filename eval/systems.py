@@ -513,6 +513,8 @@ def build_asem_system(
         max_retries=max_retries,
         max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
         context_window=int(ans_cfg.get("context_window") or 0) or None,
+        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
+        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -608,6 +610,8 @@ def build_asem_v2_system(
         max_retries=max_retries,
         max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
         context_window=int(ans_cfg.get("context_window") or 0) or None,
+        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
+        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -843,11 +847,13 @@ def build_fast_asem_system(
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
-        baseline_prompt_template=qa_prompt,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
         direct_mode=ans_cfg.direct_mode,
         max_retries=max_retries,
         max_tokens=int(ans_cfg.max_tokens or 0) or None,
         context_window=int(ans_cfg.context_window or 0) or None,
+        max_context_notes=int(ans_cfg.max_context_notes or 0) or None,
+        content_char_limit=int(ans_cfg.content_char_limit),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
