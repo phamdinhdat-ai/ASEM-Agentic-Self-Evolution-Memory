@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from typing import Any, Dict, List, Optional
@@ -139,6 +140,40 @@ def _preflight(
     return ok or allow_missing
 
 
+def _resolve_conversations(requested: List[str], available: List[str]) -> List[str]:
+    """Map user-supplied conversation selectors to canonical dataset ids.
+
+    ``locomo_0003``, ``locomo_3`` and ``3`` all resolve to ``locomo_0003``.
+    Unknown selectors abort the run: silently evaluating a different
+    conversation than the one asked for would be worse than failing.
+    """
+    by_index: Dict[int, str] = {}
+    for cid in available:
+        m = re.search(r"(\d+)$", str(cid))
+        if m:
+            by_index[int(m.group(1))] = str(cid)
+
+    out: List[str] = []
+    unknown: List[str] = []
+    for raw in requested:
+        token = str(raw).strip()
+        m = re.search(r"(\d+)$", token)
+        resolved = token if token in available else by_index.get(
+            int(m.group(1)) if m else -1, ""
+        )
+        if not resolved:
+            unknown.append(token)
+        elif resolved not in out:
+            out.append(resolved)
+
+    if unknown:
+        raise SystemExit(
+            f"Unknown --conversations {unknown}. "
+            f"Available: {', '.join(available) or '(none)'}"
+        )
+    return out
+
+
 def _fresh(paths: List[str]) -> None:
     for path in paths:
         if os.path.exists(path):
@@ -159,7 +194,11 @@ def main() -> int:
         render_sweep_table,
         write_results,
     )
-    from eval.static_eval import render_report_table, run_static_eval
+    from eval.static_eval import (
+        render_per_conversation_matrix,
+        render_report_table,
+        run_static_eval,
+    )
     from scripts.run_locomo10_experiments import (
         convert_locomo10_to_eval,
         group_by_conversation,
@@ -196,10 +235,20 @@ def main() -> int:
                         help="Any of: em em_loose f1 rougeL bertscore_f1 judge")
     parser.add_argument("--limit", type=int, default=None,
                         help="Answer only the first N QA pairs (smoke tests)")
+    parser.add_argument("--conversations", nargs="+", default=None,
+                        help="Evaluate only these conversations (ids like locomo_0003, "
+                             "or 0-based indices like 3). Applied before --limit, so "
+                             "one conversation can be evaluated per invocation.")
     parser.add_argument("--per-category", dest="per_category", action="store_true",
                         default=True, help="Per-category breakdown (default: on)")
     parser.add_argument("--no-per-category", dest="per_category", action="store_false",
                         help="Skip the per-category breakdown")
+    parser.add_argument("--per-conversation", dest="per_conversation", action="store_true",
+                        default=True,
+                        help="Per-conversation breakdown + matrices (default: on)")
+    parser.add_argument("--no-per-conversation", dest="per_conversation",
+                        action="store_false",
+                        help="Skip the per-conversation breakdown")
     parser.add_argument("--full-context-dates", action="store_true",
                         help="Use the date-leveled FullContext prompt (fair vs FastASEM)")
     parser.add_argument("--full-context-max-turns", type=int, default=0,
@@ -245,8 +294,16 @@ def main() -> int:
     print(f"Loading {args.input} ...")
     eval_items = convert_locomo10_to_eval(args.input, limit=args.limit)
     groups = group_by_conversation(eval_items)
+    if args.conversations:
+        args.conversations = _resolve_conversations(
+            args.conversations, [str(g[0].get("session_id", "")) for g in groups]
+        )
+        groups = [
+            g for g in groups if str(g[0].get("session_id", "")) in set(args.conversations)
+        ]
     total_qa = sum(len(g) for g in groups)
     print(f"  {len(groups)} conversations | {total_qa} QA pairs (--limit={args.limit})")
+    print(f"  conversations: {', '.join(str(g[0].get('session_id', '')) for g in groups)}")
 
     retrieval_cfgs = _resolve_retrieval_configs(args)
     out_root = os.path.join(args.results_dir, dataset)
@@ -321,6 +378,8 @@ def main() -> int:
                 out_path=out_path,
                 log_path=log_path,
                 per_category=args.per_category,
+                per_conversation=args.per_conversation,
+                conversations=args.conversations,
                 require_banks=not args.allow_missing_banks,
                 work_root=None if args.no_work_copy else args.work_root,
                 model_tag=display_tag,
@@ -379,13 +438,23 @@ def main() -> int:
         results["elapsed_sec"] = round(elapsed, 2)
         write_results(out_path, results)
         table = render_report_table(results, args.metrics)
+        matrix = render_per_conversation_matrix(results, args.metrics)
         with open(md_path, "w", encoding="utf-8") as fh:
             fh.write(f"# Static-bank evaluation — tag `{args.tag}`, model `{display_tag}`\n\n")
             fh.write(f"- dataset: `{dataset}`\n- bank root: `{bank_root}/{args.tag}`\n")
             fh.write(f"- config: `{config_path}`\n- judge: `{judge_config or config_path}`\n")
             fh.write(f"- metrics: `{', '.join(args.metrics)}`\n")
+            fh.write(
+                "- conversations: "
+                + (f"{len(results.get('conversations') or [])} "
+                   f"({', '.join(results.get('conversations') or [])})\n"
+                   if results.get("conversations") else "all\n")
+            )
             fh.write(f"- QA pairs: {results.get('n_qa', 0)} | elapsed: {elapsed:.1f}s\n\n")
             fh.write(table + "\n")
+            if matrix:
+                fh.write("\n## Per-conversation matrices\n")
+                fh.write(matrix + "\n")
 
         print(f"\nResults -> {out_path}")
         print(f"Report  -> {md_path}")

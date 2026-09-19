@@ -30,9 +30,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 cfg = yaml.safe_load(open(os.path.join(ROOT, "configs/locomo_openai.yaml"), encoding="utf-8"))
 infer_cfg = cfg["inference"]
 backend = build_backend(infer_cfg)
-print(f"backend={infer_cfg['backend']} provider={infer_cfg['langchain'].get('provider')} "
-      f"model={infer_cfg['langchain'].get('model')} "
-      f"base_url={infer_cfg['langchain'].get('base_url') or os.environ.get('OPENAI_BASE_URL', '(unset)')}")
+# Backend-agnostic: read the block selected by `backend` (langchain / openai /
+# huggingface) instead of hardcoding "langchain".
+block = infer_cfg.get(infer_cfg.get("backend")) or {}
+print(f"backend={infer_cfg.get('backend')} provider={block.get('provider')} "
+      f"model={block.get('model') or block.get('model_name_or_path')} "
+      f"base_url={block.get('base_url') or os.environ.get('OPENAI_BASE_URL', '(unset)')}")
 print(f"OPENAI_API_KEY set: {bool(os.environ.get('OPENAI_API_KEY'))}")
 
 # --- Load the first session of the default dataset (same parser as run_asem_v2) ---
