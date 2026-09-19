@@ -50,7 +50,14 @@ class RetrieverConfig:
 class AnswerConfig:
     direct_mode: bool = True  # single-pass direct QA generation
     include_dates: bool = True
+    # HARD CEILING on notes reaching the answer prompt (relevance-ordered, so the
+    # lowest-ranked go first). A small backbone degrades on long, low-signal
+    # contexts, so fewer+better beats "everything that matched".
     max_context_notes: int = 8
+    # Chars of the raw conversation turn kept per note (0 = drop `content`).
+    # `content` is the largest and least information-dense field; `description`,
+    # `keywords`, `entities`, `speaker` and `session_date` carry the answer.
+    content_char_limit: int = 200
     max_tokens: int = 512
     temperature: float = 0.1
     # Model context window. When set, the answer prompt is trimmed so that
@@ -165,6 +172,7 @@ class ASEMConfig:
                 direct_mode=ans.get("direct_mode", True),
                 include_dates=ans.get("include_dates", True),
                 max_context_notes=ans.get("max_context_notes", 8),
+                content_char_limit=ans.get("content_char_limit", 200),
                 max_tokens=ans.get("max_tokens", 512),
                 temperature=ans.get("temperature", 0.1),
                 context_window=ans.get("context_window"),

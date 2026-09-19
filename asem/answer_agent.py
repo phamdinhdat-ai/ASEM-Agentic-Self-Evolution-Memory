@@ -7,7 +7,7 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from .backends.base import InferenceBackend
 from .llm_validator import LLMRetryHandler, _is_transient_network_error, validate_distil_response
@@ -35,6 +35,63 @@ _NOTE_GAP_RE = re.compile(
 # A *long* answer that merely appends a small caveat to a real fact is treated as
 # an answer, so the recovery pass never throws away a correct partial answer.
 _ABSTENTION_MAX_CHARS = 240
+
+# Reserve a few tokens when budgeting the prompt: the ~4-chars/token estimate can
+# undercount (JSON punctuation, non-ASCII), and a 1-token overflow is a hard 400.
+_SAFETY_MARGIN_TOKENS = 64
+
+# Substrings identifying a "prompt too long" 400 from an OpenAI-compatible
+# endpoint (vLLM: "This model's maximum context length is 8192 tokens").
+_CONTEXT_OVERFLOW_HINTS = (
+    "maximum context length",
+    "context_length_exceeded",
+    "reduce the length of the input",
+    "too many tokens",
+)
+
+# `content` is the RAW conversation turn and it dominates the prompt (measured
+# at ~60% of characters, ~600 tokens/note). The decision procedure only skims
+# `description` / `keywords` / `entities` / `speaker` / `session_date`, so a
+# short prefix of the turn is enough grounding and the rest is pure cost.
+# Measured on ds_fixed: this cuts the answer prompt by roughly two thirds.
+_CONTENT_CHAR_LIMIT = 200
+
+# Fields that carry no answer signal but used to be serialised on every note.
+# `timestamp_iso` is redundant with `session_date`, `utility` (the Q-value) is a
+# retrieval-side number, and `tags` duplicate `keywords`.
+_DROP_PAYLOAD_FIELDS = ("timestamp_iso", "utility", "tags")
+
+# MEASURED (ds_fixed, 1790 questions, ASEM): the full edge list was **49.9% of
+# the prompt** — 873 chars/note — because every note serialised all of its graph
+# edges, including the thousands whose target was never retrieved and therefore
+# cannot be read. Only edges BETWEEN notes in the same prompt are actionable, so
+# those are kept verbatim (capped) and the remainder collapses to a tiny count
+# map that still tells the model "this note is contradicted / corroborated".
+_MAX_RELATIONS_PER_NOTE = 6
+_MAX_RELATION_TYPES = 4
+
+
+def _relation_digest(counts: dict) -> str:
+    """Compact "same-topic:14, extends:3" form of the out-of-context edges."""
+    if not counts:
+        return ""
+    top = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:_MAX_RELATION_TYPES]
+    return ", ".join(f"{rel}:{n}" for rel, n in top)
+
+
+def _clip(text: str, limit: int) -> str:
+    """Truncate `text` to `limit` chars on a word boundary (adds an ellipsis)."""
+    if not text or limit <= 0:
+        return ""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(",;:. ")
+    return (cut or text[:limit]) + " …"
+
+
+def _is_context_overflow(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(hint in msg for hint in _CONTEXT_OVERFLOW_HINTS)
 
 
 def is_abstention(answer: str, *, max_chars: int = _ABSTENTION_MAX_CHARS) -> bool:
@@ -69,6 +126,28 @@ class AnswerAgent:
     # The model's total context window. The rendered prompt is trimmed so that
     # `prompt + max_tokens <= context_window`. None disables trimming.
     context_window: Optional[int] = None
+    # Hard ceiling on how many notes reach the prompt. Notes arrive in
+    # relevance order, so the LOWEST-ranked are dropped first. None = no cap.
+    # Fewer, better notes beat "everything that matched": a small backbone
+    # degrades on long, low-signal contexts.
+    max_context_notes: Optional[int] = None
+    # Chars of the raw turn kept per note (0 = drop `content` entirely).
+    content_char_limit: int = _CONTENT_CHAR_LIMIT
+
+    def _select(self, candidates: List[Note]) -> List[Note]:
+        """Keep the most relevant notes up to `max_context_notes`.
+
+        Candidates are assumed to be in relevance order (the retriever ranks
+        them; the recovery pass re-ranks by query similarity).
+        """
+        if not self.max_context_notes or len(candidates) <= self.max_context_notes:
+            return list(candidates)
+        kept = list(candidates[: self.max_context_notes])
+        _log.debug(
+            "Context cap: kept {}/{} notes (max_context_notes={})",
+            len(kept), len(candidates), self.max_context_notes,
+        )
+        return kept
 
     @staticmethod
     def _estimate_tokens(text: str) -> int:
@@ -90,7 +169,7 @@ class AnswerAgent:
         prompt = render(kept)
         if not self.context_window:
             return prompt, kept
-        budget = int(self.context_window) - int(self.max_tokens or 0)
+        budget = int(self.context_window) - int(self.max_tokens or 0) - _SAFETY_MARGIN_TOKENS
         while len(kept) > 1 and self._estimate_tokens(prompt) > budget:
             kept.pop()
             prompt = render(kept)
@@ -109,8 +188,8 @@ class AnswerAgent:
             )
         return prompt, kept
 
-    def _generate(self, prompt: str, max_tokens: Optional[int] = None) -> str:
-        """Generate, using a per-call output cap when the backend supports it."""
+    def _call(self, prompt: str, max_tokens: Optional[int]) -> str:
+        """One backend call, passing a per-call output cap where supported."""
         if not max_tokens:
             return self.backend.generate(prompt)
         try:
@@ -121,6 +200,34 @@ class AnswerAgent:
                 _log.debug("Backend ignores per-call max_tokens: {}", exc)
                 return self.backend.generate(prompt)
             raise
+
+    def _generate(self, prompt: str, max_tokens: Optional[int] = None) -> str:
+        """Generate, with a last-resort retry if the endpoint rejects the prompt length.
+
+        The character-based estimate can undercount, and callers other than this
+        class (e.g. an LLMRetryHandler) may not pass a cap at all. Rather than
+        failing the whole benchmark run on an avoidable HTTP 400, shrink the
+        output budget so that prompt + output fits the declared window.
+        """
+        try:
+            return self._call(prompt, max_tokens)
+        except Exception as exc:  # noqa: BLE001
+            if not (self.context_window and _is_context_overflow(exc)):
+                raise
+            est = self._estimate_tokens(prompt)
+            affordable = int(self.context_window) - est - _SAFETY_MARGIN_TOKENS
+            if affordable < 64:
+                # Even a minimal completion cannot fit — nothing left to give.
+                raise
+            requested = int(max_tokens) if max_tokens else None
+            configured = int(self.max_tokens) if self.max_tokens else None
+            new_cap = min(v for v in (requested, configured, affordable) if v is not None)
+            _log.warning(
+                "Context overflow (prompt ~{} tokens, requested cap {}): "
+                "retrying with max_tokens={} against a {}-token window.",
+                est, max_tokens, new_cap, self.context_window,
+            )
+            return self._call(prompt, new_cap)
 
     def _generate_resilient(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Generate with retry on transient network errors (DNS blips, etc.).
@@ -160,17 +267,35 @@ class AnswerAgent:
             return candidates, answer
 
         def render(notes: List[Note]) -> str:
+            in_context = {n.id for n in notes}
             body = self.prompt_template.format(
                 query=query,
-                candidates=json.dumps([self._note_payload(n) for n in notes]),
+                candidates=json.dumps(
+                    [
+                        self._note_payload(
+                            n,
+                            content_chars=self.content_char_limit,
+                            in_context=in_context,
+                        )
+                        for n in notes
+                    ]
+                ),
             )
             # Second-chance pass: the previous answer was a refusal, so say so
             # and make the model re-read a wider candidate set.
             return f"{notice}\n\n{body}" if notice else body
 
-        prompt, candidates = self._fit(candidates, render)
+        prompt, candidates = self._fit(self._select(candidates), render)
         if self.max_retries > 0:
-            retry = LLMRetryHandler(self.backend.generate, max_retries=self.max_retries)
+            # Bind the cap INTO the retry handler: LLMRetryHandler calls
+            # generate_fn(prompt) with NO kwargs, so passing self.backend.generate
+            # directly silently dropped the per-call cap and fell back to the
+            # client-wide max_tokens — which overflowed the context window
+            # (6145 + 2048 > 8192) on the Qwen3-4B 8k endpoint.
+            retry = LLMRetryHandler(
+                lambda p: self._generate(p, self.max_tokens),
+                max_retries=self.max_retries,
+            )
             data, _attempt = retry.invoke(
                 prompt,
                 parse_fn=lambda raw: _try_extract_json(raw, expect_array=False),
@@ -205,7 +330,7 @@ class AnswerAgent:
             return "I don't know"
 
         prompt, _ = self._fit(
-            candidates,
+            self._select(candidates),
             lambda notes: self.baseline_prompt_template.format(
                 query=query, context=self._render_graph_context(notes)
             ),
@@ -213,7 +338,13 @@ class AnswerAgent:
         return self._generate_resilient(prompt, max_tokens=self.max_tokens).strip()
 
     def _render_graph_context(self, candidates: List[Note]) -> str:
-        """Render notes as numbered graph nodes (speaker / entities / relations)."""
+        """Render notes as compact numbered graph nodes.
+
+        Each node carries only what answers a question: who said it, when, the
+        entities it names, the distilled summary, its keywords and its typed
+        edges. The raw turn is clipped to `content_char_limit` because it is the
+        single largest field and the least information-dense.
+        """
         # Chronologically sort notes, then number them so relation edges can
         # reference other notes inside the SAME context block.
         sorted_notes = sorted(candidates, key=lambda n: n.t if n.t else datetime.min)
@@ -227,24 +358,35 @@ class AnswerAgent:
                 header += f" speaker={n.speaker}"
             if n.entities:
                 header += f" entities=[{', '.join(n.entities)}]"
-            lines = [header, f"    content: {n.c}"]
+            lines = [header]
 
-            # Surface K/G/X: ingestion may merge facts into these while `c`
-            # holds only the raw turn. Without them the LLM cannot see facts
-            # that were folded into a merged note.
+            # `summary` (X) is the distilled fact; `content` (c) is the raw turn.
+            # Ingestion may fold facts into X while c holds only the dialogue, so
+            # render both — but never twice, and never a full turn.
             if n.X and n.X != n.c:
                 lines.append(f"    summary: {n.X}")
+            content = _clip(n.c, self.content_char_limit)
+            if content and content.rstrip(" …") != (n.X or "").rstrip(" …"):
+                lines.append(f"    content: {content}")
             if n.K:
                 lines.append(f"    keywords: {', '.join(n.K[:12])}")
 
-            # Typed links to notes present in this same context block.
-            edges = []
+            # Typed links: keep the edges whose target IS in this block (the model
+            # can read those), collapse the rest to a count map. Serialising the
+            # whole edge list was 49.9% of the prompt for zero extra signal.
+            edges, other = [], {}
             for link in n.L:
+                rel = link.relation or "linked"
                 target = index_by_id.get(link.target_id)
-                if target is not None:
-                    edges.append(f"{link.relation or 'linked'} -> [{target}]")
+                if target is not None and len(edges) < _MAX_RELATIONS_PER_NOTE:
+                    edges.append(f"{rel} -> [{target}]")
+                else:
+                    other[rel] = other.get(rel, 0) + 1
             if edges:
                 lines.append(f"    relations: {'; '.join(edges)}")
+            digest = _relation_digest(other)
+            if digest:
+                lines.append(f"    also_linked: {digest}")
 
             context_items.append("\n".join(lines))
 
@@ -275,23 +417,51 @@ class AnswerAgent:
         return [str(item) for item in selected_ids], str(answer).strip()
 
     @staticmethod
-    def _note_payload(note: Note) -> dict:
-        return {
+    def _note_payload(
+        note: Note,
+        *,
+        content_chars: int = _CONTENT_CHAR_LIMIT,
+        in_context: Optional[Iterable[str]] = None,
+    ) -> dict:
+        """Serialise a note for the answer prompt, keeping only what answers questions.
+
+        Deliberately excludes `timestamp_iso` / `utility` / `tags` and clips the
+        raw turn: the prompt is a *reading* context, not a dump of the bank row.
+        `in_context` is the set of note ids sharing the prompt; relation edges are
+        kept only when their target is in it (defaults to just this note), and the
+        remainder is summarised as counts. Measured: the unfiltered edge list was
+        49.9% of the prompt at 873 chars/note.
+        """
+        present = set(in_context) if in_context is not None else {note.id}
+
+        edges, other = [], {}
+        for link in note.L:
+            rel = link.relation or "linked"
+            if link.target_id in present and len(edges) < _MAX_RELATIONS_PER_NOTE:
+                edges.append({"relation": rel, "target_id": link.target_id})
+            else:
+                other[rel] = other.get(rel, 0) + 1
+
+        payload = {
             "id": note.id,
             "keywords": note.K,
-            "tags": note.G,
             "description": note.X,
-            "content": note.c,
-            "utility": note.q,
             "session_date": note.session_date,
-            "timestamp_iso": note.timestamp_iso or (note.t.isoformat() if note.t else None),
             "entities": note.entities,
             "speaker": note.speaker,
-            # Typed edges to other candidates (matched by target_id). The
-            # relation label is what lets the model connect and attribute facts
-            # instead of reading each note in isolation.
-            "relations": [
-                {"relation": link.relation or "linked", "target_id": link.target_id}
-                for link in note.L
-            ],
+            # Typed edges to other candidates. The relation label is what lets the
+            # model connect and attribute facts instead of reading each note in
+            # isolation.
+            "relations": edges,
         }
+        digest = _relation_digest(other)
+        if digest:
+            payload["also_linked"] = digest
+        if content_chars > 0:
+            content = _clip(note.c, content_chars)
+            # Never pay for the same text twice: FastASEM-style notes set
+            # `description == content`, and merged ASEM notes often embed the
+            # raw turn in their description already.
+            if content and content.rstrip(" …") not in (note.X or ""):
+                payload["content"] = content
+        return payload

@@ -32,6 +32,23 @@ _RECOVERY_NOTICE = (
 )
 
 
+def _cosine(a, b) -> float:
+    """Cosine similarity, tolerant of ``None`` vectors and zero norms.
+
+    Pure Python on purpose: this runs over ~17 notes per recovery, which does not
+    justify importing numpy into the pipeline module.
+    """
+    if a is None or b is None:
+        return 0.0
+    try:
+        num = sum(float(x) * float(y) for x, y in zip(a, b))
+        na = sum(float(x) ** 2 for x in a) ** 0.5
+        nb = sum(float(y) ** 2 for y in b) ** 0.5
+    except (TypeError, ValueError):
+        return 0.0
+    return num / (na * nb) if na and nb else 0.0
+
+
 @dataclass
 class ASEMPipeline:
     """Pipeline wiring for all ASEM stages."""
@@ -171,6 +188,16 @@ class ASEMPipeline:
         merged = list(first) + [n for n in pool if n.id not in seen]
         if len(merged) == len(first) and len(pool) == len(first):
             return first, None
+
+        # Put the merged set in RELEVANCE order. The answer agent trims from the
+        # tail when the context window is tight, so leaving `first + extra`
+        # order would make it discard precisely the notes the widened pass just
+        # found — defeating the recovery. Highest query similarity is kept.
+        try:
+            e_q = self.retriever.backend.embed(query)
+            merged.sort(key=lambda n: -_cosine(e_q, n.e))
+        except Exception as exc:  # noqa: BLE001
+            _log.debug("Recovery re-rank skipped: {}", exc)
 
         _log.info(
             "S4 recovery | first={} widened={} merged={}",
