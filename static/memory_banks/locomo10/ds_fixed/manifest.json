@@ -1,0 +1,291 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "ds_fixed",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/deepseek_openai.yaml",
+  "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+  "model": "deepseek-v4-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "ASEM",
+    "FastASEM"
+  ],
+  "created_at": "2026-09-19T07:51:40",
+  "updated_at": "2026-09-19T12:27:32",
+  "elapsed_sec": 16212.91,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 221,
+          "link_edges": 2078,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0000\\asem.sqlite",
+          "bytes": 4366336,
+          "elapsed_sec": 1804.62
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0001",
+      "sessions": 19,
+      "turns": 369,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 145,
+          "link_edges": 1336,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0001\\asem.sqlite",
+          "bytes": 2859008,
+          "elapsed_sec": 1089.52
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0002",
+      "sessions": 32,
+      "turns": 663,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 309,
+          "link_edges": 2826,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0002\\asem.sqlite",
+          "bytes": 6111232,
+          "elapsed_sec": 1735.39
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0003",
+      "sessions": 29,
+      "turns": 629,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 281,
+          "link_edges": 2636,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0003\\asem.sqlite",
+          "bytes": 5521408,
+          "elapsed_sec": 1839.09
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0004",
+      "sessions": 29,
+      "turns": 680,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 345,
+          "link_edges": 3032,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0004\\asem.sqlite",
+          "bytes": 6754304,
+          "elapsed_sec": 1852.28
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0005",
+      "sessions": 28,
+      "turns": 675,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 265,
+          "link_edges": 2468,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0005\\asem.sqlite",
+          "bytes": 5210112,
+          "elapsed_sec": 1946.29
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0006",
+      "sessions": 31,
+      "turns": 689,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 347,
+          "link_edges": 2888,
+          "new_edges": 4,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0006\\asem.sqlite",
+          "bytes": 6807552,
+          "elapsed_sec": 1639.14
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0007",
+      "sessions": 30,
+      "turns": 681,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 347,
+          "link_edges": 2982,
+          "new_edges": 1,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0007\\asem.sqlite",
+          "bytes": 6778880,
+          "elapsed_sec": 1615.72
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0008",
+      "sessions": 25,
+      "turns": 509,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 205,
+          "link_edges": 1826,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0008\\asem.sqlite",
+          "bytes": 4038656,
+          "elapsed_sec": 1246.2
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0009",
+      "sessions": 30,
+      "turns": 568,
+      "systems": {
+        "ASEM": {
+          "ingest_config": "configs/models/deepseek_openai.yaml",
+          "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+          "model": "deepseek-v4-flash",
+          "thinking": {
+            "thinking": {
+              "type": "disabled"
+            }
+          },
+          "notes": 267,
+          "link_edges": 2526,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ds_fixed\\ASEM\\locomo_0009\\asem.sqlite",
+          "bytes": 5255168,
+          "elapsed_sec": 1444.4
+        }
+      }
+    }
+  ],
+  "totals": {
+    "conversations": 10,
+    "banks_ok": 10,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "ASEM": 2732
+    }
+  },
+  "run": {
+    "built": 10,
+    "skipped": 0,
+    "errors": 0,
+    "notes": 2732,
+    "discarded_partial": 1,
+    "interrupted": false
+  },
+  "config_history": [
+    {
+      "config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+      "ingest_config": "configs/models/deepseek_openai.yaml",
+      "model": "deepseek-v4-flash",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      },
+      "first_used": "2026-09-19T07:51:40"
+    }
+  ]
+}

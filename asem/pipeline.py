@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from .answer_agent import AnswerAgent
+from .answer_agent import AnswerAgent, is_abstention
 from .link_evolver import LinkEvolver
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
@@ -18,6 +19,17 @@ from .write_gate import WriteGate
 from .profiling import StageProfiler, stage_timer
 
 _log = get_logger("pipeline")
+
+# Shown on the second-chance pass. Abstention is ~1/3 of all "I don't know"
+# answers EVEN when the gold note is already in the context, so an explicit
+# "the first refusal was too hasty, re-read these" nudge is high-leverage.
+_RECOVERY_NOTICE = (
+    "A previous attempt answered \"I don't know\". That was too hasty. The memory "
+    "notes below are a WIDER candidate set for the same question. At least one of "
+    "them normally carries the fact. Re-read every note, follow the `relations` "
+    "between notes, and answer from the notes even if they only PARTIALLY cover the "
+    "question. Answer \"I don't know\" only if truly none of the notes bears on it."
+)
 
 
 @dataclass
@@ -32,6 +44,14 @@ class ASEMPipeline:
     answer_agent: AnswerAgent
     utility_updater: UtilityUpdater
     write_gate: WriteGate = field(default_factory=WriteGate)
+
+    # Second-chance retrieval after a refusal. Abstention is ~1/3 of the
+    # "I don't know" answers even when the gold note is in the context, so one
+    # widened retry is cheap (only refusals pay for it) and high-leverage.
+    recovery_enabled: bool = True
+    recovery_k2: int = 12
+    recovery_delta: float = 0.15
+    recovery_topn: int = 8
 
     def write_path(
         self,
@@ -115,8 +135,53 @@ class ASEMPipeline:
         candidates = self.retriever.retrieve(query, self.memory_bank)
         _log.debug("S4 retriever | candidates={}  stats={}", len(candidates), self.retriever.stats)
         notes, answer = self.answer_agent.distil_and_answer(query, candidates)
+        if self.recovery_enabled and is_abstention(answer):
+            recovered_notes, recovered_answer = self._recover(query, candidates)
+            if recovered_answer is not None:
+                notes, answer = recovered_notes, recovered_answer
         _log.success("READ done | distilled={}  answer={!r}", len(notes), answer[:80])
         return notes, answer
+
+    def _recover(
+        self, query: str, first: List[Note]
+    ) -> Tuple[List[Note], Optional[str]]:
+        """One widened retrieval + answer retry after an abstention.
+
+        Widens the candidate pool (larger ``k2``, lower similarity floor, more
+        link neighbours) and tells the model its first refusal was too hasty.
+        The recovered answer is accepted only when it is no longer a refusal, so
+        a fact that is genuinely absent still ends up as "I don't know".
+        """
+        try:
+            broad = dataclasses.replace(
+                self.retriever,
+                k2=max(self.recovery_k2, self.retriever.k2),
+                delta=min(self.recovery_delta, self.retriever.delta),
+                link_traversal_topn=max(
+                    self.recovery_topn,
+                    getattr(self.retriever, "link_traversal_topn", 3),
+                ),
+            )
+        except TypeError:
+            # Non-dataclass retriever (e.g. EnhancedHybridRetriever) — reuse it.
+            broad = self.retriever
+
+        pool = broad.retrieve(query, self.memory_bank)
+        seen = {n.id for n in first}
+        merged = list(first) + [n for n in pool if n.id not in seen]
+        if len(merged) == len(first) and len(pool) == len(first):
+            return first, None
+
+        _log.info(
+            "S4 recovery | first={} widened={} merged={}",
+            len(first), len(pool), len(merged),
+        )
+        notes, answer = self.answer_agent.distil_and_answer(
+            query, merged, notice=_RECOVERY_NOTICE
+        )
+        if answer and not is_abstention(answer):
+            return notes, answer
+        return merged, None
 
     def update_path(
         self,

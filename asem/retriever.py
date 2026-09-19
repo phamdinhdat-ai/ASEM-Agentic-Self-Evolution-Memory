@@ -33,6 +33,20 @@ _LAMBDA_DEFAULT = 0.40      # balanced (original paper default)
 # A1 — max link-traversal hops
 _MAX_LINK_HOPS = 3
 
+# A1 — typed-edge weights for link traversal. `same-topic`/`semantic` are the
+# baseline; the typed edges are boosted so traversal surfaces corroborating,
+# conflicting or time-anchored evidence instead of more of the same topic.
+# This is the signal that carries attribution / "who did what" reasoning.
+_RELATION_BOOST: Dict[str, float] = {
+    "contradicts": 1.35,
+    "causal": 1.25,
+    "temporal": 1.20,
+    "extends": 1.10,
+    "same-topic": 1.00,
+    "semantic": 1.00,
+    "linked": 1.00,
+}
+
 
 @dataclass
 class HybridRetriever:
@@ -258,9 +272,9 @@ class HybridRetriever:
     ) -> List[Note]:
         """Follow the link graph from seed notes to discover linked neighbors.
 
-        Only follows direct (1-hop) links by default.  Each linked neighbor
-        is scored by similarity to the query and its utility.  The top
-        `link_traversal_topn` are added to the retrieved set.
+        Only follows direct (1-hop) links by default.  Each linked neighbor is
+        scored by similarity to the query, its utility, and the TYPE of the
+        edge that reaches it.  The top `link_traversal_topn` are added.
         """
         seen_ids: Set[str] = {n.id for n in seed_notes}
         candidate_notes: List[Tuple[float, Note]] = []
@@ -268,19 +282,32 @@ class HybridRetriever:
         for seed in seed_notes:
             if not seed.L:
                 continue
+            # Keep the relation label: it is the reasoning signal that a flat
+            # similarity score throws away.
+            rel_by_target = {
+                link.target_id: (link.relation or "linked") for link in seed.L
+            }
             # Batch-lookup linked neighbors by ID
-            linked_notes = M.get_notes_by_ids([l.target_id for l in seed.L])
+            linked_notes = M.get_notes_by_ids(list(rel_by_target))
             for neighbor in linked_notes:
                 if neighbor.id in seen_ids:
                     continue
                 seen_ids.add(neighbor.id)
                 sim = self._cosine(query_embedding, neighbor.e)
-                # Weight by utility — high-q linked neighbors are preferred
-                score = sim * (0.5 + 0.5 * neighbor.q)
+                relation = rel_by_target.get(neighbor.id, "linked")
+                boost = _RELATION_BOOST.get(relation, 1.0)
+                # Weight by utility — high-q linked neighbors are preferred —
+                # and by the typed edge that reached this neighbor.
+                score = sim * (0.5 + 0.5 * neighbor.q) * boost
                 candidate_notes.append((score, neighbor))
 
         candidate_notes.sort(key=lambda item: item[0], reverse=True)
         added = [note for _, note in candidate_notes[: self.link_traversal_topn]]
+        self.stats["traversed_relations"] = [
+            link.relation or "linked"
+            for seed in seed_notes
+            for link in seed.L
+        ][:20]
         return added
 
     # ------------------------------------------------------------------

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from .backends.base import InferenceBackend
 from .llm_validator import LLMRetryHandler, _is_transient_network_error, validate_distil_response
@@ -14,6 +15,42 @@ from .logging_utils import get_logger
 from .note import Note, _try_extract_json
 
 _log = get_logger("S4.answer")
+
+# Answers that refuse to answer. Used to trigger a second-chance retrieval pass
+# and to report an abstention rate alongside the accuracy metrics.
+_REFUSAL_START_RE = re.compile(
+    r"^\s*(?:sorry[,.]?\s*)?(?:i\s*(?:don'?t|do not)\s+know|i'?m not sure|"
+    r"i\s+(?:cannot|can'?t)\s+(?:determine|find|answer)|"
+    r"unable to (?:determine|find)|no information|not mentioned|"
+    r"insufficient (?:information|evidence))",
+    re.IGNORECASE,
+)
+# "…but the notes do not specify its title" — the question is left unanswered.
+_NOTE_GAP_RE = re.compile(
+    r"\bnotes?\s+(?:do(?:es)?\s+not|don'?t)\s+"
+    r"(?:say|mention|specify|contain|include|give)",
+    re.IGNORECASE,
+)
+
+# A *long* answer that merely appends a small caveat to a real fact is treated as
+# an answer, so the recovery pass never throws away a correct partial answer.
+_ABSTENTION_MAX_CHARS = 240
+
+
+def is_abstention(answer: str, *, max_chars: int = _ABSTENTION_MAX_CHARS) -> bool:
+    """True when an answer refuses / leaves the question unanswered.
+
+    Two shapes count as an abstention:
+      * the answer OPENS with a refusal ("I don't know", "I cannot determine…");
+      * the answer is short AND reports what the notes fail to say, i.e. the
+        model produced no fact for the question.
+    """
+    text = (answer or "").strip()
+    if not text:
+        return True
+    if _REFUSAL_START_RE.match(text):
+        return True
+    return bool(_NOTE_GAP_RE.search(text)) and len(text) <= max_chars
 
 
 @dataclass
@@ -49,7 +86,12 @@ class AnswerAgent:
                     continue
                 raise
 
-    def distil_and_answer(self, query: str, candidates: List[Note]) -> Tuple[List[Note], str]:
+    def distil_and_answer(
+        self,
+        query: str,
+        candidates: List[Note],
+        notice: Optional[str] = None,
+    ) -> Tuple[List[Note], str]:
         if not candidates:
             _log.debug("No candidates, using baseline answer")
             return [], self._baseline_answer(query, [])
@@ -62,6 +104,10 @@ class AnswerAgent:
             query=query,
             candidates=json.dumps([self._note_payload(n) for n in candidates]),
         )
+        if notice:
+            # Second-chance pass: the previous answer was a refusal, so say so
+            # and make the model re-read a wider candidate set.
+            prompt = f"{notice}\n\n{prompt}"
         if self.max_retries > 0:
             retry = LLMRetryHandler(self.backend.generate, max_retries=self.max_retries)
             data, _attempt = retry.invoke(
@@ -86,22 +132,50 @@ class AnswerAgent:
         return selected_notes, answer
 
     def direct_answer(self, query: str, candidates: List[Note]) -> str:
-        """Fast single-pass temporal QA answering without JSON distillation."""
+        """Fast single-pass temporal QA answering without JSON distillation.
+
+        Each candidate is rendered as a labelled graph node — who said it, the
+        entities it mentions, and its typed relations to the other notes in the
+        same block. The relation labels and the ``speaker`` are what let the
+        model resolve attribution (who said/did what) instead of guessing from
+        flat, de-contextualised text.
+        """
         if not candidates:
             return "I don't know"
 
-        # Chronologically sort notes
+        # Chronologically sort notes, then number them so relation edges can
+        # reference other notes inside the SAME context block.
         sorted_notes = sorted(candidates, key=lambda n: n.t if n.t else datetime.min)
+        index_by_id = {n.id: i + 1 for i, n in enumerate(sorted_notes)}
+
         context_items = []
-        for n in sorted_notes:
-            date_prefix = f"[{n.session_date}] " if n.session_date else f"[{n.t.strftime('%d %B %Y')}] "
-            entities_str = f" (Entities: {', '.join(n.entities)})" if n.entities else ""
-            # Surface keywords/description too: ingestion may merge facts into
-            # K/G/X while c holds only a single headline sentence. Without these
-            # the LLM cannot see facts that were folded into a merged note.
-            keywords_str = f" (Keywords: {', '.join(n.K[:12])})" if n.K else ""
-            desc_str = f" (Description: {n.X})" if (n.X and n.X != n.c) else ""
-            context_items.append(f"- {date_prefix}{n.c}{entities_str}{keywords_str}{desc_str}")
+        for i, n in enumerate(sorted_notes):
+            date_str = n.session_date or (n.t.strftime('%d %B %Y') if n.t else "")
+            header = f"[{i + 1}] date={date_str}"
+            if n.speaker:
+                header += f" speaker={n.speaker}"
+            if n.entities:
+                header += f" entities=[{', '.join(n.entities)}]"
+            lines = [header, f"    content: {n.c}"]
+
+            # Surface K/G/X: ingestion may merge facts into these while `c`
+            # holds only the raw turn. Without them the LLM cannot see facts
+            # that were folded into a merged note.
+            if n.X and n.X != n.c:
+                lines.append(f"    summary: {n.X}")
+            if n.K:
+                lines.append(f"    keywords: {', '.join(n.K[:12])}")
+
+            # Typed links to notes present in this same context block.
+            edges = []
+            for link in n.L:
+                target = index_by_id.get(link.target_id)
+                if target is not None:
+                    edges.append(f"{link.relation or 'linked'} -> [{target}]")
+            if edges:
+                lines.append(f"    relations: {'; '.join(edges)}")
+
+            context_items.append("\n".join(lines))
 
         context = "\n".join(context_items)
         prompt = self.baseline_prompt_template.format(query=query, context=context)
@@ -147,4 +221,11 @@ class AnswerAgent:
             "timestamp_iso": note.timestamp_iso or (note.t.isoformat() if note.t else None),
             "entities": note.entities,
             "speaker": note.speaker,
+            # Typed edges to other candidates (matched by target_id). The
+            # relation label is what lets the model connect and attribute facts
+            # instead of reading each note in isolation.
+            "relations": [
+                {"relation": link.relation or "linked", "target_id": link.target_id}
+                for link in note.L
+            ],
         }

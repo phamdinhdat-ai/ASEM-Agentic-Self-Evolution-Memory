@@ -1,0 +1,71 @@
+{
+  "system": "FastASEM",
+  "copied_from_tag": "ds_nothink",
+  "copied_to_tag": "ds_fixed",
+  "copied_at": "2026-09-19T07:56:42",
+  "reason": "FastASEM's banks were built with an extraction prompt that already emits entities/speaker and resolves pronouns + relative dates, so the ASEM entities bug does not apply. Re-ingesting would reproduce the same banks (same config hash) at API cost with no added signal.",
+  "source_config_sha256": "eecff633b6b0b3fff39e3e016e6407f9db42e1a140a3dc1f777397138150234e",
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "notes": 282,
+      "link_edges": 3754,
+      "bytes": 5664768
+    },
+    {
+      "conversation_id": "locomo_0001",
+      "notes": 271,
+      "link_edges": 3695,
+      "bytes": 5406720
+    },
+    {
+      "conversation_id": "locomo_0002",
+      "notes": 384,
+      "link_edges": 5124,
+      "bytes": 7663616
+    },
+    {
+      "conversation_id": "locomo_0003",
+      "notes": 375,
+      "link_edges": 5247,
+      "bytes": 7553024
+    },
+    {
+      "conversation_id": "locomo_0004",
+      "notes": 379,
+      "link_edges": 5175,
+      "bytes": 7585792
+    },
+    {
+      "conversation_id": "locomo_0005",
+      "notes": 354,
+      "link_edges": 4940,
+      "bytes": 7086080
+    },
+    {
+      "conversation_id": "locomo_0006",
+      "notes": 402,
+      "link_edges": 5445,
+      "bytes": 8056832
+    },
+    {
+      "conversation_id": "locomo_0007",
+      "notes": 413,
+      "link_edges": 5555,
+      "bytes": 8294400
+    },
+    {
+      "conversation_id": "locomo_0008",
+      "notes": 311,
+      "link_edges": 4364,
+      "bytes": 6234112
+    },
+    {
+      "conversation_id": "locomo_0009",
+      "notes": 333,
+      "link_edges": 4630,
+      "bytes": 6676480
+    }
+  ],
+  "skipped": []
+}

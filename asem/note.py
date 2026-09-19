@@ -378,7 +378,12 @@ class NoteConstructor:
 
         fmt_kwargs: Dict[str, Any] = {"turns_text": turns_text}
         if "{session_date}" in template:
-            fmt_kwargs["session_date"] = session_date or (dt_obj.strftime("%d %B %Y") if dt_obj else "")
+            # Prefer the human-readable date FOR THE PROMPT: the stored
+            # session_date is an ISO instant (e.g. 2023-05-08T13:56:00Z), which
+            # is awkward to reason about and blocks relative-date resolution.
+            # This does NOT change the note's stored session_date.
+            friendly = dt_obj.strftime("%d %B %Y") if dt_obj else ""
+            fmt_kwargs["session_date"] = friendly or (session_date or "")
         if "{timestamp}" in template:
             fmt_kwargs["timestamp"] = iso_str or (dt_obj.isoformat() if dt_obj else "")
         prompt = template.format(**fmt_kwargs)
