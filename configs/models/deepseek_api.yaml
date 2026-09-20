@@ -74,8 +74,17 @@ answer:
   include_dates: true
   max_context_notes: 8
   content_char_limit: 200
+  # Per-call completion cap for the ANSWER path (ingestion keeps
+  # `inference.langchain.max_tokens`).
   max_tokens: 512
   temperature: 0.0
+  # Model context window for the ANSWER call (prompt + completion). Every
+  # system - ASEM, FastASEM and each baseline (FullContext included) - trims its
+  # context so that `prompt + max_tokens <= context_window`, i.e. no arm sends
+  # an unbounded conversation and all arms answer under the same budget.
+  # 32768 is a conservative floor for the v4 models; raise it to the served
+  # window to allow longer histories. Unset = no trimming (old behaviour).
+  context_window: 32768
 
 ingestion:
   mode: "session_batch"

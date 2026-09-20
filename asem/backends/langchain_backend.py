@@ -12,13 +12,29 @@ from .base import InferenceBackend, build_thinking_body, content_to_text as _con
 class LangChainBackend(InferenceBackend):
     """LangChain inference backend using BaseChatModel and Embeddings."""
 
-    def __init__(self, llm: Any, embedder: Any) -> None:
+    def __init__(
+        self,
+        llm: Any,
+        embedder: Any,
+        max_tokens: int | None = None,
+    ) -> None:
         super().__init__()
         self._llm = llm
         self._embedder = embedder
+        # Config-level completion cap, kept so a caller budgeting a prompt
+        # against a context window can reserve exactly what will be requested.
+        self._max_tokens = int(max_tokens) if max_tokens else None
+
+    @property
+    def default_max_tokens(self) -> int | None:
+        """The config-level ``max_tokens`` applied when a call passes none."""
+        return self._max_tokens
 
     def generate(self, prompt: str, **kwargs) -> str:
-        response = self._llm.invoke(prompt)
+        # Forward per-call overrides (e.g. ``max_tokens``): dropping them here
+        # silently ignored the answer agent's cap and sent the client-wide
+        # default instead, overflowing small context windows.
+        response = self._llm.invoke(prompt, **kwargs)
         # Extract token usage from LangChain response metadata when available
         if hasattr(response, "response_metadata"):
             usage = response.response_metadata.get("token_usage", {})
@@ -29,7 +45,7 @@ class LangChainBackend(InferenceBackend):
         return str(response)
 
     async def agenerate(self, prompt: str, **kwargs) -> str:
-        response = await self._llm.ainvoke(prompt)
+        response = await self._llm.ainvoke(prompt, **kwargs)
         if hasattr(response, "content"):
             return _content_to_text(response.content)
         return str(response)
@@ -81,7 +97,15 @@ class LangChainBackend(InferenceBackend):
                 async for chunk in self._inner.astream([HumanMessage(content=prompt)]):
                     yield chunk
 
-        return cls(llm=_Wrapper(llm), embedder=embedder)
+        # Only the OpenAI provider applies `max_tokens` to the model, so it is
+        # the only provider whose completion cap can be advertised (and thus
+        # reserved when a caller budgets a prompt).
+        cap = cfg.get("max_tokens") if provider == "openai" else None
+        return cls(
+            llm=_Wrapper(llm),
+            embedder=embedder,
+            max_tokens=int(cap) if cap else None,
+        )
 
 
 def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str, Any]) -> Any:

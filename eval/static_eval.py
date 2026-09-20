@@ -123,8 +123,16 @@ def build_context_baseline(
     backend: Any,
     full_context_dates: bool = False,
     max_full_context_turns: int = 0,
+    max_tokens: Optional[int] = None,
+    context_window: Optional[int] = None,
 ):
-    """Build NoMemory / FullContext (bankless) with a configurable context budget."""
+    """Build NoMemory / FullContext (bankless) with a configurable context budget.
+
+    ``max_tokens``/``context_window`` come from the config's ``answer`` block, so
+    the bankless baselines trim their context against the same token budget the
+    ASEM answer agent uses (``max_full_context_turns`` is only a cheap
+    turn-count pre-filter).
+    """
     from eval.baselines import FullContext, NoMemory
     from eval.systems import (
         _FULL_CONTEXT_PROMPT,
@@ -133,13 +141,20 @@ def build_context_baseline(
     )
 
     if name == "NoMemory":
-        return NoMemory(backend=backend, prompt_template=_NO_MEMORY_PROMPT)
+        return NoMemory(
+            backend=backend,
+            prompt_template=_NO_MEMORY_PROMPT,
+            max_tokens=max_tokens,
+            context_window=context_window,
+        )
     if name == "FullContext":
         prompt = _FULL_CONTEXT_PROMPT_DATED if full_context_dates else _FULL_CONTEXT_PROMPT
         return FullContext(
             backend=backend,
             prompt_template=prompt,
             max_history_turns=max_full_context_turns,
+            max_tokens=max_tokens,
+            context_window=context_window,
         )
     raise ValueError(f"Not a context baseline: {name}")
 
@@ -402,6 +417,7 @@ def run_static_eval(
         "per_conversation"|"n"]`` and the list of ``conversations`` covered.
     """
     from eval.phase_runner import build_backend_from_config, model_tag_from_config
+    from eval.systems import answer_budget_from_config
 
     metrics = canonical_metrics(metric_names)
     need_bert = metric_needs_bertscore(metrics)
@@ -409,6 +425,10 @@ def run_static_eval(
 
     backend = backend if backend is not None else build_backend_from_config(config_path)
     model_tag = model_tag or model_tag_from_config(config_path)
+
+    # ONE budget for every system: the bankless FullContext arm must not send an
+    # unbounded conversation while ASEM trims to `answer.context_window`.
+    answer_max_tokens, context_window = answer_budget_from_config(config_path)
 
     if need_judge and judge_backend is None:
         judge_backend = (
@@ -514,7 +534,9 @@ def run_static_eval(
             for name in systems:
                 if name in NO_BANK_SYSTEMS:
                     built[name] = build_context_baseline(
-                        name, backend, full_context_dates, max_full_context_turns
+                        name, backend, full_context_dates, max_full_context_turns,
+                        max_tokens=answer_max_tokens,
+                        context_window=context_window,
                     )
                     continue
 

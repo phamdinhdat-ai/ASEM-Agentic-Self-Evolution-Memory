@@ -115,6 +115,11 @@ class OpenAIBackend(InferenceBackend):
     # Generation
     # ------------------------------------------------------------------
 
+    @property
+    def default_max_tokens(self) -> Optional[int]:
+        """The config-level ``max_tokens`` sent when a call passes none."""
+        return self._max_tokens
+
     def generate(self, prompt: str, **kwargs: Any) -> str:
         """Single-turn generation via ``chat.completions.create``.
 

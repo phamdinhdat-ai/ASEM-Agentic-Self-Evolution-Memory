@@ -420,6 +420,22 @@ def _load_config(path: str) -> dict:
         return yaml.safe_load(handle)
 
 
+def answer_budget_from_config(
+    config_path: str,
+) -> Tuple[Optional[int], Optional[int]]:
+    """``(max_tokens, context_window)`` declared in a config's ``answer`` block.
+
+    Every system — ASEM, FastASEM and each baseline — answers with one model
+    call and must respect this budget (``prompt <= window - max_tokens``). The
+    values are read in ONE place so a comparison can never give one arm more
+    room than another; ``None`` means "not declared", which disables trimming.
+    """
+    ans_cfg = (_load_config(config_path).get("answer", {}) or {})
+    max_tokens = int(ans_cfg.get("max_tokens") or 0) or None
+    context_window = int(ans_cfg.get("context_window") or 0) or None
+    return max_tokens, context_window
+
+
 def _ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
@@ -663,18 +679,25 @@ def build_baselines(
     """Build all six baseline systems, each with its own isolated MemoryBank.
 
     Args:
-        max_history_turns: Truncation limit for FullContext baseline.
-            0 = no truncation. Default 150 for LoCoMo.
+        max_history_turns: Turn-count pre-filter for the FullContext baseline
+            (0 = off). It is only a cheap cap: how much context actually
+            reaches the model is decided by the answer token budget below.
         with_dates: When True, use the date-leveled QA prompts (expects the
             context/history to carry ``[<session date>]`` prefixes) so the
             baselines can resolve relative time like FastASEM.
         backend: Optional pre-built inference backend (shared model instance).
         only: Optional subset of baseline names to return. When provided the
             non-requested systems are dropped from the returned dict.
+
+    Every baseline is given the config's ``answer.max_tokens`` /
+    ``answer.context_window``, so all systems trim their context against the same
+    budget the ASEM answer agent uses.
     """
     cfg = _load_config(config_path)
+    ans_cfg = cfg.get("answer", {}) or {}
     backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
+    answer_max_tokens, context_window = answer_budget_from_config(config_path)
 
     retrieval_prompt = _RETRIEVAL_PROMPT_DATED if with_dates else _RETRIEVAL_PROMPT
     full_context_prompt = _FULL_CONTEXT_PROMPT_DATED if with_dates else _FULL_CONTEXT_PROMPT
@@ -720,6 +743,12 @@ def build_baselines(
         prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
+        # Without these the ValueRetrievalOnly arm would answer with an
+        # unbounded context while ASEM trims to the same nominal budget.
+        max_tokens=answer_max_tokens,
+        context_window=context_window,
+        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
+        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -732,11 +761,15 @@ def build_baselines(
         "NoMemory": NoMemory(
             backend=backend,
             prompt_template=_NO_MEMORY_PROMPT,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
         ),
         "FullContext": FullContext(
             backend=backend,
             prompt_template=full_context_prompt,
             max_history_turns=max_history_turns,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
         ),
         "SimRetrieval": SimRetrieval(
             backend=backend,
@@ -744,6 +777,8 @@ def build_baselines(
             note_constructor=note_constructor,
             top_k=hp["k2"],
             prompt_template=retrieval_prompt,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
         ),
         "AtomicLinking": AtomicLinking(
             backend=backend,
@@ -752,6 +787,8 @@ def build_baselines(
             link_evolver=link_evolver,
             top_k=hp["k2"],
             prompt_template=_RETRIEVAL_PROMPT,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
         ),
         "RLManagerOnly": RLManagerOnly(
             backend=backend,
@@ -760,6 +797,8 @@ def build_baselines(
             memory_manager=memory_manager,
             top_k=hp["k2"],
             prompt_template=_RETRIEVAL_PROMPT,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
         ),
         "ValueRetrievalOnly": ValueRetrievalOnly(
             backend=backend,

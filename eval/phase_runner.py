@@ -196,18 +196,36 @@ def build_backend_from_config(config_path: str) -> Any:
     return build_backend(cfg["inference"])
 
 
-def build_context_baseline(name: str, backend: Any):
-    """Build NoMemory / FullContext directly (they hold no memory bank)."""
+def build_context_baseline(
+    name: str,
+    backend: Any,
+    max_tokens: Optional[int] = None,
+    context_window: Optional[int] = None,
+):
+    """Build NoMemory / FullContext directly (they hold no memory bank).
+
+    ``max_tokens`` / ``context_window`` are the config's answer budget, so the
+    bankless baselines trim their context like every other system
+    (``max_history_turns=0`` no longer means "unbounded": the token budget caps
+    the prompt).
+    """
     from eval.baselines import FullContext, NoMemory
     from eval.systems import _FULL_CONTEXT_PROMPT, _NO_MEMORY_PROMPT
 
     if name == "NoMemory":
-        return NoMemory(backend=backend, prompt_template=_NO_MEMORY_PROMPT)
+        return NoMemory(
+            backend=backend,
+            prompt_template=_NO_MEMORY_PROMPT,
+            max_tokens=max_tokens,
+            context_window=context_window,
+        )
     if name == "FullContext":
         return FullContext(
             backend=backend,
             prompt_template=_FULL_CONTEXT_PROMPT,
             max_history_turns=0,
+            max_tokens=max_tokens,
+            context_window=context_window,
         )
     raise ValueError(f"Not a context baseline: {name}")
 
@@ -220,7 +238,12 @@ def build_eval_system(
 ):
     """Build any eval system; context baselines ignore ``db_dir``."""
     if name in NO_BANK_SYSTEMS:
-        return build_context_baseline(name, backend)
+        from eval.systems import answer_budget_from_config
+
+        max_tokens, context_window = answer_budget_from_config(config_path)
+        return build_context_baseline(
+            name, backend, max_tokens=max_tokens, context_window=context_window
+        )
     return build_system(name, config_path, db_dir, backend=backend)
 
 

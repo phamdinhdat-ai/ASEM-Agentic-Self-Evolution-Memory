@@ -1,0 +1,1113 @@
+====================================================================================================
+COMPLETE ANSWER CONTEXT  |  tag=ds_fixed  system=ASEM  bank=static\memory_banks\locomo10\ds_fixed\ASEM\locomo_0000\asem.sqlite
+config=configs/models/qwen3_4b_openai.yaml  max_context_notes=8  content_char_limit=200  window=8192 answer_cap=512
+====================================================================================================
+
+BANK      : 221 notes
+QUESTION  : When did Caroline go to the LGBTQ support group?
+GOLD      : None
+RETRIEVER : 8 candidates (k2=5 + link traversal), stats={'phase_a_hits': 50, 'lambda_used': 0.25, 'query_type': 'factual', 'traversed_relations': ['same-topic', 'extends', 'same-topic', 'semantic', 'extends', 'same-topic', 'same-topic', 'extends', 'same-topic', 'same-topic', 'extends', 'extends', 'semantic', 'same-topic', 'same-topic', 'same-topic', 'same-topic', 'same-topic', 'same-topic', 'same-topic'], 'link_traversal_added': 3, 'total_retrieved': 8}
+RECOVERY  : widened k2=12/delta=0.15 -> 15, merged -> 15
+SELECTED  : 8 notes reach the prompt
+
+####################################################################################################
+# BEFORE — legacy payload (every field, every edge)
+# PRODUCTION (compact json): ~5061 tokens (20246 chars), 8 notes
+# pretty-printed below:      ~6065 tokens (24260 chars)
+####################################################################################################
+You are a memory retrieval agent. Given a question and a set of candidate memory notes from a memory graph, select the notes needed to answer and produce a concise factual answer.
+
+Each note carries: id, speaker (who said it), entities (people/places named), keywords, description, session_date, and relations — typed edges to OTHER NOTES IN THIS SAME LIST, referenced by target_id. A note may also carry `also_linked`: a count of its remaining edges to notes that are NOT in this list (e.g. "same-topic:14, extends:3"). Those targets cannot be read, but the counts tell you whether a note is heavily corroborated, contradicted or extended elsewhere in the memory.
+
+## Task
+Output a JSON object with two fields:
+- **selected_ids**: The ids of the candidate notes whose information is actually used in the answer. Empty list if no note is relevant.
+- **answer**: The concise answer (a few words to one sentence). Answer from the notes even if they only PARTIALLY cover the question — say "I don't know" ONLY when no note contains any information related to the question. For time or date questions, give the exact date, month, or year using the notes' session_date and descriptions, resolving any relative timeframe into an absolute date.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question and identify what fact it asks for.
+Step 2: Skim each candidate note's description, keywords, entities, speaker, and session_date.
+Step 3: Keep every note that contributes information related to the question. Follow `relations` (especially temporal / causal / contradicts / extends) to reach the notes the question depends on. Use `also_linked` only as a hint about how well-connected a note is — never invent the content of a note that is not listed.
+Step 4: Write the answer strictly from the kept notes, resolving dates to absolute dates when asked about time.
+Step 5: Attribute each fact to the note's `speaker`. If the question credits a fact to the wrong person, STILL GIVE THE FACT and name the correct speaker — a name mismatch is never a reason to refuse.
+Step 6: Only if NO note is related at all, set selected_ids to [] and answer "I don't know".
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": ["id1", ...], "answer": "concise answer"}
+
+## Examples
+
+Example 1:
+Query: "Where does Alex work?"
+Memory notes: [{"id": "n1", "description": "Alex is a data scientist at Google in Mountain View.", "keywords": ["alex", "google", "mountain view"]}, {"id": "n2", "description": "Alex has a golden retriever named Buddy.", "keywords": ["alex", "buddy", "dog"]}]
+Reasoning: Only n1 mentions Alex's work. n2 is about a dog — irrelevant.
+{"selected_ids": ["n1"], "answer": "Alex works at Google in Mountain View."}
+
+Example 2 (no relevant note):
+Query: "What is Alex's phone number?"
+Memory notes: [{"id": "n1", "description": "Alex is a data scientist.", "keywords": ["alex", "data scientist"]}]
+Reasoning: No note contains a phone number — cannot answer.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 2b (temporal question with session_date):
+Query: "When did Caroline go to the support group?"
+Memory notes: [{"id": "n1", "speaker": "Caroline", "session_date": "8 May 2023", "description": "On 7 May 2023, Caroline went to the LGBTQ support group.", "keywords": ["caroline", "support group"]}]
+Reasoning: Note n1 gives the exact event date (7 May 2023).
+{"selected_ids": ["n1"], "answer": "7 May 2023"}
+
+Example 3 (partial evidence — answer what the notes cover):
+Query: "What events has Alex participated in?"
+Memory notes: [{"id": "n1", "speaker": "Alex", "description": "Alex spoke at a school event.", "keywords": ["alex", "school event"]}, {"id": "n2", "speaker": "Alex", "description": "Alex has a pet cat.", "keywords": ["alex", "cat"]}]
+Reasoning: n1 lists one event (school event). n2 is unrelated. Answer with the one event — do not refuse.
+{"selected_ids": ["n1"], "answer": "Alex spoke at a school event."}
+
+Example 4 (attribution / person swap — use speaker and relations):
+Query: "What was Melanie's grandmother's gift?"
+Memory notes: [{"id": "n1", "speaker": "Caroline", "entities": ["Caroline", "Sweden"], "description": "Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.", "keywords": ["necklace", "grandmother", "sweden"], "relations": [{"relation": "same-topic", "target_id": "n2"}]}, {"id": "n2", "speaker": "Melanie", "entities": ["Melanie"], "description": "Melanie complimented the necklace.", "keywords": ["necklace"], "relations": [{"relation": "contradicts", "target_id": "n1"}]}]
+Reasoning: The necklace belongs to Caroline (n1); n2 only comments on it. The question credits it to the wrong person — answer with the correct person.
+{"selected_ids": ["n1", "n2"], "answer": "It was Caroline's necklace, from her grandmother in Sweden — not Melanie's."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["n1", "n2"], "answer": "Alex works at Google."}
+→ Do not select notes whose information was not used in the answer.
+WRONG: {"selected_ids": ["n1"], "answer": "Alex works at Meta."}
+→ Answer only what the notes say. Never invent or guess facts.
+WRONG: Answering "last week" when the note gives the session date 8 May 2023 and the date was early May 2023.
+→ Give the resolved absolute date whenever possible.
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include any commentary, markdown fences, or extra text.
+- selected_ids must only contain ids from the provided memory notes.
+- Keep the answer short — a few words or one sentence.
+- `relations` is a READING AID, not part of the answer: do not mention it, and do not answer with a note that is not in the list.
+
+## Query
+When did Caroline go to the LGBTQ support group?
+
+## Memory notes
+[
+  {
+    "id": "cb65da0c-65e8-4b05-9fe0-16cb831bdc8d",
+    "keywords": [
+      "lgbtq+",
+      "adoption",
+      "inclusivity",
+      "support",
+      "adoption process",
+      "excitement"
+    ],
+    "tags": [
+      "personal",
+      "fact",
+      "relationship",
+      "question"
+    ],
+    "description": "Caroline chose the adoption agency because it helps LGBTQ+ people with adoption, and its inclusivity and support resonated with her; Melanie appreciated this inclusivity and support and asked Caroline what she is excited about in the adoption process.",
+    "content": "[Caroline] I chose them 'cause they help LGBTQ+ folks with adoption. Their inclusivity and support really spoke to me.",
+    "utility": 0.5,
+    "session_date": "2023-05-25T13:14:00Z",
+    "timestamp_iso": "2023-05-25T13:14:00Z",
+    "entities": [
+      "Melanie",
+      "Caroline"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "3fd8a270-01f4-4b09-b5e0-428d1f132bec"
+      },
+      {
+        "relation": "extends",
+        "target_id": "d16d175a-0e61-4be9-8998-5ea9e8db8193"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "1691c03b-6efe-42f1-8600-ef21544728d9"
+      },
+      {
+        "relation": "semantic",
+        "target_id": "e00a7109-889c-4777-868a-acd55f727cb8"
+      },
+      {
+        "relation": "extends",
+        "target_id": "c0d28611-82aa-41e7-a44a-5287b9365503"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "47efed7a-c4fd-49e9-9ce1-0e7a9894edab"
+      },
+      {
+        "relation": "extends",
+        "target_id": "4548f63e-e9de-4e8a-a0fe-75da24a0df88"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "97979d6b-ad04-419e-99e8-bfe18059017b"
+      }
+    ]
+  },
+  {
+    "id": "8ddb1b08-03b2-4660-971f-8ddd11508d10",
+    "keywords": [
+      "lgbtq support group",
+      "caroline",
+      "melanie",
+      "accepted",
+      "courage",
+      "self-embrace",
+      "pride parade",
+      "lgbtq center",
+      "unity",
+      "strength",
+      "connected lgbtq activists",
+      "meetings",
+      "events",
+      "campaigns"
+    ],
+    "tags": [
+      "personal",
+      "event",
+      "temporal",
+      "opinion",
+      "question",
+      "health",
+      "relationship",
+      "plan"
+    ],
+    "description": "On 7 May 2023, Caroline attended a powerful LGBTQ support group where she felt accepted and gained courage to embrace herself, and she also joined the pride parade, calling it an amazing top memory; she later described her group 'Connected LGBTQ Activists', which includes diverse people, holds regular meetings, and plans events and campaigns for mutual support.",
+    "content": "[Caroline] I went to a LGBTQ support group yesterday and it was so powerful.",
+    "utility": 0.5,
+    "session_date": "2023-05-08T13:56:00Z",
+    "timestamp_iso": "2023-05-08T13:56:00Z",
+    "entities": [
+      "Caroline"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "f3ab25cb-302c-404d-ae82-41c796f343e9"
+      },
+      {
+        "relation": "extends",
+        "target_id": "109648cd-ba31-4193-be18-444452069e00"
+      },
+      {
+        "relation": "extends",
+        "target_id": "47efed7a-c4fd-49e9-9ce1-0e7a9894edab"
+      },
+      {
+        "relation": "semantic",
+        "target_id": "a9927439-39dd-489a-947a-eb97b6ea6dc6"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "01e7b667-9593-4d41-999a-f4ec8d31d337"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "1c693e99-ba74-4a4c-883b-d15db05be1dc"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "cb65da0c-65e8-4b05-9fe0-16cb831bdc8d"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "9266c8eb-ba4c-454f-a09d-bbb7f1e30a70"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "40c64ff8-7e51-4df4-9774-1752cf5075a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2a935046-e72a-4f5c-a96c-1b038ffd5db3"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "78d67cb0-2ed4-4ba8-b102-ba34922e4a6c"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2fb8fbb2-60a0-478b-8da2-28f7286891e5"
+      },
+      {
+        "relation": "causal",
+        "target_id": "0b221336-f69f-4831-a9cb-8dc2fbb98fda"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "567f31f5-c8c6-44fd-9c05-97a71418685a"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "dcd8fc5d-977c-4a81-aa12-ad63618ac5fc"
+      }
+    ]
+  },
+  {
+    "id": "16a1517e-f4c9-41f7-b51e-c8aa89291619",
+    "keywords": [
+      "connected lgbtq activists",
+      "platform",
+      "meetings",
+      "events",
+      "campaigns"
+    ],
+    "tags": [
+      "personal",
+      "relationship",
+      "plan"
+    ],
+    "description": "Caroline described her group 'Connected LGBTQ Activists', which includes diverse people, holds regular meetings, and plans events and campaigns for mutual support.",
+    "content": "[Caroline] Thanks, Melanie! It's awesome to have our own platform to be ourselves and support others' rights. Our group, 'Connected LGBTQ Activists', is made of all kinds of people investing in positive changes. We have regular meetings, plan events and campaigns, to get together and support each other.",
+    "utility": 0.5,
+    "session_date": "2023-07-20T20:56:00Z",
+    "timestamp_iso": "2023-07-20T20:56:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie",
+      "LGBTQ activist group",
+      "Connected LGBTQ Activists"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "temporal",
+        "target_id": "765b7afd-96d9-4107-a4d7-4ae65036d595"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "40c64ff8-7e51-4df4-9774-1752cf5075a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "01e7b667-9593-4d41-999a-f4ec8d31d337"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "06a83966-e31e-4662-8b8b-f9b68ff524e3"
+      }
+    ]
+  },
+  {
+    "id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45",
+    "keywords": [
+      "caroline",
+      "lgbtq rights",
+      "acceptance",
+      "crowd",
+      "love",
+      "rainbow flag",
+      "volunteering"
+    ],
+    "tags": [
+      "personal",
+      "opinion",
+      "event"
+    ],
+    "description": "Caroline described the pride crowd, shown with a rainbow flag, as inspiring, with diverse people celebrating love and acceptance, motivating her to keep fighting for LGBTQ rights.",
+    "content": "[Caroline] It was so inspiring, Mel! Check out the crowd. People of all kinds celebrating love and acceptance - it really pushed me to keep fighting for LGBTQ rights. (image: a photo of a group of people walking down a street with balloons)",
+    "utility": 0.5,
+    "session_date": "2023-08-14T14:24:00Z",
+    "timestamp_iso": "2023-08-14T14:24:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "2a935046-e72a-4f5c-a96c-1b038ffd5db3"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "567f31f5-c8c6-44fd-9c05-97a71418685a"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e4027763-de57-403d-b8df-39e99845f176"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "06a83966-e31e-4662-8b8b-f9b68ff524e3"
+      },
+      {
+        "relation": "extends",
+        "target_id": "2e24e3a7-3014-48fc-99d3-9f3d12109b38"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "cee29410-ce55-45fd-9b0b-db2ed4fc4d2a"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "1d15dbde-5c63-4b2b-a420-92532f677259"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "227b01fe-4963-4663-84c8-82026ee20161"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "dcd8fc5d-977c-4a81-aa12-ad63618ac5fc"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "78d67cb0-2ed4-4ba8-b102-ba34922e4a6c"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "c3d3f3d8-4887-4ba1-9a55-73649082ed01"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "1e86ac74-b282-4be4-9ee4-629dab137ee8"
+      }
+    ]
+  },
+  {
+    "id": "1e86ac74-b282-4be4-9ee4-629dab137ee8",
+    "keywords": [
+      "caroline",
+      "lgbtq+ community",
+      "volunteering",
+      "art",
+      "mentors",
+      "support",
+      "painting"
+    ],
+    "tags": [
+      "personal",
+      "preference",
+      "opinion"
+    ],
+    "description": "Caroline said she is inspired by making a difference for the LGBTQ+ community, is thankful for support from friends, family, and mentors, and shared a photo of a painting of a heart.",
+    "content": "[Caroline] I'm inspired seeing my work make a difference for the LGBTQ+ community. Knowing I'm helping create a more loving world is amazing. I'm really thankful for my friends, family and mentors' support. It inspires me to keep making art, too. (image: a photo of a painting of a heart on a table)",
+    "utility": 0.5,
+    "session_date": "2023-09-13T00:09:00Z",
+    "timestamp_iso": "2023-09-13T00:09:00Z",
+    "entities": [
+      "Melanie",
+      "Caroline",
+      "LGBTQ+ community"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "extends",
+        "target_id": "0b0e5f6c-40a1-4333-8593-7c4f0a850161"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "109648cd-ba31-4193-be18-444452069e00"
+      },
+      {
+        "relation": "extends",
+        "target_id": "a4ccd22f-f454-4339-85e6-5a50be9a96b9"
+      },
+      {
+        "relation": "extends",
+        "target_id": "a794681e-a038-4477-ad32-dae315930405"
+      },
+      {
+        "relation": "extends",
+        "target_id": "af83ccda-7c0e-47f9-997e-bf6672da7dc9"
+      },
+      {
+        "relation": "extends",
+        "target_id": "0b221336-f69f-4831-a9cb-8dc2fbb98fda"
+      },
+      {
+        "relation": "extends",
+        "target_id": "77d65fb1-15db-4e65-9146-f62ef8879a5d"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "cee29410-ce55-45fd-9b0b-db2ed4fc4d2a"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2e24e3a7-3014-48fc-99d3-9f3d12109b38"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "0d23e26b-52a5-4aa8-9358-75da70b2f66f"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "4ef3b78a-4013-4a8d-8865-bf2f5d9d54ce"
+      }
+    ]
+  },
+  {
+    "id": "765b7afd-96d9-4107-a4d7-4ae65036d595",
+    "keywords": [
+      "transgender conference",
+      "advocacy",
+      "community"
+    ],
+    "tags": [
+      "personal",
+      "event",
+      "plan"
+    ],
+    "description": "Caroline plans to attend a transgender conference in July 2023 to meet community members and learn about advocacy.",
+    "content": "[Caroline] Thanks Mel! I'm going to a transgender conference this month. I'm so excited to meet other people in the community and learn more about advocacy. It's gonna be great!",
+    "utility": 0.5,
+    "session_date": "2023-07-03T13:36:00Z",
+    "timestamp_iso": "2023-07-03T13:36:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "9266c8eb-ba4c-454f-a09d-bbb7f1e30a70"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "40c64ff8-7e51-4df4-9774-1752cf5075a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "01e7b667-9593-4d41-999a-f4ec8d31d337"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2a935046-e72a-4f5c-a96c-1b038ffd5db3"
+      },
+      {
+        "relation": "temporal",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "335cddc7-3eb5-4758-a70a-3629a4c42b11"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "78d67cb0-2ed4-4ba8-b102-ba34922e4a6c"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2fb8fbb2-60a0-478b-8da2-28f7286891e5"
+      },
+      {
+        "relation": "temporal",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "227b01fe-4963-4663-84c8-82026ee20161"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "a2a8c335-2fc3-4de0-9cb8-01efe5a95f9b"
+      }
+    ]
+  },
+  {
+    "id": "e03c9428-e057-479a-be08-1427fd9605a0",
+    "keywords": [
+      "caroline",
+      "transgender teen",
+      "mentee",
+      "confidence",
+      "pride event"
+    ],
+    "tags": [
+      "personal",
+      "relationship",
+      "event",
+      "temporal"
+    ],
+    "description": "Caroline mentors a transgender teen like herself, working on confidence and positive strategies, and they attended an LGBT pride event in June 2023.",
+    "content": "[Caroline] I mentor a transgender teen just like me. We've been working on building up confidence and finding positive strategies, and it's really been paying off! We had a great time at the LGBT pride event last month.",
+    "utility": 0.5,
+    "session_date": "2023-07-17T14:31:00Z",
+    "timestamp_iso": "2023-07-17T14:31:00Z",
+    "entities": [
+      "Caroline"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "765b7afd-96d9-4107-a4d7-4ae65036d595"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "9266c8eb-ba4c-454f-a09d-bbb7f1e30a70"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2a935046-e72a-4f5c-a96c-1b038ffd5db3"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2fb8fbb2-60a0-478b-8da2-28f7286891e5"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "567f31f5-c8c6-44fd-9c05-97a71418685a"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "dcd8fc5d-977c-4a81-aa12-ad63618ac5fc"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "a2a8c335-2fc3-4de0-9cb8-01efe5a95f9b"
+      }
+    ]
+  },
+  {
+    "id": "f98ea146-e9c2-49fd-8993-93573844fc9e",
+    "keywords": [
+      "lgbtq conference",
+      "trans rights",
+      "community",
+      "acceptance",
+      "awareness"
+    ],
+    "tags": [
+      "event",
+      "personal",
+      "opinion"
+    ],
+    "description": "Caroline attended an LGBTQ conference on 10 July 2023, where she connected with people on similar journeys and felt accepted, reinforcing her commitment to trans rights and awareness.",
+    "content": "[Caroline] Hey Mel, great to chat with you again! So much has happened since we last spoke - I went to an LGBTQ conference two days ago and it was really special. I got the chance to meet and connect with people who've gone through similar journeys. It was such a welcoming environment and I felt totally accepted. I'm really thankful for this amazing community - it's shown me how important it is to fight for trans rights and spread awareness.",
+    "utility": 0.5,
+    "session_date": "2023-07-12T16:33:00Z",
+    "timestamp_iso": "2023-07-12T16:33:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "temporal",
+        "target_id": "765b7afd-96d9-4107-a4d7-4ae65036d595"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "40c64ff8-7e51-4df4-9774-1752cf5075a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "01e7b667-9593-4d41-999a-f4ec8d31d337"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "9266c8eb-ba4c-454f-a09d-bbb7f1e30a70"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "2a935046-e72a-4f5c-a96c-1b038ffd5db3"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "567f31f5-c8c6-44fd-9c05-97a71418685a"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "06a83966-e31e-4662-8b8b-f9b68ff524e3"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "227b01fe-4963-4663-84c8-82026ee20161"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "dcd8fc5d-977c-4a81-aa12-ad63618ac5fc"
+      }
+    ]
+  }
+]
+
+
+####################################################################################################
+# AFTER — lean payload, capped to max_context_notes
+# PRODUCTION (compact json): ~3391 tokens (13567 chars), 8 notes
+# pretty-printed below:      ~3795 tokens (15183 chars)
+####################################################################################################
+You are a memory retrieval agent. Given a question and a set of candidate memory notes from a memory graph, select the notes needed to answer and produce a concise factual answer.
+
+Each note carries: id, speaker (who said it), entities (people/places named), keywords, description, session_date, and relations — typed edges to OTHER NOTES IN THIS SAME LIST, referenced by target_id. A note may also carry `also_linked`: a count of its remaining edges to notes that are NOT in this list (e.g. "same-topic:14, extends:3"). Those targets cannot be read, but the counts tell you whether a note is heavily corroborated, contradicted or extended elsewhere in the memory.
+
+## Task
+Output a JSON object with two fields:
+- **selected_ids**: The ids of the candidate notes whose information is actually used in the answer. Empty list if no note is relevant.
+- **answer**: The concise answer (a few words to one sentence). Answer from the notes even if they only PARTIALLY cover the question — say "I don't know" ONLY when no note contains any information related to the question. For time or date questions, give the exact date, month, or year using the notes' session_date and descriptions, resolving any relative timeframe into an absolute date.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question and identify what fact it asks for.
+Step 2: Skim each candidate note's description, keywords, entities, speaker, and session_date.
+Step 3: Keep every note that contributes information related to the question. Follow `relations` (especially temporal / causal / contradicts / extends) to reach the notes the question depends on. Use `also_linked` only as a hint about how well-connected a note is — never invent the content of a note that is not listed.
+Step 4: Write the answer strictly from the kept notes, resolving dates to absolute dates when asked about time.
+Step 5: Attribute each fact to the note's `speaker`. If the question credits a fact to the wrong person, STILL GIVE THE FACT and name the correct speaker — a name mismatch is never a reason to refuse.
+Step 6: Only if NO note is related at all, set selected_ids to [] and answer "I don't know".
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": ["id1", ...], "answer": "concise answer"}
+
+## Examples
+
+Example 1:
+Query: "Where does Alex work?"
+Memory notes: [{"id": "n1", "description": "Alex is a data scientist at Google in Mountain View.", "keywords": ["alex", "google", "mountain view"]}, {"id": "n2", "description": "Alex has a golden retriever named Buddy.", "keywords": ["alex", "buddy", "dog"]}]
+Reasoning: Only n1 mentions Alex's work. n2 is about a dog — irrelevant.
+{"selected_ids": ["n1"], "answer": "Alex works at Google in Mountain View."}
+
+Example 2 (no relevant note):
+Query: "What is Alex's phone number?"
+Memory notes: [{"id": "n1", "description": "Alex is a data scientist.", "keywords": ["alex", "data scientist"]}]
+Reasoning: No note contains a phone number — cannot answer.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 2b (temporal question with session_date):
+Query: "When did Caroline go to the support group?"
+Memory notes: [{"id": "n1", "speaker": "Caroline", "session_date": "8 May 2023", "description": "On 7 May 2023, Caroline went to the LGBTQ support group.", "keywords": ["caroline", "support group"]}]
+Reasoning: Note n1 gives the exact event date (7 May 2023).
+{"selected_ids": ["n1"], "answer": "7 May 2023"}
+
+Example 3 (partial evidence — answer what the notes cover):
+Query: "What events has Alex participated in?"
+Memory notes: [{"id": "n1", "speaker": "Alex", "description": "Alex spoke at a school event.", "keywords": ["alex", "school event"]}, {"id": "n2", "speaker": "Alex", "description": "Alex has a pet cat.", "keywords": ["alex", "cat"]}]
+Reasoning: n1 lists one event (school event). n2 is unrelated. Answer with the one event — do not refuse.
+{"selected_ids": ["n1"], "answer": "Alex spoke at a school event."}
+
+Example 4 (attribution / person swap — use speaker and relations):
+Query: "What was Melanie's grandmother's gift?"
+Memory notes: [{"id": "n1", "speaker": "Caroline", "entities": ["Caroline", "Sweden"], "description": "Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.", "keywords": ["necklace", "grandmother", "sweden"], "relations": [{"relation": "same-topic", "target_id": "n2"}]}, {"id": "n2", "speaker": "Melanie", "entities": ["Melanie"], "description": "Melanie complimented the necklace.", "keywords": ["necklace"], "relations": [{"relation": "contradicts", "target_id": "n1"}]}]
+Reasoning: The necklace belongs to Caroline (n1); n2 only comments on it. The question credits it to the wrong person — answer with the correct person.
+{"selected_ids": ["n1", "n2"], "answer": "It was Caroline's necklace, from her grandmother in Sweden — not Melanie's."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["n1", "n2"], "answer": "Alex works at Google."}
+→ Do not select notes whose information was not used in the answer.
+WRONG: {"selected_ids": ["n1"], "answer": "Alex works at Meta."}
+→ Answer only what the notes say. Never invent or guess facts.
+WRONG: Answering "last week" when the note gives the session date 8 May 2023 and the date was early May 2023.
+→ Give the resolved absolute date whenever possible.
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include any commentary, markdown fences, or extra text.
+- selected_ids must only contain ids from the provided memory notes.
+- Keep the answer short — a few words or one sentence.
+- `relations` is a READING AID, not part of the answer: do not mention it, and do not answer with a note that is not in the list.
+
+## Query
+When did Caroline go to the LGBTQ support group?
+
+## Memory notes
+[
+  {
+    "id": "cb65da0c-65e8-4b05-9fe0-16cb831bdc8d",
+    "keywords": [
+      "lgbtq+",
+      "adoption",
+      "inclusivity",
+      "support",
+      "adoption process",
+      "excitement"
+    ],
+    "description": "Caroline chose the adoption agency because it helps LGBTQ+ people with adoption, and its inclusivity and support resonated with her; Melanie appreciated this inclusivity and support and asked Caroline what she is excited about in the adoption process.",
+    "session_date": "2023-05-25T13:14:00Z",
+    "entities": [
+      "Melanie",
+      "Caroline"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      }
+    ],
+    "also_linked": "same-topic:4, extends:3, semantic:1",
+    "content": "[Caroline] I chose them 'cause they help LGBTQ+ folks with adoption. Their inclusivity and support really spoke to me."
+  },
+  {
+    "id": "8ddb1b08-03b2-4660-971f-8ddd11508d10",
+    "keywords": [
+      "lgbtq support group",
+      "caroline",
+      "melanie",
+      "accepted",
+      "courage",
+      "self-embrace",
+      "pride parade",
+      "lgbtq center",
+      "unity",
+      "strength",
+      "connected lgbtq activists",
+      "meetings",
+      "events",
+      "campaigns"
+    ],
+    "description": "On 7 May 2023, Caroline attended a powerful LGBTQ support group where she felt accepted and gained courage to embrace herself, and she also joined the pride parade, calling it an amazing top memory; she later described her group 'Connected LGBTQ Activists', which includes diverse people, holds regular meetings, and plans events and campaigns for mutual support.",
+    "session_date": "2023-05-08T13:56:00Z",
+    "entities": [
+      "Caroline"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "cb65da0c-65e8-4b05-9fe0-16cb831bdc8d"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45"
+      }
+    ],
+    "also_linked": "same-topic:10, extends:2, causal:1, semantic:1",
+    "content": "[Caroline] I went to a LGBTQ support group yesterday and it was so powerful."
+  },
+  {
+    "id": "16a1517e-f4c9-41f7-b51e-c8aa89291619",
+    "keywords": [
+      "connected lgbtq activists",
+      "platform",
+      "meetings",
+      "events",
+      "campaigns"
+    ],
+    "description": "Caroline described her group 'Connected LGBTQ Activists', which includes diverse people, holds regular meetings, and plans events and campaigns for mutual support.",
+    "session_date": "2023-07-20T20:56:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie",
+      "LGBTQ activist group",
+      "Connected LGBTQ Activists"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "temporal",
+        "target_id": "765b7afd-96d9-4107-a4d7-4ae65036d595"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      }
+    ],
+    "also_linked": "same-topic:3",
+    "content": "[Caroline] Thanks, Melanie! It's awesome to have our own platform to be ourselves and support others' rights. Our group, 'Connected LGBTQ Activists', is made of all kinds of people investing in \u2026"
+  },
+  {
+    "id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45",
+    "keywords": [
+      "caroline",
+      "lgbtq rights",
+      "acceptance",
+      "crowd",
+      "love",
+      "rainbow flag",
+      "volunteering"
+    ],
+    "description": "Caroline described the pride crowd, shown with a rainbow flag, as inspiring, with diverse people celebrating love and acceptance, motivating her to keep fighting for LGBTQ rights.",
+    "session_date": "2023-08-14T14:24:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "1e86ac74-b282-4be4-9ee4-629dab137ee8"
+      }
+    ],
+    "also_linked": "same-topic:10, extends:1",
+    "content": "[Caroline] It was so inspiring, Mel! Check out the crowd. People of all kinds celebrating love and acceptance - it really pushed me to keep fighting for LGBTQ rights. (image: a photo of a group of \u2026"
+  },
+  {
+    "id": "1e86ac74-b282-4be4-9ee4-629dab137ee8",
+    "keywords": [
+      "caroline",
+      "lgbtq+ community",
+      "volunteering",
+      "art",
+      "mentors",
+      "support",
+      "painting"
+    ],
+    "description": "Caroline said she is inspired by making a difference for the LGBTQ+ community, is thankful for support from friends, family, and mentors, and shared a photo of a painting of a heart.",
+    "session_date": "2023-09-13T00:09:00Z",
+    "entities": [
+      "Melanie",
+      "Caroline",
+      "LGBTQ+ community"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45"
+      }
+    ],
+    "also_linked": "extends:6, same-topic:5",
+    "content": "[Caroline] I'm inspired seeing my work make a difference for the LGBTQ+ community. Knowing I'm helping create a more loving world is amazing. I'm really thankful for my friends, family and mentors' \u2026"
+  },
+  {
+    "id": "765b7afd-96d9-4107-a4d7-4ae65036d595",
+    "keywords": [
+      "transgender conference",
+      "advocacy",
+      "community"
+    ],
+    "description": "Caroline plans to attend a transgender conference in July 2023 to meet community members and learn about advocacy.",
+    "session_date": "2023-07-03T13:36:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "temporal",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "temporal",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      }
+    ],
+    "also_linked": "same-topic:9",
+    "content": "[Caroline] Thanks Mel! I'm going to a transgender conference this month. I'm so excited to meet other people in the community and learn more about advocacy. It's gonna be great!"
+  },
+  {
+    "id": "e03c9428-e057-479a-be08-1427fd9605a0",
+    "keywords": [
+      "caroline",
+      "transgender teen",
+      "mentee",
+      "confidence",
+      "pride event"
+    ],
+    "description": "Caroline mentors a transgender teen like herself, working on confidence and positive strategies, and they attended an LGBT pride event in June 2023.",
+    "session_date": "2023-07-17T14:31:00Z",
+    "entities": [
+      "Caroline"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "same-topic",
+        "target_id": "8ddb1b08-03b2-4660-971f-8ddd11508d10"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "765b7afd-96d9-4107-a4d7-4ae65036d595"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "f98ea146-e9c2-49fd-8993-93573844fc9e"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      }
+    ],
+    "also_linked": "same-topic:6",
+    "content": "[Caroline] I mentor a transgender teen just like me. We've been working on building up confidence and finding positive strategies, and it's really been paying off! We had a great time at the LGBT \u2026"
+  },
+  {
+    "id": "f98ea146-e9c2-49fd-8993-93573844fc9e",
+    "keywords": [
+      "lgbtq conference",
+      "trans rights",
+      "community",
+      "acceptance",
+      "awareness"
+    ],
+    "description": "Caroline attended an LGBTQ conference on 10 July 2023, where she connected with people on similar journeys and felt accepted, reinforcing her commitment to trans rights and awareness.",
+    "session_date": "2023-07-12T16:33:00Z",
+    "entities": [
+      "Caroline",
+      "Melanie"
+    ],
+    "speaker": "Caroline",
+    "relations": [
+      {
+        "relation": "temporal",
+        "target_id": "765b7afd-96d9-4107-a4d7-4ae65036d595"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "e03c9428-e057-479a-be08-1427fd9605a0"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "16a1517e-f4c9-41f7-b51e-c8aa89291619"
+      },
+      {
+        "relation": "same-topic",
+        "target_id": "d1717e36-1bcf-4c1e-ab28-73ac1399fc45"
+      }
+    ],
+    "also_linked": "same-topic:8",
+    "content": "[Caroline] Hey Mel, great to chat with you again! So much has happened since we last spoke - I went to an LGBTQ conference two days ago and it was really special. I got the chance to meet and connect \u2026"
+  }
+]
+
+
+####################################################################################################
+# SAME NOTES via _render_graph_context (FastASEM / ASEMv2 direct path)
+# ~1355 tokens  (5423 chars)
+####################################################################################################
+[1] date=2023-05-08T13:56:00Z speaker=Caroline entities=[Caroline]
+    summary: On 7 May 2023, Caroline attended a powerful LGBTQ support group where she felt accepted and gained courage to embrace herself, and she also joined the pride parade, calling it an amazing top memory; she later described her group 'Connected LGBTQ Activists', which includes diverse people, holds regular meetings, and plans events and campaigns for mutual support.
+    content: [Caroline] I went to a LGBTQ support group yesterday and it was so powerful.
+    keywords: lgbtq support group, caroline, melanie, accepted, courage, self-embrace, pride parade, lgbtq center, unity, strength, connected lgbtq activists, meetings
+    relations: same-topic -> [2]; same-topic -> [5]; same-topic -> [6]; same-topic -> [7]
+    also_linked: same-topic:10, extends:2, causal:1, semantic:1
+[2] date=2023-05-25T13:14:00Z speaker=Caroline entities=[Melanie, Caroline]
+    summary: Caroline chose the adoption agency because it helps LGBTQ+ people with adoption, and its inclusivity and support resonated with her; Melanie appreciated this inclusivity and support and asked Caroline what she is excited about in the adoption process.
+    content: [Caroline] I chose them 'cause they help LGBTQ+ folks with adoption. Their inclusivity and support really spoke to me.
+    keywords: lgbtq+, adoption, inclusivity, support, adoption process, excitement
+    relations: same-topic -> [1]
+    also_linked: same-topic:4, extends:3, semantic:1
+[3] date=2023-07-03T13:36:00Z speaker=Caroline entities=[Caroline, Melanie]
+    summary: Caroline plans to attend a transgender conference in July 2023 to meet community members and learn about advocacy.
+    content: [Caroline] Thanks Mel! I'm going to a transgender conference this month. I'm so excited to meet other people in the community and learn more about advocacy. It's gonna be great!
+    keywords: transgender conference, advocacy, community
+    relations: temporal -> [4]; same-topic -> [5]; temporal -> [6]
+    also_linked: same-topic:9
+[4] date=2023-07-12T16:33:00Z speaker=Caroline entities=[Caroline, Melanie]
+    summary: Caroline attended an LGBTQ conference on 10 July 2023, where she connected with people on similar journeys and felt accepted, reinforcing her commitment to trans rights and awareness.
+    content: [Caroline] Hey Mel, great to chat with you again! So much has happened since we last spoke - I went to an LGBTQ conference two days ago and it was really special. I got the chance to meet and connect …
+    keywords: lgbtq conference, trans rights, community, acceptance, awareness
+    relations: temporal -> [3]; same-topic -> [5]; same-topic -> [6]; same-topic -> [7]
+    also_linked: same-topic:8
+[5] date=2023-07-17T14:31:00Z speaker=Caroline entities=[Caroline]
+    summary: Caroline mentors a transgender teen like herself, working on confidence and positive strategies, and they attended an LGBT pride event in June 2023.
+    content: [Caroline] I mentor a transgender teen just like me. We've been working on building up confidence and finding positive strategies, and it's really been paying off! We had a great time at the LGBT …
+    keywords: caroline, transgender teen, mentee, confidence, pride event
+    relations: same-topic -> [1]; same-topic -> [3]; same-topic -> [4]; same-topic -> [6]
+    also_linked: same-topic:6
+[6] date=2023-07-20T20:56:00Z speaker=Caroline entities=[Caroline, Melanie, LGBTQ activist group, Connected LGBTQ Activists]
+    summary: Caroline described her group 'Connected LGBTQ Activists', which includes diverse people, holds regular meetings, and plans events and campaigns for mutual support.
+    content: [Caroline] Thanks, Melanie! It's awesome to have our own platform to be ourselves and support others' rights. Our group, 'Connected LGBTQ Activists', is made of all kinds of people investing in …
+    keywords: connected lgbtq activists, platform, meetings, events, campaigns
+    relations: same-topic -> [4]; same-topic -> [1]; temporal -> [3]; same-topic -> [5]
+    also_linked: same-topic:3
+[7] date=2023-08-14T14:24:00Z speaker=Caroline entities=[Caroline, Melanie]
+    summary: Caroline described the pride crowd, shown with a rainbow flag, as inspiring, with diverse people celebrating love and acceptance, motivating her to keep fighting for LGBTQ rights.
+    content: [Caroline] It was so inspiring, Mel! Check out the crowd. People of all kinds celebrating love and acceptance - it really pushed me to keep fighting for LGBTQ rights. (image: a photo of a group of …
+    keywords: caroline, lgbtq rights, acceptance, crowd, love, rainbow flag, volunteering
+    relations: same-topic -> [4]; same-topic -> [1]; same-topic -> [8]
+    also_linked: same-topic:10, extends:1
+[8] date=2023-09-13T00:09:00Z speaker=Caroline entities=[Melanie, Caroline, LGBTQ+ community]
+    summary: Caroline said she is inspired by making a difference for the LGBTQ+ community, is thankful for support from friends, family, and mentors, and shared a photo of a painting of a heart.
+    content: [Caroline] I'm inspired seeing my work make a difference for the LGBTQ+ community. Knowing I'm helping create a more loving world is amazing. I'm really thankful for my friends, family and mentors' …
+    keywords: caroline, lgbtq+ community, volunteering, art, mentors, support, painting
+    relations: same-topic -> [7]
+    also_linked: extends:6, same-topic:5

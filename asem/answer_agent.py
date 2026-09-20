@@ -13,6 +13,14 @@ from .backends.base import InferenceBackend
 from .llm_validator import LLMRetryHandler, _is_transient_network_error, validate_distil_response
 from .logging_utils import get_logger
 from .note import Note, _try_extract_json
+from .token_budget import (
+    SAFETY_MARGIN_TOKENS as _SAFETY_MARGIN_TOKENS,
+    default_output_cap,
+    estimate_tokens,
+    fit_items,
+    generate_with_cap,
+    resolve_budget,
+)
 
 _log = get_logger("S4.answer")
 
@@ -36,9 +44,9 @@ _NOTE_GAP_RE = re.compile(
 # an answer, so the recovery pass never throws away a correct partial answer.
 _ABSTENTION_MAX_CHARS = 240
 
-# Reserve a few tokens when budgeting the prompt: the ~4-chars/token estimate can
-# undercount (JSON punctuation, non-ASCII), and a 1-token overflow is a hard 400.
-_SAFETY_MARGIN_TOKENS = 64
+# The prompt-budget arithmetic (estimate, safety margin, trimming) is shared with
+# the baselines so every system in a comparison respects the same number of
+# tokens for the answer call. See `asem/token_budget.py`.
 
 # Substrings identifying a "prompt too long" 400 from an OpenAI-compatible
 # endpoint (vLLM: "This model's maximum context length is 8192 tokens").
@@ -149,57 +157,45 @@ class AnswerAgent:
         )
         return kept
 
+    @property
+    def effective_max_tokens(self) -> Optional[int]:
+        """The completion cap this agent will actually request.
+
+        ``answer.max_tokens`` wins; otherwise the backend's client-wide cap is
+        used, which is what the request would send anyway. Reserving it in the
+        prompt budget is what keeps ``prompt + completion`` inside the window.
+        """
+        return int(self.max_tokens) if self.max_tokens else default_output_cap(self.backend)
+
+    def prompt_budget(self) -> Optional[int]:
+        """Tokens this agent may spend on the prompt (None = no window declared)."""
+        return resolve_budget(self.backend, self.context_window, self.max_tokens)
+
     @staticmethod
     def _estimate_tokens(text: str) -> int:
-        """Cheap token estimate (~4 chars/token).
-
-        Deliberately conservative: it only decides how many low-ranked notes to
-        drop, and dropping one low-ranked note is harmless while failing to drop
-        one causes a hard 400 on a small-context model.
-        """
-        return max(1, len(text) // 4)
+        """Cheap token estimate (~4 chars/token). See `asem.token_budget`."""
+        return estimate_tokens(text)
 
     def _fit(self, candidates: List[Note], render) -> Tuple[str, List[Note]]:
         """Render a prompt that fits ``context_window`` minus ``max_tokens``.
 
         Drops the LOWEST-ranked candidate (last in retrieval order) until the
-        prompt fits, always keeping at least one note.
+        prompt fits, always keeping at least one note, then shrinks the largest
+        remaining one if a single note alone overflows the budget.
         """
-        kept = list(candidates)
-        prompt = render(kept)
-        if not self.context_window:
-            return prompt, kept
-        budget = int(self.context_window) - int(self.max_tokens or 0) - _SAFETY_MARGIN_TOKENS
-        while len(kept) > 1 and self._estimate_tokens(prompt) > budget:
-            kept.pop()
-            prompt = render(kept)
-        est = self._estimate_tokens(prompt)
-        if est > budget:
-            _log.warning(
-                "Answer prompt still ~{} tokens after trimming to 1 note "
-                "(budget {} = context_window {} - max_tokens {}). Raise the "
-                "model context window or lower max_tokens.",
-                est, budget, self.context_window, int(self.max_tokens or 0),
-            )
-        elif len(kept) < len(candidates):
-            _log.debug(
-                "Prompt budget: kept {}/{} notes (~{} tokens, budget {})",
-                len(kept), len(candidates), est, budget,
-            )
+        prompt, kept = fit_items(
+            candidates,
+            render,
+            budget=self.prompt_budget(),
+            min_keep=1,
+            drop="tail",
+            label="answer prompt",
+        )
         return prompt, kept
 
     def _call(self, prompt: str, max_tokens: Optional[int]) -> str:
         """One backend call, passing a per-call output cap where supported."""
-        if not max_tokens:
-            return self.backend.generate(prompt)
-        try:
-            return self.backend.generate(prompt, max_tokens=max_tokens)
-        except TypeError as exc:
-            # Backend/wrapper without per-call kwargs — fall back to its default.
-            if "unexpected keyword" in str(exc) or "positional argument" in str(exc):
-                _log.debug("Backend ignores per-call max_tokens: {}", exc)
-                return self.backend.generate(prompt)
-            raise
+        return generate_with_cap(self.backend, prompt, max_tokens)
 
     def _generate(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Generate, with a last-resort retry if the endpoint rejects the prompt length.
@@ -220,7 +216,7 @@ class AnswerAgent:
                 # Even a minimal completion cannot fit — nothing left to give.
                 raise
             requested = int(max_tokens) if max_tokens else None
-            configured = int(self.max_tokens) if self.max_tokens else None
+            configured = self.effective_max_tokens
             new_cap = min(v for v in (requested, configured, affordable) if v is not None)
             _log.warning(
                 "Context overflow (prompt ~{} tokens, requested cap {}): "

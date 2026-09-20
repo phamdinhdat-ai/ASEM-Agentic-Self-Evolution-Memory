@@ -37,6 +37,15 @@ class HuggingFaceBackend(InferenceBackend):
         except Exception:
             pass
 
+    @property
+    def default_max_tokens(self) -> Optional[int]:
+        """The ``max_new_tokens`` applied when a call overrides nothing."""
+        value = self._generation_defaults.get("max_new_tokens")
+        try:
+            return int(value) if value else None
+        except (TypeError, ValueError):
+            return None
+
     def generate(self, prompt: str, **kwargs) -> str:
         # Count prompt tokens before generation
         if self._tokenizer is not None:
@@ -48,6 +57,15 @@ class HuggingFaceBackend(InferenceBackend):
             prompt_tokens = len(prompt) // 4
 
         call_kwargs = {**self._generation_defaults, **kwargs}
+        # `max_tokens` is the OpenAI-style name ASEM uses for the per-call
+        # completion cap; transformers calls the same knob `max_new_tokens`.
+        # Translating here keeps a per-call budget working on the local path
+        # instead of raising "unexpected keyword argument".
+        if "max_tokens" in call_kwargs:
+            cap = call_kwargs.pop("max_tokens")
+            call_kwargs["max_new_tokens"] = int(cap) if cap else int(
+                self._generation_defaults.get("max_new_tokens", 512)
+            )
         outputs = self._text_generator(prompt, **call_kwargs)
         if not outputs:
             return ""

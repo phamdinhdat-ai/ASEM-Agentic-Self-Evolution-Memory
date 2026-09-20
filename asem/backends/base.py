@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -71,6 +71,17 @@ class InferenceBackend(ABC):
     def token_count(self) -> int:
         """Total tokens consumed by all generate() calls so far."""
         return self._token_count
+
+    @property
+    def default_max_tokens(self) -> Optional[int]:
+        """Completion cap applied when a caller passes no per-call ``max_tokens``.
+
+        Callers that budget a prompt against a context window must reserve the
+        completion that will actually be requested, so this is part of the
+        backend contract rather than a private detail. ``None`` means "the
+        endpoint decides / no cap", i.e. nothing to reserve.
+        """
+        return None
 
     def reset_token_count(self) -> None:
         """Reset the token counter to zero."""

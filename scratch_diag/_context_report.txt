@@ -1,0 +1,19 @@
+================================================================================================
+PROMPT SIZE BY PATH   tag=ds_fixed  convs=2  config=deepseek_openai.yaml
+config window=32768  cap=512  -> prompt budget=32192
+================================================================================================
+path                               n     p50     p90     p99      max
+ASEM answer                      608    3378    4038    4545     4802
+FastASEM answer                  304     535     711     912      933
+FullContext (whole history)      199    8943   17116   17809    17815
+
+tokens at 4 chars/token; over(opt)/over(cons) = prompts above the budget
+at 4 and 3 chars/token (a gap means the estimate is too optimistic).
+  budget  32192  (config 32768/512)
+    ASEM answer                    over(opt)=    0  over(cons)=    0
+    FastASEM answer                over(opt)=    0  over(cons)=    0
+    FullContext (whole history)    over(opt)=    0  over(cons)=    0
+  budget   7680  (reference 8192/512)
+    ASEM answer                    over(opt)=    0  over(cons)=    0
+    FastASEM answer                over(opt)=    0  over(cons)=    0
+    FullContext (whole history)    over(opt)=  111  over(cons)=  123

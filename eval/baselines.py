@@ -20,11 +20,21 @@ from typing import List, Optional, Set, Tuple
 from asem.answer_agent import AnswerAgent
 from asem.backends.base import InferenceBackend
 from asem.link_evolver import LinkEvolver
+from asem.logging_utils import get_logger
 from asem.memory_bank import MemoryBank
 from asem.memory_manager import MemoryManager, Op
 from asem.note import Note, NoteConstructor
 from asem.retriever import HybridRetriever
+from asem.token_budget import (
+    clip_block,
+    default_output_cap,
+    fit_items,
+    generate_with_cap,
+    resolve_budget,
+)
 from asem.utility_updater import UtilityUpdater
+
+_log = get_logger("eval.baselines")
 
 
 @dataclass
@@ -64,43 +74,132 @@ class Baseline:
         return 0
 
 
+class _BudgetedAnswer:
+    """Token-budget plumbing shared by the direct-prompt baselines.
+
+    Every system in a comparison answers with ONE model call, so the context it
+    assembles — the whole history for ``FullContext``, the top-k notes for the
+    retrieval baselines — must fit the SAME budget the ASEM answer agent uses
+    (``asem.token_budget``)::
+
+        prompt <= context_window - max_tokens - safety
+
+    The mixin deliberately declares no dataclass fields (each baseline owns its
+    ``max_tokens`` / ``context_window``); it only provides the shared behaviour.
+    """
+
+    backend: InferenceBackend
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
+
+    def answer_budget(self) -> Optional[int]:
+        """Tokens this system may spend on the prompt (None = no window set)."""
+        return resolve_budget(self.backend, self.context_window, self.max_tokens)
+
+    def fit_context(
+        self,
+        blocks: List[str],
+        render,
+        *,
+        drop: str = "tail",
+        head_keep: int = 0,
+        label: str = "context",
+    ) -> Tuple[str, List[str]]:
+        """Shrink the context blocks until the rendered prompt fits the budget.
+
+        ``drop="tail"`` is for relevance-ordered blocks (retrieved notes),
+        ``drop="oldest"`` for chronological history — the middle is dropped and
+        the opening plus the most recent blocks survive.
+        """
+        return fit_items(
+            blocks,
+            render,
+            budget=self.answer_budget(),
+            min_keep=1,
+            drop=drop,
+            head_keep=head_keep,
+            shrink=clip_block,   # a single oversized turn must not blow the window
+            label=label,
+        )
+
+    def _generate(self, prompt: str, *, label: str) -> str:
+        """The answer call, with the same per-call completion cap as ASEM.
+
+        Reserving ``max_tokens`` while letting the request send a larger
+        client-wide default would still overflow the window, so the cap goes out
+        with the request; without ``answer.max_tokens`` the backend's own
+        default applies (and was already reserved by ``answer_budget``).
+        """
+        cap = self.max_tokens or default_output_cap(self.backend)
+        _log.debug(
+            "{}: answer call with max_tokens={} (prompt budget {})",
+            label, cap, self.answer_budget(),
+        )
+        return generate_with_cap(self.backend, prompt, cap)
+
+
 @dataclass
-class NoMemory(Baseline):
+class NoMemory(_BudgetedAnswer, Baseline):
     """Backbone-only baseline — ignores all history."""
 
     backend: InferenceBackend
     prompt_template: str
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
 
     def answer(self, query: str, history: List[str]) -> str:
         prompt = self.prompt_template.format(query=query)
-        return self.backend.generate(prompt)
+        return self._generate(prompt, label="NoMemory")
 
 
 @dataclass
-class FullContext(Baseline):
-    """All history concatenated into the context window."""
+class FullContext(_BudgetedAnswer, Baseline):
+    """All history concatenated into the context window.
+
+    The history is trimmed to the answer call's token budget
+    (``context_window - max_tokens - safety``), keeping the opening ``head_turns``
+    turns and as many of the most RECENT ones as fit — the middle is what goes.
+    ``max_history_turns`` remains a cheap turn-count pre-filter (0 = off); it is
+    no longer the thing that decides how much context the model sees.
+    """
 
     backend: InferenceBackend
     prompt_template: str
     max_history_turns: int = 0
+    # Turns protected at the START of the history: LoCoMo conversations open with
+    # the setup (who is who, where they live), which late questions still need.
+    head_turns: int = 5
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
 
     def answer(self, query: str, history: List[str]) -> str:
         h = list(history)
         if self.max_history_turns > 0 and len(h) > self.max_history_turns:
-            keep_first = min(5, self.max_history_turns // 4)
+            keep_first = min(self.head_turns, self.max_history_turns // 4)
             keep_last = self.max_history_turns - keep_first
             h = h[:keep_first] + h[-keep_last:]
-        context = "\n".join(h) if h else "(no prior conversation)"
-        prompt = self.prompt_template.format(query=query, context=context)
-        return self.backend.generate(prompt)
+
+        prompt, _ = self.fit_context(
+            h,
+            lambda kept: self.prompt_template.format(
+                query=query,
+                context="\n".join(kept) if kept else "(no prior conversation)",
+            ),
+            drop="oldest",
+            head_keep=self.head_turns,
+            label="FullContext",
+        )
+        return self._generate(prompt, label="FullContext")
 
 
 @dataclass
-class SimRetrieval(Baseline):
+class SimRetrieval(_BudgetedAnswer, Baseline):
     """Flat ANN retrieval — writes all history as atomic notes, then retrieves.
 
     Deduplicates against already-processed content so that repeated calls with
     cumulative histories within the same conversation don't create duplicates.
+    The retrieved context is trimmed to the answer call's token budget, dropping
+    the least similar notes first.
     """
 
     backend: InferenceBackend
@@ -108,6 +207,8 @@ class SimRetrieval(Baseline):
     note_constructor: NoteConstructor
     top_k: int
     prompt_template: str
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
 
     # ---- private, not constructor args -----------------------------------
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
@@ -136,9 +237,15 @@ class SimRetrieval(Baseline):
 
         e_q = self.backend.embed(query)
         notes = self.memory_bank.ann_search(e_q, k=self.top_k)
-        context = "\n".join([n.c for n in notes]) if notes else "(no relevant memory)"
-        prompt = self.prompt_template.format(query=query, context=context)
-        return self.backend.generate(prompt)
+        prompt, _ = self.fit_context(
+            [n.c for n in notes],
+            lambda kept: self.prompt_template.format(
+                query=query,
+                context="\n".join(kept) if kept else "(no relevant memory)",
+            ),
+            label="SimRetrieval",
+        )
+        return self._generate(prompt, label="SimRetrieval")
 
     def reset(self) -> None:
         self._seen_hashes.clear()
@@ -146,7 +253,7 @@ class SimRetrieval(Baseline):
 
 
 @dataclass
-class AtomicLinking(Baseline):
+class AtomicLinking(_BudgetedAnswer, Baseline):
     """Notes + bidirectional linking — writes all history with Stage 1 + Stage 3."""
 
     backend: InferenceBackend
@@ -155,6 +262,8 @@ class AtomicLinking(Baseline):
     link_evolver: LinkEvolver
     top_k: int
     prompt_template: str
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
 
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
 
@@ -183,9 +292,15 @@ class AtomicLinking(Baseline):
 
         e_q = self.backend.embed(query)
         notes = self.memory_bank.ann_search(e_q, k=self.top_k)
-        context = "\n".join([n.c for n in notes]) if notes else "(no relevant memory)"
-        prompt = self.prompt_template.format(query=query, context=context)
-        return self.backend.generate(prompt)
+        prompt, _ = self.fit_context(
+            [n.c for n in notes],
+            lambda kept: self.prompt_template.format(
+                query=query,
+                context="\n".join(kept) if kept else "(no relevant memory)",
+            ),
+            label="AtomicLinking",
+        )
+        return self._generate(prompt, label="AtomicLinking")
 
     def reset(self) -> None:
         self._seen_hashes.clear()
@@ -193,7 +308,7 @@ class AtomicLinking(Baseline):
 
 
 @dataclass
-class RLManagerOnly(Baseline):
+class RLManagerOnly(_BudgetedAnswer, Baseline):
     """RL write ops + similarity retrieval — all history through Memory Manager."""
 
     backend: InferenceBackend
@@ -202,6 +317,8 @@ class RLManagerOnly(Baseline):
     memory_manager: MemoryManager
     top_k: int
     prompt_template: str
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
 
     _seen_hashes: Set[int] = field(default_factory=set, init=False, repr=False)
 
@@ -250,9 +367,15 @@ class RLManagerOnly(Baseline):
 
         e_q = self.backend.embed(query)
         notes = self.memory_bank.ann_search(e_q, k=self.top_k)
-        context = "\n".join([n.c for n in notes]) if notes else "(no relevant memory)"
-        prompt = self.prompt_template.format(query=query, context=context)
-        return self.backend.generate(prompt)
+        prompt, _ = self.fit_context(
+            [n.c for n in notes],
+            lambda kept: self.prompt_template.format(
+                query=query,
+                context="\n".join(kept) if kept else "(no relevant memory)",
+            ),
+            label="RLManagerOnly",
+        )
+        return self._generate(prompt, label="RLManagerOnly")
 
     def reset(self) -> None:
         self._seen_hashes.clear()
