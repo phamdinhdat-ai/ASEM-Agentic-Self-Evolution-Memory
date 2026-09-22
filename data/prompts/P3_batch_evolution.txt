@@ -5,7 +5,7 @@ For EACH existing note, merge its keywords/tags/description with the new note's 
 
 - **keywords**: Merge both lists, remove duplicates (case-insensitive), keep 3–10 most specific and informative.
 - **tags**: Merge both lists, remove duplicates, keep all non-redundant labels.
-- **description**: A 1–2 sentence synthesized factual summary integrating the new information. Do NOT simply concatenate the two descriptions.
+- **description**: A 1–2 sentence synthesized factual summary integrating the new information, at most 45 words. REWRITE the summary: never append the new note's text to the old one and never let it grow into a paragraph. Keep the strongest fact first and let links carry the rest.
 
 ## Rules per relationship
 - The new note **contradicts** an existing note: the updated description reflects the corrected/current state; remove obsolete keywords for disproven facts.

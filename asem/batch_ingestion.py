@@ -34,7 +34,7 @@ from .llm_validator import (
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .memory_manager import Op
-from .note import LinkRecord, Note
+from .note import LinkRecord, Note, cap_description, cap_keywords
 from .temporal import extract_session_header, parse_session_datetime
 
 _log = get_logger("batch_ingest")
@@ -353,9 +353,9 @@ class BatchIngestor:
         dropped = 0
         for item in extracted:
             c = str(item.get("content", ""))
-            K = list(item.get("keywords", []))
+            K = cap_keywords(item.get("keywords", []))
             G = list(item.get("tags", []))
-            X = str(item.get("description", ""))
+            X = cap_description(str(item.get("description", "")))
 
             if not c.strip():
                 dropped += 1

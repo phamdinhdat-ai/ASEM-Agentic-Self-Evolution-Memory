@@ -30,6 +30,59 @@ LEGACY_LINK_RELATION = "linked"
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "data" / "prompts"
 
+# ---------------------------------------------------------------------------
+# Bounds on the stored attributes
+# ---------------------------------------------------------------------------
+# Memory evolution rewrites a note's `description` by merging in a new note. The
+# prompt asks for "1-2 sentences", but a 4B backbone does not reliably obey it:
+# an audit of the frozen `ds_fixed` bank found descriptions up to ~1,700 chars
+# that concatenate 10+ turns from different sessions into one paragraph, mixing
+# speakers. That blob is unreadable in a retrieval context (and it pushed the
+# answer prompt from ~3.4k to a size where the extractable fact is buried).
+#
+# The prompt got tighter AND the bound is enforced here, at the write path, so a
+# model that ignores the instruction cannot poison the bank. Descriptions in
+# `ds_fixed` are mostly 150-350 chars, so the cap only ever trims run-ons.
+MAX_DESCRIPTION_CHARS = 600
+MAX_KEYWORDS = 12
+
+
+def cap_description(text: str, limit: int = MAX_DESCRIPTION_CHARS) -> str:
+    """Keep whole sentences up to `limit` chars (word-boundary cut as fallback).
+
+    Cuts on a sentence boundary when one is available before `limit`, so the
+    stored fact never ends mid-clause; otherwise cuts on a word boundary.
+    """
+    text = " ".join(str(text or "").split())
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    cut = max(head.rfind(". "), head.rfind("! "), head.rfind("? "))
+    if cut >= limit // 3:
+        return head[: cut + 1].strip()
+    return head.rsplit(" ", 1)[0].rstrip(",;:.") + " …"
+
+
+def cap_keywords(keywords: Any, limit: int = MAX_KEYWORDS) -> List[str]:
+    """Deduplicate (case-insensitive) and keep the first `limit` keywords.
+
+    Evolution merges the keyword lists of both notes, and an audited note carried
+    49 keywords — most of them restatements. Keywords are retrieval metadata, not
+    answer text, so a hard cap costs nothing and keeps the context readable.
+    """
+    out: List[str] = []
+    seen: set = set()
+    for raw in keywords or []:
+        word = str(raw).strip()
+        key = word.lower()
+        if not word or key in seen:
+            continue
+        seen.add(key)
+        out.append(word)
+        if len(out) >= limit:
+            break
+    return out
+
 
 @dataclass(frozen=True)
 class LinkRecord:

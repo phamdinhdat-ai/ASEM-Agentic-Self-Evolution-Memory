@@ -78,6 +78,181 @@ _DROP_PAYLOAD_FIELDS = ("timestamp_iso", "utility", "tags")
 _MAX_RELATIONS_PER_NOTE = 6
 _MAX_RELATION_TYPES = 4
 
+# ---------------------------------------------------------------------------
+# Rendering the retrieved notes
+# ---------------------------------------------------------------------------
+# The distil path used to hand the model a JSON array of note objects. Two
+# problems with that, both visible in the dumped prompts
+# (`scratch_diag/context_samples/`):
+#
+#   1. INDIRECTION. Copying a 36-char UUID is a failure mode for a small model,
+#      and `relations[].target_id` forced a three-step join (find id -> match to
+#      another object's id -> read that object). Rank numbers ("[3]") remove
+#      both, and numbers survive tokenisation far better than UUIDs.
+#   2. UNREADABLE PROSE. An evolved note's `description` can reach ~1,700 chars
+#      of run-on third-person text (the evolution prompt asks for 1-2 sentences
+#      but this is not enforced), serialised as ONE line with `\u2014` escapes.
+#      Splitting it into sentence bullets with an explicit speaker/date header
+#      is what makes the same information readable.
+#
+# So the context is now a numbered, line-oriented block per note. The model is
+# still asked for JSON *output* (`{"selected_ids": [1, 3], "answer": ...}`), but
+# the INPUT is prose it can skim.
+_FACT_CHAR_LIMIT = 420        # chars of `description` rendered per note
+_MAX_FACT_BULLETS = 4         # sentences of `description` rendered per note
+_MAX_TOPICS = 8               # keywords rendered (evolved notes carry up to ~50)
+_WRAP_WIDTH = 104             # soft wrap for rendered facts / raw turns
+_INDENT = "      "            # continuation indent inside a note block
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\"'\u201c])")
+
+
+def _human_date(note: Note) -> str:
+    """Render a note's date as `20 April 2023` (fallback: the stored string).
+
+    `session_date` is either an ISO timestamp ("2023-04-20T16:15:00Z") or a raw
+    LoCoMo date ("8 May 2023"). ISO timestamps are unreadable inside a prompt and
+    invite the model to copy the time-of-day into a date answer, so both forms
+    are normalised to day-month-year.
+    """
+    for raw in (note.session_date, getattr(note, "timestamp_iso", None)):
+        if not raw:
+            continue
+        text = str(raw).strip().replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(text).strftime("%d %B %Y").lstrip("0")
+        except ValueError:
+            pass
+        for fmt in ("%d %B %Y", "%d %b %Y", "%B %d, %Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(str(raw).strip(), fmt).strftime("%d %B %Y").lstrip("0")
+            except ValueError:
+                continue
+    if note.t is not None:
+        try:
+            return note.t.strftime("%d %B %Y").lstrip("0")
+        except Exception:  # noqa: BLE001
+            pass
+    return "date unknown"
+
+
+def _sentences(text: str) -> list:
+    """Split prose into sentences (cheap, punctuation-based)."""
+    text = " ".join((text or "").split())
+    if not text:
+        return []
+    return [s.strip() for s in _SENTENCE_SPLIT_RE.split(text) if s.strip()]
+
+
+def _wrap(text: str, width: int = _WRAP_WIDTH, indent: str = _INDENT) -> str:
+    """Soft-wrap `text` on spaces, indenting continuation lines."""
+    words, lines, current = text.split(), [], ""
+    for word in words:
+        if current and len(current) + 1 + len(word) > width:
+            lines.append(current)
+            current = word
+        else:
+            current = f"{current} {word}".strip()
+    if current:
+        lines.append(current)
+    if not lines:
+        return indent + "…"
+    return ("\n" + indent).join(lines)
+
+
+def _render_notes_block(
+    notes: List[Note],
+    *,
+    content_chars: int = _CONTENT_CHAR_LIMIT,
+    fact_chars: int = _FACT_CHAR_LIMIT,
+    max_bullets: int = _MAX_FACT_BULLETS,
+) -> str:
+    """Render the retrieved notes as numbered, readable evidence blocks.
+
+    Every note becomes:
+
+        [n] DATE · said by SPEAKER · about: ent1, ent2
+            • first fact sentence (wrapped)
+            • second fact sentence
+            • [+k more facts]
+            turn: "raw turn, clipped"
+            links: [3] same-topic, [6] extends (+4 more not in this list)
+
+    Relation targets are printed as the RANK of the other note in this same
+    block, so the model never has to join ids. Edges whose target is not in the
+    block collapse to a count, because their content cannot be read.
+    """
+    if not notes:
+        return "(no memory notes retrieved)"
+
+    index_by_id = {n.id: i + 1 for i, n in enumerate(notes)}
+    blocks: List[str] = []
+
+    for rank, note in enumerate(notes, start=1):
+        header = f"[{rank}] {_human_date(note)}"
+        if note.speaker:
+            header += f" · said by {note.speaker}"
+        entities = [e for e in (note.entities or []) if e]
+        if entities:
+            header += f" · about: {', '.join(entities[:6])}"
+        lines = [header]
+
+        # --- facts: the stored description, split into readable sentences -----
+        facts = _sentences(note.X)
+        shown, used, clipped = [], 0, False
+        for sentence in facts[:max_bullets]:
+            room = fact_chars - used
+            if room <= 40:
+                break
+            piece = _clip(sentence, room)
+            if len(piece) < len(sentence):
+                clipped = True
+            shown.append(piece)
+            used += len(piece)
+        if not shown and note.X:
+            shown = [_clip(note.X, fact_chars)]
+        lines += [f"{_INDENT}• {_wrap(s, indent=_INDENT + '  ')}" for s in shown]
+        # Sentences that never made it in full (dropped by the bullet cap, the char
+        # budget, or cut mid-way) are reported so the model knows the note continues.
+        hidden = max(0, len(facts) - len(shown)) + (1 if clipped else 0)
+        if hidden:
+            lines.append(f"{_INDENT}• [+{hidden} more fact(s) in this note, not shown]")
+
+        # --- the raw turn, only when it adds words the facts do not have ------
+        if content_chars > 0:
+            raw = _clip(note.c, content_chars)
+            if raw and raw.rstrip(" …") not in (note.X or ""):
+                lines.append(f"{_INDENT}turn: \"{_wrap(raw, indent=_INDENT + ' ' * 7)}\"")
+
+        # --- topics: keywords are retrieval metadata, capped hard -------------
+        topics = [k for k in (note.K or []) if k][:_MAX_TOPICS]
+        if topics:
+            lines.append(f"{_INDENT}topics: {', '.join(topics)}")
+
+        # --- links: ranks inside this block, counts outside -------------------
+        edges, other = [], {}
+        for link in note.L:
+            rel = link.relation or "linked"
+            target = index_by_id.get(link.target_id)
+            if target is not None and len(edges) < _MAX_RELATIONS_PER_NOTE:
+                edges.append(f"[{target}] {rel}")
+            else:
+                other[rel] = other.get(rel, 0) + 1
+        if edges or other:
+            link_line = f"{_INDENT}links: "
+            if edges:
+                link_line += ", ".join(edges)
+            digest = _relation_digest(other)
+            if digest:
+                prefix = "  (" if edges else "("
+                link_line += (f"{prefix}+{sum(other.values())} more not in this list: "
+                              f"{digest})")
+            lines.append(link_line)
+
+        blocks.append("\n".join(lines))
+
+    return "\n\n".join(blocks)
+
 
 def _relation_digest(counts: dict) -> str:
     """Compact "same-topic:14, extends:3" form of the out-of-context edges."""
@@ -88,12 +263,19 @@ def _relation_digest(counts: dict) -> str:
 
 
 def _clip(text: str, limit: int) -> str:
-    """Truncate `text` to `limit` chars on a word boundary (adds an ellipsis)."""
+    """Truncate `text` to `limit` chars on a word boundary (adds an ellipsis).
+
+    Falls back to a hard cut when the word-boundary search would throw away most
+    of the budget — a description padded with dots/hyphens or one long token has
+    no space to break on, and `rsplit` used to return just the first word.
+    """
     if not text or limit <= 0:
         return ""
     if len(text) <= limit:
         return text
     cut = text[:limit].rsplit(" ", 1)[0].rstrip(",;:. ")
+    if len(cut) < limit * 0.5:
+        cut = text[:limit].rstrip(",;:. ")
     return (cut or text[:limit]) + " …"
 
 
@@ -141,6 +323,13 @@ class AnswerAgent:
     max_context_notes: Optional[int] = None
     # Chars of the raw turn kept per note (0 = drop `content` entirely).
     content_char_limit: int = _CONTENT_CHAR_LIMIT
+    # Chars of the stored `description` rendered per note. An evolved note's
+    # description can reach ~1,700 chars; without a cap a single note would eat a
+    # fifth of an 8k window. The cap is applied per note, after sentence splitting.
+    fact_char_limit: int = _FACT_CHAR_LIMIT
+    # Sentences of `description` rendered per note (the rest becomes
+    # "[+k more fact(s) in this note, not shown]").
+    max_fact_bullets: int = _MAX_FACT_BULLETS
 
     def _select(self, candidates: List[Note]) -> List[Note]:
         """Keep the most relevant notes up to `max_context_notes`.
@@ -263,18 +452,13 @@ class AnswerAgent:
             return candidates, answer
 
         def render(notes: List[Note]) -> str:
-            in_context = {n.id for n in notes}
             body = self.prompt_template.format(
                 query=query,
-                candidates=json.dumps(
-                    [
-                        self._note_payload(
-                            n,
-                            content_chars=self.content_char_limit,
-                            in_context=in_context,
-                        )
-                        for n in notes
-                    ]
+                candidates=_render_notes_block(
+                    notes,
+                    content_chars=self.content_char_limit,
+                    fact_chars=self.fact_char_limit,
+                    max_bullets=self.max_fact_bullets,
                 ),
             )
             # Second-chance pass: the previous answer was a refusal, so say so
@@ -306,7 +490,19 @@ class AnswerAgent:
             return candidates, self._baseline_answer(query, candidates)
 
         selected_ids, answer = parsed
-        selected_notes = [n for n in candidates if n.id in selected_ids]
+        # `selected_ids` holds the bracketed RANKS printed in the context
+        # ("[1]" ... "[8]") — a small model reproduces "3" far more reliably than
+        # a 36-char UUID, and a mangled UUID used to silently degrade to "all
+        # candidates". Plain ids are still accepted (older prompts, other
+        # callers), so a UUID-shaped token is matched directly.
+        resolved: set = set()
+        for item in selected_ids:
+            token = str(item).strip().strip("[]")
+            if token.isdigit() and 1 <= int(token) <= len(candidates):
+                resolved.add(candidates[int(token) - 1].id)
+            else:
+                resolved.add(token)
+        selected_notes = [n for n in candidates if n.id in resolved]
         if not selected_notes:
             selected_notes = candidates
         _log.debug("Distilled | selected={}/{}  answer={!r}",
@@ -334,65 +530,29 @@ class AnswerAgent:
         return self._generate_resilient(prompt, max_tokens=self.max_tokens).strip()
 
     def _render_graph_context(self, candidates: List[Note]) -> str:
-        """Render notes as compact numbered graph nodes.
+        """Render notes as numbered evidence blocks, OLDEST first.
 
-        Each node carries only what answers a question: who said it, when, the
-        entities it names, the distilled summary, its keywords and its typed
-        edges. The raw turn is clipped to `content_char_limit` because it is the
-        single largest field and the least information-dense.
+        Same grammar as the distil context (`_render_notes_block`) so both answer
+        paths read the same way — the raw turn is the only field that needs
+        clipping, since `description` is capped by `fact_char_limit`.
+
+        Only the ORDER differs from the distil path: here it is chronological,
+        which is what temporal questions need, while distil keeps the retriever's
+        relevance order.
         """
-        # Chronologically sort notes, then number them so relation edges can
-        # reference other notes inside the SAME context block.
-        sorted_notes = sorted(candidates, key=lambda n: n.t if n.t else datetime.min)
-        index_by_id = {n.id: i + 1 for i, n in enumerate(sorted_notes)}
-
-        context_items = []
-        for i, n in enumerate(sorted_notes):
-            date_str = n.session_date or (n.t.strftime('%d %B %Y') if n.t else "")
-            header = f"[{i + 1}] date={date_str}"
-            if n.speaker:
-                header += f" speaker={n.speaker}"
-            if n.entities:
-                header += f" entities=[{', '.join(n.entities)}]"
-            lines = [header]
-
-            # `summary` (X) is the distilled fact; `content` (c) is the raw turn.
-            # Ingestion may fold facts into X while c holds only the dialogue, so
-            # render both — but never twice, and never a full turn.
-            if n.X and n.X != n.c:
-                lines.append(f"    summary: {n.X}")
-            content = _clip(n.c, self.content_char_limit)
-            if content and content.rstrip(" …") != (n.X or "").rstrip(" …"):
-                lines.append(f"    content: {content}")
-            if n.K:
-                lines.append(f"    keywords: {', '.join(n.K[:12])}")
-
-            # Typed links: keep the edges whose target IS in this block (the model
-            # can read those), collapse the rest to a count map. Serialising the
-            # whole edge list was 49.9% of the prompt for zero extra signal.
-            edges, other = [], {}
-            for link in n.L:
-                rel = link.relation or "linked"
-                target = index_by_id.get(link.target_id)
-                if target is not None and len(edges) < _MAX_RELATIONS_PER_NOTE:
-                    edges.append(f"{rel} -> [{target}]")
-                else:
-                    other[rel] = other.get(rel, 0) + 1
-            if edges:
-                lines.append(f"    relations: {'; '.join(edges)}")
-            digest = _relation_digest(other)
-            if digest:
-                lines.append(f"    also_linked: {digest}")
-
-            context_items.append("\n".join(lines))
-
-        return "\n".join(context_items)
+        ordered = sorted(candidates, key=lambda n: n.t if n.t else datetime.min)
+        return _render_notes_block(
+            ordered,
+            content_chars=self.content_char_limit,
+            fact_chars=self.fact_char_limit,
+            max_bullets=self.max_fact_bullets,
+        )
 
     def _baseline_answer(self, query: str, candidates: List[Note]) -> str:
         context_items = []
         for note in candidates:
-            date_prefix = f"[{note.session_date}] " if note.session_date else (f"[{note.t.strftime('%d %B %Y')}] " if note.t else "")
-            context_items.append(f"- {date_prefix}{note.c}")
+            date_prefix = f"[{_human_date(note)}] "
+            context_items.append(f"- {date_prefix}{_clip(note.c, self.content_char_limit or 200)}")
         context = "\n".join(context_items)
         prompt = self.baseline_prompt_template.format(query=query, context=context)
         return self._generate_resilient(prompt, max_tokens=self.max_tokens).strip()

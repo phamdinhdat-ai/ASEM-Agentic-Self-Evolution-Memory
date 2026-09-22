@@ -18,7 +18,7 @@ from .llm_validator import (
 )
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
-from .note import LinkRecord, Note, _try_extract_json  # robust JSON parser for LLM output
+from .note import LinkRecord, Note, _try_extract_json, cap_description, cap_keywords  # robust JSON parser for LLM output
 
 _log = get_logger("S3.linker")
 
@@ -242,9 +242,9 @@ class LinkEvolver:
                 id=orig.id,
                 c=orig.c,
                 t=orig.t,
-                K=list(item.get("keywords", orig.K)),
+                K=cap_keywords(item.get("keywords", orig.K)),
                 G=list(item.get("tags", orig.G)),
-                X=str(item.get("description", orig.X)),
+                X=cap_description(str(item.get("description", orig.X))),
                 e=orig.e,
                 L=orig.L,
                 z=orig.z,
@@ -280,9 +280,9 @@ class LinkEvolver:
         if not isinstance(data, dict):
             return None
 
-        keywords = list(data.get("keywords", note.K))
+        keywords = cap_keywords(data.get("keywords", note.K))
         tags = list(data.get("tags", note.G))
-        description = str(data.get("description", note.X))
+        description = cap_description(str(data.get("description", note.X)))
 
         return Note(
             id=note.id,

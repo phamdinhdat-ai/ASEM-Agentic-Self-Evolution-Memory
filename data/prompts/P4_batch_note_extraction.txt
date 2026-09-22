@@ -5,7 +5,7 @@ For each atomic fact, output a JSON object with:
 - **content**: The exact text of the dialogue turn containing this fact (preserve speaker labels)
 - **keywords**: 3-5 key terms from this fact (lowercase, specific — no stopwords)
 - **tags**: 1-3 categorical labels from this list: personal, professional, technical, event, preference, fact, question, plan, relationship, location, temporal, health, travel, pet, observation, opinion
-- **description**: A 1-2 sentence factual summary of what was learned, in third person
+- **description**: A 1-2 sentence factual summary of what was learned, in third person, at most 45 words (one fact per note — never merge several facts into one paragraph)
 - **entities**: List of named entities, people, locations, and organizations
 - **speaker**: The speaker's name
 

@@ -4,7 +4,7 @@ You are a precise memory extraction agent. Extract structured memory attributes 
 For EACH turn below, extract:
 - **keywords**: 3-8 lowercase words or short phrases capturing the core entities and concepts of that turn. Avoid stopwords and generic words.
 - **tags**: 2-5 broad category labels from this list: personal, professional, technical, event, preference, fact, question, plan, relationship, location, temporal, health, travel, pet, observation, opinion
-- **description**: A 1-2 sentence third-person factual summary of that turn's content.
+- **description**: A 1-2 sentence third-person factual summary of that turn's content, at most 45 words. One turn = one fact: never merge several turns, several facts, or several people's words into one long paragraph.
 - **entities**: The named people, locations, and organizations mentioned in that turn (e.g. ["Caroline", "Sweden", "LGBTQ support group"]).
 - **speaker**: The single name of the turn's speaker (e.g. "Caroline").
 

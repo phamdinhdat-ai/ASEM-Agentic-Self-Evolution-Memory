@@ -23,7 +23,7 @@ from .backends.base import InferenceBackend
 from .llm_validator import LLMRetryHandler
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
-from .note import LinkRecord, Note, _try_extract_json
+from .note import LinkRecord, Note, _try_extract_json, cap_description
 from .temporal import parse_session_datetime
 
 _log = get_logger("SLAFI.ingest")
@@ -58,7 +58,7 @@ CRITICAL RULES:
 Return a JSON array of objects with the following schema:
 [
   {
-    "fact": "Declarative standalone factual sentence with absolute date where applicable",
+    "fact": "One standalone factual sentence with the absolute date where applicable (max 45 words)",
     "entities": ["Entity1", "Entity2"],
     "keywords": ["keyword1", "keyword2"],
     "tags": ["topic_tag"],
@@ -123,7 +123,7 @@ class FastSessionIngestor:
         # 2. Build candidate notes with embeddings
         raw_notes: List[Note] = []
         for item in extracted_facts:
-            fact = str(item.get("fact", item.get("content", item.get("description", "")))).strip()
+            fact = cap_description(str(item.get("fact", item.get("content", item.get("description", "")))).strip())
             if not fact or len(fact) < 5:
                 continue
 

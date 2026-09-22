@@ -4,7 +4,7 @@ You are a memory evolution agent. Your job is to revise an existing memory note 
 Given an existing note and a new, strongly related note, produce an updated version of the existing note that merges the knowledge from both. You must return all three fields:
 - **keywords**: Merge both keyword lists. Remove duplicates (case-insensitive). Keep the combined list to 3–10 keywords — if merging produces more, retain the most specific and informative ones. Prefer keywords from the new note when there is conflict.
 - **tags**: Merge both tag lists. Remove duplicates (case-insensitive). Retain all non-redundant category labels. If the new note introduces a new aspect not covered by existing tags, include the new tag.
-- **description**: Write an updated 1–2 sentence factual summary that integrates the new information with the existing knowledge. Do NOT simply concatenate both descriptions — synthesize them.
+- **description**: Write an updated 1–2 sentence factual summary (max 45 words) that integrates the new information with the existing knowledge. REWRITE it; never append or concatenate, and never let it grow into a paragraph. Do NOT simply concatenate both descriptions — synthesize them.
 
 ## Merge strategy by relation type
 | Relation | Strategy |
