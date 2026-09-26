@@ -736,6 +736,11 @@ class ASEMTHGSystem:
 
     _ingested: bool = False
 
+    @property
+    def hyper_graph(self):
+        """The deterministic TemporalHyperGraph owned by the ingestor."""
+        return getattr(self.single_pass_ingestor, "hyper_graph", None)
+
     def ingest_conversation(
         self,
         dialogue_turns: Any,
@@ -794,6 +799,9 @@ class ASEMTHGSystem:
     def reset(self) -> None:
         self._ingested = False
         self.pipeline.memory_bank.clear()
+        graph = self.hyper_graph
+        if graph is not None:
+            graph.clear()
 
 
 def build_asem_thg_system(
@@ -819,6 +827,7 @@ def build_asem_thg_system(
 
     from asem.single_pass_ingest import SinglePassSessionIngestor
     from asem.enhanced_retriever import EnhancedHybridRetriever
+    from asem.hyper_graph import TemporalHyperGraph
 
     note_constructor = NoteConstructor(
         backend=backend, prompt_template=note_prompt, q0=hp["q0"], max_retries=max_retries,
@@ -838,6 +847,10 @@ def build_asem_thg_system(
         enable_global_semantics=True,
         enable_intent_q=True,
     )
+    # THG emits two relation labels the retriever's default weight map does not
+    # know; without an entry a traversed edge falls back to the "unknown" tier.
+    retriever.relation_weights.setdefault("same-entity", 0.85)
+    retriever.relation_weights.setdefault("superseded_by", 0.50)
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
@@ -851,8 +864,14 @@ def build_asem_thg_system(
     utility_updater = UtilityUpdater(
         backend=backend, alpha=hp["alpha"], q0=hp["q0"], summary_prompt_template=summary_prompt, note_constructor=note_constructor,
     )
+    hg_cfg = cfg.get("hyper_graph", {}) or {}
+    hyper_graph = TemporalHyperGraph(
+        semantic_tau=float(hg_cfg.get("semantic_tau", 0.70)),
+        max_entity_links=int(hg_cfg.get("max_entity_links", 5)),
+        max_semantic_links=int(hg_cfg.get("max_semantic_links", 5)),
+    )
     single_pass_ingestor = SinglePassSessionIngestor(
-        backend=backend, q0=hp["q0"], max_retries=max_retries,
+        backend=backend, hyper_graph=hyper_graph, q0=hp["q0"], max_retries=max_retries,
     )
     wg_cfg = cfg.get("write_gate", {}) or {}
     write_gate = WriteGate(

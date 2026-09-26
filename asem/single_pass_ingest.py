@@ -20,38 +20,62 @@ from .hyper_graph import TemporalHyperGraph, Triplet
 from .llm_validator import LLMRetryHandler
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
-from .note import LinkRecord, Note, _try_extract_json
+from .note import (
+    LinkRecord,
+    Note,
+    _try_extract_json,
+    cap_description,
+    cap_keywords,
+)
 from .temporal import extract_session_header, parse_session_datetime
 
 _log = get_logger("THG.ingest")
 
+# Applied when the extractor returns no tags, so the tag channel is never flat
+# across the bank (ASEM v1 / FastASEM both populate G).
+_DEFAULT_TAG = "fact"
+
 _SINGLE_PASS_PROMPT_TEMPLATE = """You are an expert memory extraction agent.
-Your task is to extract clear, standalone, atomic factual notes from a dialogue session.
+Convert ONE dialogue session into standalone, atomic factual notes that become
+nodes in a temporal knowledge graph.
 
 SESSION DATE: {session_date}
 
-CRITICAL RULES:
-1. RESOLVE PRONOUNS: Replace every pronoun with the speaker's name or full person name.
-2. RESOLVE RELATIVE TIME TO ABSOLUTE DATES: Convert relative time ("yesterday", "last week") into absolute dates using the session date.
-3. EXTRACT ATOMIC TRIPLETS: Provide subject, predicate, and object for precise graph versioning.
-4. EXTRACT NAMED ENTITIES AND KEYWORDS.
+CRITICAL RULES
+1. RESOLVE PRONOUNS: replace every pronoun with the person's name ("I went there" -> "Caroline went to Hawaii").
+2. RESOLVE RELATIVE TIME TO ABSOLUTE DATES using the session date:
+   - "yesterday" -> the day before the session date
+   - "last week" / "a few days ago" -> the matching earlier date in the same month
+   - "last Saturday" -> the most recent Saturday before the session date
+   - "next week" / "next month" -> the following week / month
+   - "last year" -> the previous calendar year
+   State the resolved absolute date inside the fact (e.g. "On 6 May 2023, ...").
+3. ONE FACT PER NOTE: emit a separate object for EVERY distinct event, activity,
+   plan, intention, preference, relationship and status.
+   - Do NOT merge several events into one thematic summary.
+   - Do NOT drop a fact because it sounds minor.
+   - A past event and a future plan are TWO different notes.
+4. ATOMIC TRIPLET: give the (subject, predicate, object) the fact is about, so the
+   graph can version it deterministically. subject = main person/entity,
+   predicate = verb/status/relationship, object = target entity or value.
 
 DIALOGUE:
 {dialogue}
 
-Return a JSON array of objects with the following schema:
+Return a JSON array of objects with this schema (one object per fact):
 [
   {{
-    "fact": "Standalone factual sentence with absolute date where applicable",
-    "subject": "Main Person/Entity",
-    "predicate": "Action/Status/Relationship",
-    "object": "Target Entity/Value",
-    "entities": ["Entity1", "Entity2"],
+    "fact": "One standalone factual sentence, max 45 words, with the absolute date where applicable",
+    "subject": "Main person/entity",
+    "predicate": "verb / status / relationship",
+    "object": "Target entity or value",
+    "entities": ["Person", "Place", "Organisation"],
     "keywords": ["keyword1", "keyword2"],
-    "speaker": "SpeakerName"
+    "tags": ["personal|professional|event|preference|plan|relationship|location|health|travel|pet|temporal|fact"],
+    "speaker": "Name of the speaker of the turn the fact came from"
   }}
 ]
-Output ONLY valid JSON array."""
+Output ONLY the JSON array (no markdown fences, no commentary)."""
 
 
 class SinglePassSessionIngestor:
@@ -117,20 +141,37 @@ class SinglePassSessionIngestor:
         for item in extracted:
             if not isinstance(item, dict):
                 continue
-            fact_text = str(item.get("fact", item.get("content", ""))).strip()
+
+            # Length caps keep a verbose extraction from bloating the bank (and
+            # the answer prompt that renders it); ASEM v1 / FastASEM apply them too.
+            fact_text = cap_description(
+                str(item.get("fact") or item.get("content") or item.get("description") or "").strip()
+            )
             if not fact_text:
                 continue
 
-            subj = str(item.get("subject", "")).strip()
-            pred = str(item.get("predicate", "")).strip()
-            obj = str(item.get("object", "")).strip()
-            entities = [str(e).strip() for e in item.get("entities", []) if str(e).strip()]
-            keywords = [str(k).strip() for k in item.get("keywords", []) if str(k).strip()]
-            speaker = str(item.get("speaker", "")).strip() or None
+            subj = str(item.get("subject") or "").strip()
+            pred = str(item.get("predicate") or "").strip()
+            obj = str(item.get("object") or "").strip()
+            # `or []` (rather than the `.get(k, [])` default) is load-bearing: the
+            # extractor emits an explicit `"entities": null` often enough that the
+            # default would let `None` through and raise on iteration.
+            entities = cap_keywords(
+                [str(e).strip() for e in (item.get("entities") or []) if str(e).strip()]
+            )
+            keywords = cap_keywords(
+                [str(k).strip() for k in (item.get("keywords") or []) if str(k).strip()]
+            )
+            tags = [str(t).strip() for t in (item.get("tags") or []) if str(t).strip()]
+            if not tags:
+                tags = [_DEFAULT_TAG]
+            speaker = str(item.get("speaker") or "").strip() or None
 
-            # Embeddings (z = raw fact, e = fact + keywords)
-            e_text = f"{fact_text} {' '.join(keywords)} {' '.join(entities)}"
-            e_vec = self.backend.embed(e_text)
+            # Joint embedding, same shape as ASEM v1 / FastASEM:
+            # z = the atomic fact, e = fact + keywords + tags + entities.
+            e_vec = self.backend.embed(
+                " ".join([fact_text, " ".join(keywords), " ".join(tags), " ".join(entities)])
+            )
             z_vec = self.backend.embed(fact_text)
 
             note = Note(
@@ -138,7 +179,7 @@ class SinglePassSessionIngestor:
                 c=fact_text,
                 t=dt_obj,
                 K=keywords,
-                G=["atomic_fact"],
+                G=tags,
                 X=fact_text,
                 e=e_vec,
                 L=[],
@@ -151,19 +192,20 @@ class SinglePassSessionIngestor:
                 speaker=speaker,
             )
 
-            # Deterministic HyperGraph links
+            # Deterministic hyper-graph links (zero LLM): same-entity peers,
+            # semantic neighbours and -- through the triplet -- temporal versioning.
             triplet = Triplet(subject=subj, predicate=pred, object=obj, timestamp=iso_str or "")
-            auto_links = self.hyper_graph.add_note(note, triplet)
-            note.L.extend(auto_links)
+            note.L.extend(self.hyper_graph.add_note(note, triplet))
 
             created_notes.append(note)
             note_ids.append(note.id)
 
-        # 4. Add Temporal Sequence Edges
+        # 4. Chronological edges between consecutive notes of the session
         self.hyper_graph.add_temporal_sequence(note_ids)
 
-        # 5. Save to MemoryBank in single transaction
-        memory_bank.add_many(created_notes)
+        # 5. One transaction: the new notes, plus every pre-existing peer whose
+        #    link set the graph just extended.
+        self._persist(created_notes, memory_bank)
 
         _log.info(
             "Single-pass ingest done | turns={} facts={} bank_size={}",
@@ -171,12 +213,45 @@ class SinglePassSessionIngestor:
         )
         return created_notes
 
+    def _persist(self, created_notes: List[Note], memory_bank: MemoryBank) -> None:
+        """Persist the new notes plus every pre-existing peer the graph touched.
+
+        The hyper-graph writes mirror edges onto peer notes in place. Peers from
+        earlier sessions exist only in the bank, so they have to be written back
+        for the new edge to survive into the evaluation phase (which runs in a
+        separate process and only ever sees the stored ``Note.L``).
+        """
+        if not created_notes:
+            return
+        by_id = {note.id: note for note in created_notes}
+        extra = [n for n in self.hyper_graph.pop_touched_peers() if n.id not in by_id]
+        memory_bank.add_many(created_notes + extra)
     @staticmethod
     def _fallback_extract(turns: List[str]) -> List[Dict[str, Any]]:
-        results = []
+        """Last-resort extraction: one note per dialogue line.
+
+        Strips the ``[Speaker]`` prefix off the fact text (the bank stores the
+        speaker in its own field) so a fallback note is still readable evidence.
+        """
+        results: List[Dict[str, Any]] = []
         for line in turns:
             line = line.strip()
-            if line and len(line) >= 10:
-                results.append({"fact": line, "keywords": [], "entities": []})
+            if len(line) < 10 or line.startswith("[Session"):
+                continue
+            match = re.match(r"^\[(.*?)\]\s*(.*)", line)
+            speaker, content = (match.group(1), match.group(2)) if match else ("", line)
+            content = content.strip()
+            if not content:
+                continue
+            results.append({
+                "fact": content,
+                "subject": speaker,
+                "predicate": "",
+                "object": "",
+                "entities": [speaker] if speaker else [],
+                "keywords": re.findall(r"\w{4,}", content.lower())[:4],
+                "tags": [_DEFAULT_TAG],
+                "speaker": speaker,
+            })
         return results
 
