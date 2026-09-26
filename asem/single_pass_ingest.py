@@ -36,6 +36,9 @@ CRITICAL RULES:
 3. EXTRACT ATOMIC TRIPLETS: Provide subject, predicate, and object for precise graph versioning.
 4. EXTRACT NAMED ENTITIES AND KEYWORDS.
 
+DIALOGUE:
+{dialogue}
+
 Return a JSON array of objects with the following schema:
 [
   {{
@@ -98,8 +101,13 @@ class SinglePassSessionIngestor:
 
         raw = self.backend.generate(prompt)
         extracted = _try_extract_json(raw, expect_array=True)
-        if not isinstance(extracted, list):
-            _log.warning("SinglePassSessionIngestor | JSON extraction fallback triggered")
+        if not isinstance(extracted, list) or not extracted:
+            _log.warning(
+                "SinglePassSessionIngestor | JSON extraction fallback triggered "
+                "(raw_len={} parsed={})",
+                len(raw or ""),
+                type(extracted).__name__,
+            )
             extracted = self._fallback_extract(dialogue_turns)
 
         # 3. Create Notes & Index into HyperGraph
