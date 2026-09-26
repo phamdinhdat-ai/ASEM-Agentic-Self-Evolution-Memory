@@ -1,0 +1,13 @@
+# system=NoMemory idx=1782 conv=locomo_0009 category=temporal (harness label=temporal)
+# question: When did Calvin first travel to Tokyo?
+# gold: between 26 March and 20 April 2023
+# pred (real run): Unknown.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=300 prompt_tokens~75
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Calvin and Dave. Question: When did Calvin first travel to Tokyo?
+
+Answer:

@@ -33,6 +33,61 @@ _LAMBDA_DEFAULT = 0.40      # balanced (original paper default)
 # A1 — max link-traversal hops
 _MAX_LINK_HOPS = 3
 
+# --- Attribution robustness: the "masked query" channel ----------------------
+# MEASURED failure mode (`report.md` §4.3/§4.5, dumped prompts in
+# `scratch_diag/context_samples/`): on an attribution question the question names
+# a person, every channel anchors on that name, and the note that actually holds
+# the fact — written about the OTHER person — never enters the context. 49% of
+# ASEM's single_hop misses and a third of FastASEM's adversarial refusals are
+# exactly this (`#157 "What does Melanie's necklace symbolize?"` -> the necklace is
+# Caroline's and her note is never retrieved).
+#
+# So each query is retrieved TWICE: as asked, and with the person names masked
+# ("necklace symbolize" — the topic the fact-bearing note embeds against). The two
+# rankings are fused with the same RRF as the other channels. A candidate reached
+# only by the masked query must clear `delta` against the MASKED embedding, so the
+# channel adds recall without lowering the precision floor.
+_MASK_KEEP = {
+    "What", "When", "Where", "Who", "Whom", "Which", "Why", "How", "Did",
+    "Does", "Do", "Is", "Are", "Was", "Were", "Has", "Have", "Had", "Can",
+    "Could", "Would", "Should", "Will", "The", "A", "An", "In", "On", "At",
+    "For", "To", "Of", "And", "Or", "But", "If", "It", "Its", "He", "She",
+    "They", "His", "Her", "Them", "Their", "That", "This", "These", "Those",
+}
+
+
+def _norm_text(text: str) -> str:
+    """Lowercase alphanumeric skeleton, used to spot a restated fact."""
+    return " ".join(re.findall(r"[a-z0-9]+", (text or "").lower()))
+
+
+def mask_person_names(query: str) -> str:
+    """Return `query` with proper names removed ("" when nothing is masked).
+
+    A token is treated as a name when it is Capitalised-but-not-ALLCAPS, is not a
+    question/function word, is not the first token of the query, and carries no
+    digits. "Melanie's" masks as "Melanie". The result is the *topic* facet of the
+    question, which is what an attribution-robust second retrieval needs.
+    """
+    tokens = (query or "").split()
+    kept, masked = [], False
+    for i, token in enumerate(tokens):
+        bare = token.strip(".,?!;:\"'()[]")
+        core = bare[:-2] if bare.endswith("'s") else bare
+        is_name = (
+            i > 0
+            and len(core) > 1
+            and core[0].isupper()
+            and not core.isupper()
+            and core not in _MASK_KEEP
+            and not any(ch.isdigit() for ch in core)
+        )
+        if is_name:
+            masked = True
+            continue
+        kept.append(token)
+    return " ".join(kept).strip() if masked else ""
+
 # A1 — typed-edge weights for link traversal. `same-topic`/`semantic` are the
 # baseline; the typed edges are boosted so traversal surfaces corroborating,
 # conflicting or time-anchored evidence instead of more of the same topic.
@@ -78,8 +133,21 @@ class HybridRetriever:
     # A1+A4 — link traversal and adaptive lambda knobs
     enable_link_traversal: bool = True
     max_link_hops: int = 1           # 1 = only direct neighbors
-    link_traversal_topn: int = 3     # how many linked neighbors to add
+    hop_decay: float = 0.70          # score multiplier per extra hop
+    link_traversal_topn: int = 3     # how many linked neighbors to add per hop
     enable_adaptive_lambda: bool = True
+
+    # Attribution-robust recall (see `mask_person_names`) and near-duplicate
+    # suppression. The masked channel costs one extra embedding; dedupe is O(k^2)
+    # float math. `dedupe_tau` is the cosine above which two notes count as the
+    # same evidence — kept at 1.0 (= OFF) by default because the text-containment
+    # rule below already catches restatements, and an embedding-only rule can drop
+    # a note that carries an EXTRA fact (an evolved note is a superset of the note
+    # it grew from). Enable it only with measured evidence.
+    use_masked_query: bool = True
+    masked_weight: float = 0.9
+    use_dedupe: bool = True
+    dedupe_tau: float = 1.0
 
     # Stats (populated during retrieval for introspection / token accounting)
     stats: Dict[str, object] = field(default_factory=dict)
@@ -122,6 +190,19 @@ class HybridRetriever:
                     entity_ranks[n.id] = r
                     all_pool_map[n.id] = n
 
+        # Channel 4: the topic-only (person-masked) view of the same question.
+        # This is what reaches the fact-bearing note when the question attributes
+        # the fact to the wrong person.
+        masked_ranks: Dict[str, int] = {}
+        e_masked = None
+        masked_query = mask_person_names(query) if self.use_masked_query else ""
+        if masked_query:
+            e_masked = self.backend.embed(masked_query)
+            for r, n in enumerate(M.ann_search(e_masked, k=self.k1)):
+                masked_ranks[n.id] = r
+                all_pool_map.setdefault(n.id, n)
+            self.stats["masked_query"] = masked_query
+
         # Check temporal query
         is_temp = bool(re.search(r"\b(when|before|after|date|time|year|month|day|during|first|last)\b", query, re.I))
 
@@ -135,12 +216,19 @@ class HybridRetriever:
                 score += self.bm25_weight / (self.rrf_k + bm25_ranks[nid])
             if nid in entity_ranks:
                 score += self.entity_weight / (self.rrf_k + entity_ranks[nid])
+            if nid in masked_ranks:
+                score += self.masked_weight / (self.rrf_k + masked_ranks[nid])
             if self.use_temporal_boost and is_temp and (note.session_date or note.timestamp_iso):
                 score += self.temporal_weight / (self.rrf_k + 0)
 
-            # Cosine similarity filter threshold
+            # Cosine similarity filter threshold. A candidate reached only by the
+            # masked channel is judged against the MASKED embedding — otherwise the
+            # name it is supposed to rescue the question from would filter it out.
             sim = self._cosine(e_q, note.e) if note.e is not None else 0.0
-            if sim >= self.delta or nid in bm25_ranks or nid in entity_ranks:
+            keep = sim >= self.delta or nid in bm25_ranks or nid in entity_ranks
+            if not keep and e_masked is not None and note.e is not None:
+                keep = self._cosine(e_masked, note.e) >= self.delta
+            if keep:
                 rrf_scores.append((note, score))
 
         if not rrf_scores:
@@ -183,6 +271,14 @@ class HybridRetriever:
                     result.append(n)
                     seen_ids.add(n.id)
             self.stats["link_traversal_added"] = len(linked)
+
+        # Near-duplicate suppression: a merged/evolved bank holds several notes
+        # that restate one fact, and each one costs a slot in the 8-note context
+        # while adding no new evidence.
+        if self.use_dedupe and len(result) > 1:
+            before = len(result)
+            result = self._dedupe(result)
+            self.stats["deduped"] = before - len(result)
 
         self.stats["total_retrieved"] = len(result)
         return result
@@ -270,45 +366,80 @@ class HybridRetriever:
         query_embedding: np.ndarray,
         M: MemoryBank,
     ) -> List[Note]:
-        """Follow the link graph from seed notes to discover linked neighbors.
+        """Follow the link graph from seed notes, up to `max_link_hops` hops.
 
-        Only follows direct (1-hop) links by default.  Each linked neighbor is
-        scored by similarity to the query, its utility, and the TYPE of the
-        edge that reaches it.  The top `link_traversal_topn` are added.
+        Hop 1 is scored by similarity to the query, the neighbour's utility and the
+        TYPE of the edge that reaches it (`_RELATION_BOOST`, the attribution signal).
+        Each further hop multiplies by `hop_decay`, so a 2-hop neighbour must be
+        both relevant and well connected to displace a direct hit. `topn` neighbours
+        are kept per hop, and hops stop as soon as nothing new is reachable.
         """
         seen_ids: Set[str] = {n.id for n in seed_notes}
-        candidate_notes: List[Tuple[float, Note]] = []
+        collected: List[Tuple[float, Note]] = []
+        frontier = list(seed_notes)
+        hops = max(1, int(self.max_link_hops or 1))
 
-        for seed in seed_notes:
-            if not seed.L:
-                continue
-            # Keep the relation label: it is the reasoning signal that a flat
-            # similarity score throws away.
-            rel_by_target = {
-                link.target_id: (link.relation or "linked") for link in seed.L
-            }
-            # Batch-lookup linked neighbors by ID
-            linked_notes = M.get_notes_by_ids(list(rel_by_target))
-            for neighbor in linked_notes:
-                if neighbor.id in seen_ids:
+        for hop in range(hops):
+            candidates: List[Tuple[float, Note]] = []
+            for seed in frontier:
+                if not seed.L:
                     continue
-                seen_ids.add(neighbor.id)
-                sim = self._cosine(query_embedding, neighbor.e)
-                relation = rel_by_target.get(neighbor.id, "linked")
-                boost = _RELATION_BOOST.get(relation, 1.0)
-                # Weight by utility — high-q linked neighbors are preferred —
-                # and by the typed edge that reached this neighbor.
-                score = sim * (0.5 + 0.5 * neighbor.q) * boost
-                candidate_notes.append((score, neighbor))
+                # Keep the relation label: it is the reasoning signal that a flat
+                # similarity score throws away.
+                rel_by_target = {link.target_id: (link.relation or "linked") for link in seed.L}
+                # Batch-lookup linked neighbors by ID
+                for neighbor in M.get_notes_by_ids(list(rel_by_target)):
+                    if neighbor.id in seen_ids:
+                        continue
+                    seen_ids.add(neighbor.id)
+                    sim = self._cosine(query_embedding, neighbor.e)
+                    relation = rel_by_target.get(neighbor.id, "linked")
+                    boost = _RELATION_BOOST.get(relation, 1.0)
+                    # Weight by utility — high-q linked neighbors are preferred —
+                    # by the typed edge that reached this neighbor, and by hop depth.
+                    score = sim * (0.5 + 0.5 * neighbor.q) * boost * (self.hop_decay ** hop)
+                    candidates.append((score, neighbor))
+                    relations = self.stats.setdefault("traversed_relations", [])
+                    if len(relations) < 40:
+                        relations.append(relation)
 
-        candidate_notes.sort(key=lambda item: item[0], reverse=True)
-        added = [note for _, note in candidate_notes[: self.link_traversal_topn]]
-        self.stats["traversed_relations"] = [
-            link.relation or "linked"
-            for seed in seed_notes
-            for link in seed.L
-        ][:20]
-        return added
+            if not candidates:
+                break
+            candidates.sort(key=lambda item: item[0], reverse=True)
+            added = [note for _, note in candidates[: self.link_traversal_topn]]
+            collected.extend(candidates[: self.link_traversal_topn])
+            frontier = added
+
+        collected.sort(key=lambda item: item[0], reverse=True)
+        self.stats["max_link_hops"] = hops
+        return [note for _, note in collected][: self.link_traversal_topn * hops]
+
+    def _dedupe(self, notes: List[Note]) -> List[Note]:
+        """Drop notes that restate a HIGHER-ranked one (precision, not recall).
+
+        Two notes count as the same evidence when their description text contains
+        one another, or when their embeddings are within `dedupe_tau` cosine. The
+        higher-ranked note wins because `notes` arrives in relevance order.
+        """
+        kept: List[Note] = []
+        kept_text: List[str] = []
+        for note in notes:
+            text = _norm_text(note.X or note.c)
+            duplicate = False
+            for other_text in kept_text:
+                if text and other_text and (text in other_text or other_text in text):
+                    duplicate = True
+                    break
+            if not duplicate and self.dedupe_tau < 1.0 and note.e is not None:
+                for other in kept:
+                    if other.e is not None and self._cosine(note.e, other.e) >= self.dedupe_tau:
+                        duplicate = True
+                        break
+            if duplicate:
+                continue
+            kept.append(note)
+            kept_text.append(text)
+        return kept
 
     # ------------------------------------------------------------------
     # Helpers (unchanged)

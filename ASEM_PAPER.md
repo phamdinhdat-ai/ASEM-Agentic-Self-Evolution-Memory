@@ -282,6 +282,20 @@ zi∈ Rdis an intent embedding representing the query context under which the no
 and qi≡ q(zi,mi)∈ R is a learned utility (Q-value) reflecting the expected downstream task reward
 associated with retrieving mifor queries with intent similar to zi.
 ```
+```
+For temporally grounded deployments the tuple in Eq. (1) is extended with five optional metadata
+fields,
+```
+```
+mi = (ci, ti, Ki, Gi, Xi, ei, Li, zi, qi, si, di, τi, Ei, ψi), (1′)
+```
+```
+where si is the identifier of the session the note originated from, di its human-readable session
+date, τi an ISO-8601 absolute timestamp, Ei the set of entities named in the note, and ψi its
+speaker. These fields are populated at ingestion time (Section 4.1) and consumed by the temporal
+and entity retrieval channels (Section 4.4). All five are optional: when absent, the note reduces
+to the schema of Eq. (1) and downstream behaviour is unchanged.
+```
 ### 3.2 MEMORY-BASED MARKOV DECISION PROCESS
 
 ```
@@ -415,6 +429,24 @@ level filtering; contextual descriptions support semantic similarity at a concep
 level. The joint encoding in Eq. (5) ensures that similarity search captures the full semantic footprint
 of the note, including implicit structure not present in the raw tokens.
 ```
+```
+Temporal grounding and batch construction. In a multi-session deployment the timestamp ti of a
+note must record when the interaction occurred, not when it was ingested. Construction therefore
+proceeds session-wise rather than turn-wise. The session header is read from the opening turns of
+a dialogue to recover a session identifier and a human-readable date, which is parsed into a real
+datetime and an ISO-8601 string. The dated dialogue is then submitted to the backbone in a single
+batched prompt P 1b that extracts all atomic facts of the session at once, so construction costs
+O(1) LLM calls per session rather than O(turns). Each extracted fact is stamped with the session
+datetime (not the wall clock) together with si, di, τi, Ei, and ψi.
+```
+```
+The extraction prompt additionally instructs the model to resolve relative time expressions
+against the session date, so that a turn such as "I went to the support group last week" occurring
+in a session dated 8 May 2023 is stored as an explicit date in ci. Temporal questions can then be
+answered from the note content alone rather than by combining a relative phrase with ti. A note
+whose session date cannot be determined retains the wall-clock timestamp and empty optional
+fields, degrading gracefully to the schema of Eq. (1).
+```
 ### 4.2 STAGE 2: RL-DRIVEN MEMORY WRITE OPERATIONS
 
 ```
@@ -520,6 +552,15 @@ and m∗jreplaces mjinM. This bidirectional update mechanism mirrors human memor
 idation: the arrival of a new experience does not merely extend the store but revises the contextual
 framing of related prior knowledge, enabling the emergence of higher-order conceptual patterns that
 no individual episode would have produced in isolation.
+```
+```
+Free-form does not mean unrecorded: each relation returned by the LLM is persisted as a typed
+record (target identifier, relation label) on both endpoints of the edge, deduplicated by target,
+so that the nature of the connection survives beyond the prompt that produced it. In batch mode the
+linking call processes all notes of a session against the union of their nearest neighbours, and
+the stage reports not only how many links were created but how many connect a newly written note
+to memory from an earlier session. This cross-session link count is a direct diagnostic of how
+strongly a session is integrated into the existing network rather than merely appended to it.
 ```
 ### 4.4 STAGE 4: TWO-PHASE HYBRID RETRIEVAL WITH MEMORY DISTILLATION
 
@@ -823,6 +864,16 @@ are fine-tuned from the same backbone initialisation. Hyperparameters: k 1 = 20,
 δ = 0. 30 , λ = 0. 40 , α = 0. 10 , q 0 = 0. 50. Primary metric: exact-match (EM) accuracy. Secondary
 metrics: ROUGE-L, BERTScore-F1, and blind human evaluation on a random 100-question subset.
 All experiments are run with five random seeds; we report mean± one standard deviation.
+```
+```
+Ingestion is performed in batch mode. A complete session dialogue is processed with three LLM
+calls (note extraction, memory operation selection, and link generation), and the resulting notes
+are written in a single transaction followed by one index rebuild. Each note is temporally grounded
+with its session datetime and ISO-8601 timestamp, and links are stored as typed bidirectional
+records that preserve the relation label. Relative time expressions are resolved against the session
+date inside the extraction prompt. Banks are therefore dated and relation-labelled at write time,
+which is what allows the temporal and entity channels of Stage 4 to contribute rather than
+degrading silently to embedding similarity.
 ```
 ## 7 DISCUSSION
 

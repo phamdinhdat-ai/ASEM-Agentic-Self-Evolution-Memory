@@ -17,7 +17,12 @@ import os
 
 import pytest
 
-from eval.static_banks import build_static_banks, count_notes, load_manifest
+from eval.static_banks import (
+    build_static_banks,
+    count_links,
+    count_notes,
+    load_manifest,
+)
 from eval.static_eval import run_static_eval
 
 try:  # pytest inserts the repo root (tests/ is a package), so either form works
@@ -121,6 +126,68 @@ def test_bank_layout_manifest_and_index(tmp_path):
         index = json.load(fh)
     assert index["FastASEM"][conv]["notes"] > 0
     assert index["FastASEM"][conv]["status"] == "ok"
+
+
+def test_fastasem_link_edges_are_recorded_without_a_finalize_pass(tmp_path):
+    """Regression: FastASEM links DURING ingestion (``_weave_graph_links`` is
+    deterministic and LLM-free) and exposes no ``finalize_conversation``, so
+    ``finalize_system()`` returned 0 and every FastASEM bank was written as
+    ``link_edges: 0`` — indistinguishable from a bank that failed to link.
+    The count is now read from the bank itself.
+    """
+    dataset_path, raw, groups, bank_root, manifest = _prepare(
+        tmp_path, systems=["FastASEM"]
+    )
+    conv = str(groups[0][0]["session_id"])
+    entry = manifest["conversations"][0]["systems"]["FastASEM"]
+
+    assert entry["new_edges"] == 0        # no finalize pass exists for FastASEM
+    assert entry["link_edges"] > 0        # ...but the bank is linked regardless
+    assert entry["link_edges"] == count_links(entry["bank"])
+
+    with open(os.path.join(bank_root, "test", "banks.json"), encoding="utf-8") as fh:
+        index = json.load(fh)
+    assert index["FastASEM"][conv]["link_edges"] == entry["link_edges"]
+
+
+def test_rerun_repairs_a_stale_zero_link_edges(tmp_path):
+    """A bank recorded as ``link_edges: 0`` by a pre-fix run is corrected when
+    a later run skips over it, so existing tags stop under-reporting."""
+    dataset_path, raw, groups, bank_root, first = _prepare(
+        tmp_path, systems=["FastASEM"]
+    )
+    assert first["conversations"][0]["systems"]["FastASEM"]["link_edges"] > 0
+
+    # Rewrite the manifest the way the pre-fix code left it.
+    manifest_path = os.path.join(bank_root, "test", "manifest.json")
+    with open(manifest_path, encoding="utf-8") as fh:
+        stale = json.load(fh)
+    stale["conversations"][0]["systems"]["FastASEM"]["link_edges"] = 0
+    with open(manifest_path, "w", encoding="utf-8") as fh:
+        json.dump(stale, fh)
+
+    manifest = build_static_banks(
+        raw_dataset=raw,
+        groups=groups,
+        systems=["FastASEM"],
+        ingest_config=CONFIG,
+        bank_root=bank_root,
+        tag="test",
+        dataset="locomo_mini",
+        backend=StubBackend(),
+        input_path=str(dataset_path),
+    )
+    entry = manifest["conversations"][0]["systems"]["FastASEM"]
+    assert entry["status"] == "skipped"
+    assert entry["link_edges"] > 0
+
+
+def test_count_links_handles_missing_and_empty_banks(tmp_path):
+    assert count_links("") == 0
+    assert count_links(str(tmp_path / "absent.sqlite")) == 0
+    empty = tmp_path / "empty.sqlite"
+    empty.write_bytes(b"")
+    assert count_links(str(empty)) == 0
 
 
 def test_rerun_skips_and_force_rebuilds(tmp_path):
@@ -258,6 +325,56 @@ def test_interrupted_conversation_is_resumed_not_skipped(tmp_path):
         input_path=str(dataset_path),
     )
     assert retry["totals"]["notes"]["FastASEM"] == clean["totals"]["notes"]["FastASEM"]
+
+
+def test_mixed_config_tag_records_per_bank_provenance(tmp_path):
+    """Continuing a tag with a DIFFERENT config must not relabel existing banks.
+
+    Re-running with new settings (e.g. thinking off) is a legitimate way to
+    extend a tag, but the banks then come from two configurations. Each bank
+    must keep the config that actually built it, and the tag must list both.
+    """
+    dataset_path = tmp_path / "locomo_mini.json"
+    _write_dataset(dataset_path)
+    raw, groups = _load_groups(dataset_path)
+    bank_root = str(tmp_path / "banks")
+
+    config_a = "configs/models/deepseek_api.yaml"       # enable_reasoning: false
+    config_b = "configs/models/deepseek_openai.yaml"    # thinking: {type: disabled}
+
+    first = build_static_banks(
+        raw_dataset=raw, groups=groups, systems=["FastASEM"], ingest_config=config_a,
+        bank_root=bank_root, tag="mixed", dataset="locomo_mini",
+        backend=StubBackend(), input_path=str(dataset_path),
+    )
+    entry_a = first["conversations"][0]["systems"]["FastASEM"]
+    sha_a = entry_a["config_sha256"]
+    assert entry_a["status"] == "ok"
+    assert entry_a["thinking"] == {"enable_reasoning": False}
+    assert len(first["config_history"]) == 1
+
+    second = build_static_banks(
+        raw_dataset=raw, groups=groups, systems=["FastASEM"], ingest_config=config_b,
+        bank_root=bank_root, tag="mixed", dataset="locomo_mini",
+        backend=StubBackend(), input_path=str(dataset_path),
+    )
+    entry_b = second["conversations"][0]["systems"]["FastASEM"]
+    # Reused, not rebuilt — and still attributed to config A.
+    assert entry_b["status"] == "skipped"
+    assert entry_b["config_sha256"] == sha_a
+    assert entry_b["ingest_config"] == config_a
+    assert entry_b["thinking"] == {"enable_reasoning": False}
+
+    # Both configurations are listed for the tag; the top level tracks the latest.
+    assert len(second["config_history"]) == 2
+    assert second["config_sha256"] != sha_a
+    assert second["ingest_config"] == config_b
+
+    # The index carries the same per-bank attribution.
+    with open(os.path.join(bank_root, "mixed", "banks.json"), encoding="utf-8") as fh:
+        index = json.load(fh)
+    conv = str(groups[0][0]["session_id"])
+    assert index["FastASEM"][conv]["config_sha256"] == sha_a
 
 
 def test_fail_fast_raises(tmp_path, monkeypatch):
@@ -482,3 +599,136 @@ def test_metric_primitives():
     )
     assert judged["judge"] == 0.5
     assert judged["judge_coverage"] == pytest.approx(2 / 3)
+
+
+# ---------------------------------------------------------------------------
+# Phase B — per-conversation evaluation
+# ---------------------------------------------------------------------------
+
+def _write_two_conversation_dataset(path) -> None:
+    """The mini dataset duplicated, so conversion yields locomo_0000/0001."""
+    _write_dataset(path)
+    record = json.loads(path.read_text(encoding="utf-8"))[0]
+    path.write_text(json.dumps([record, record]), encoding="utf-8")
+
+
+def _build_two_conversation_banks(tmp_path, systems=("FastASEM",)):
+    dataset_path = tmp_path / "locomo_two.json"
+    _write_two_conversation_dataset(dataset_path)
+    raw, groups = _load_groups(dataset_path)
+    bank_root = str(tmp_path / "static_two" / "memory_banks" / "locomo_two")
+    build_static_banks(
+        raw_dataset=raw,
+        groups=groups,
+        systems=list(systems),
+        ingest_config=CONFIG,
+        bank_root=bank_root,
+        tag="test",
+        dataset="locomo_two",
+        backend=StubBackend(),
+        input_path=str(dataset_path),
+    )
+    return groups, bank_root
+
+
+def test_eval_conversation_filter_scopes_the_run(tmp_path):
+    """`--conversations` answers only the requested conversation."""
+    groups, bank_root = _build_two_conversation_banks(tmp_path)
+    assert [str(g[0]["session_id"]) for g in groups] == ["locomo_0000", "locomo_0001"]
+
+    results, _ = _run_eval(
+        tmp_path, groups, bank_root, ["FastASEM"], ["em", "f1"],
+        out_name="one_conv.json",
+        conversations=["locomo_0001"],
+        per_conversation=True,
+    )
+
+    assert results["n_qa"] == 3                      # locomo_0001's three QA pairs
+    assert results["conversations"] == ["locomo_0001"]
+    assert list(results["systems"]["FastASEM"]["per_conversation"]) == ["locomo_0001"]
+
+    preds_file = os.path.join(str(tmp_path / "preds"), "test__stub__FastASEM.jsonl")
+    with open(preds_file, encoding="utf-8") as fh:
+        rows = [json.loads(line) for line in fh if line.strip()]
+    assert len(rows) == 3
+    assert {row["conversation_id"] for row in rows} == {"locomo_0001"}
+    # Indices stay global, which is what makes a later full run resume cleanly.
+    assert {row["idx"] for row in rows} == {3, 4, 5}
+
+
+def test_eval_per_conversation_breakdown_matches_overall(tmp_path):
+    dataset_path, raw, groups, bank_root, _ = _prepare(tmp_path, systems=["SimRetrieval"])
+    systems = ["SimRetrieval", "FullContext", "NoMemory"]
+    metrics = ["em", "f1", "rougeL", "judge"]
+
+    results, _ = _run_eval(
+        tmp_path, groups, bank_root, systems, metrics,
+        out_name="per_conv.json", per_conversation=True,
+    )
+
+    assert results["conversations"] == ["locomo_0000"]
+    for name in systems:
+        entry = results["systems"][name]
+        bucket = entry["per_conversation"]["locomo_0000"]
+        assert bucket["n"] == 3
+        for metric in metrics:
+            # One conversation: the breakdown must equal the aggregate exactly.
+            assert bucket[metric] == entry["overall"][metric]
+
+    # Without the flag the block is absent, so older result files stay valid.
+    plain, _ = _run_eval(
+        tmp_path, groups, bank_root, ["SimRetrieval"], ["em"],
+        out_name="no_per_conv.json",
+    )
+    assert "per_conversation" not in plain["systems"]["SimRetrieval"]
+
+
+def test_per_conversation_report_and_matrix_render(tmp_path):
+    dataset_path, raw, groups, bank_root, _ = _prepare(tmp_path, systems=["SimRetrieval"])
+    from eval.static_eval import (
+        render_per_conversation_matrix,
+        render_report_table,
+    )
+
+    results, _ = _run_eval(
+        tmp_path, groups, bank_root, ["SimRetrieval", "NoMemory"], ["em", "f1"],
+        out_name="render.json", per_conversation=True,
+    )
+
+    table = render_report_table(results, ["em", "f1"])
+    assert "## Per-conversation" in table
+    assert "| Conversation | n | EM | F1 |" in table
+
+    matrix = render_per_conversation_matrix(results, ["em", "f1"])
+    assert "**EM**" in matrix and "**F1**" in matrix
+    assert "| Conversation | SimRetrieval | NoMemory |" in matrix
+    assert "| locomo_0000 |" in matrix
+
+
+def test_eval_unknown_conversation_is_an_empty_but_valid_result(tmp_path):
+    """A selector that matches nothing must not crash or lose the result file."""
+    dataset_path, raw, groups, bank_root, _ = _prepare(tmp_path, systems=["SimRetrieval"])
+
+    results, out_path = _run_eval(
+        tmp_path, groups, bank_root, ["SimRetrieval"], ["em"],
+        out_name="absent.json", conversations=["locomo_0099"],
+    )
+
+    assert results["n_qa"] == 0
+    assert results["conversations"] == []
+    assert results["systems"]["SimRetrieval"]["n"] == 0
+    assert os.path.exists(out_path)
+
+
+def test_cli_conversation_resolution():
+    """Ids, bare indices and `locomo_<n>` all resolve to canonical ids."""
+    from scripts.run_static_eval import _resolve_conversations
+
+    available = ["locomo_0000", "locomo_0007"]
+    assert _resolve_conversations(["locomo_0007"], available) == ["locomo_0007"]
+    assert _resolve_conversations(["7", "locomo_0"], available) == [
+        "locomo_0007", "locomo_0000",
+    ]
+    assert _resolve_conversations(["locomo_0007", "7"], available) == ["locomo_0007"]
+    with pytest.raises(SystemExit):
+        _resolve_conversations(["9"], available)

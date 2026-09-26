@@ -1,0 +1,193 @@
+# system=ASEM idx=1018 conv=locomo_0005 category=open_domain (harness label=commonsense)
+# question: What is an indoor activity that Andrew would enjoy doing while make his dog happy?
+# gold: cook dog treats
+# pred (real run): Andrew would enjoy playing with a ball in a doggy daycare or going on walks for fresh air with his dog.
+# judge_correct=False judge_error=missing_info f1=0.0909 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['4f56ce94-993a-4be9-9566-b6621290a000'] evidence_in_prompt=None
+# prompt_chars=11081 prompt_tokens~2770
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What is an indoor activity that Andrew would enjoy doing while make his dog happy?
+
+## Memory notes
+[1] 26 June 2023 · said by Andrew · about: Andrew
+      • Andrew shared a photo of dogs playing with a ball in a large indoor area, which he explained is a doggy
+        daycare near him with a big indoor space for dogs to play.
+      turn: "[Andrew] Wow you really went in huh!? Now they have a great place to play and explore, that's awesome!
+             Take a look at this place I'm at. (image: a photo of a group of dogs playing with a ball in a …"
+      topics: andrew, dogs, ball, doggy daycare, indoor space
+      links: [3] extends, [7] same-topic  (+9 more not in this list: same-topic:8, semantic:1)
+
+[2] 8 July 2023 · said by Andrew · about: Andrew
+      • Andrew says the dogs make everyone smile and he can't wait to go hiking with them, hoping to take Toby
+        along since German Shepherds would make great, smart, and loyal hiking buddies; Audrey adds that German
+        Shepherds are loyal and smart, love new journeys, and can picture Andrew and his pup conquering trails
+        together.
+      • Andrew also shared a photo of himself and his dog hiking last time, noting how happy the dog was …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Andrew] They make everyone smile. Can't wait to go hiking with them!"
+      topics: dogs, hiking, smile, andrew, toby, german shepherd, hiking buddies, audrey
+      links: [5] same-topic, [4] same-topic, [6] extends  (+11 more not in this list: same-topic:7, extends:4)
+
+[3] 26 June 2023 · said by Andrew · about: Andrew
+      • Andrew explained that the place is a doggy daycare near him with a big indoor space for dogs to play.
+      turn: "[Andrew] This is the doggy daycare near me, it has a big indoor space for dogs to play."
+      topics: andrew, doggy daycare, indoor space, dogs
+      links: [1] extends  (+4 more not in this list: same-topic:4)
+
+[4] 19 October 2023 · said by Andrew · about: Andrew, Toby
+      • Andrew named his new puppy Buddy, hoping he and Toby would become buddies; the puppy is doing great but
+        still getting used to Toby and the new environment, and Andrew reflects on the joy and companionship
+        pets bring, noting that he and Buddy enjoy going on walks together for fresh air.
+      • Audrey advised Andrew to focus on keeping Toby and Buddy happy and healthy before getting more dogs, and
+        Andrew planned to take …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Andrew] Thanks! He's doing great in his new home. Still getting used to Toby and the new environment.
+             Toby needs some time to get along with him too. I never imagined having pets would bring so much …"
+      topics: andrew, buddy, toby, scout, new puppy, adjustment, companionship, walks
+      links: [2] same-topic  (+13 more not in this list: extends:12, same-topic:1)
+
+[5] 3 May 2023 · said by Andrew · about: Andrew, Audrey
+      • Andrew praises Audrey's dog care, asks about her walks, road trips, her dogs' breed, age, favorite
+        activities, garden play, dog park visits, and how they get along, also complimenting her dog in a
+        sweater; Audrey offered to support Andrew by having him email his criteria so she can help find a great
+        spot for his furry friend, and she thanked him for his encouragement while affirming her devotion to
+        keeping her dogs …
+      • [+2 more fact(s) in this note, not shown]
+      turn: "[Andrew] Awesome to see that you take such good care of your dogs! What else do you do when you walk
+             them?"
+      topics: andrew, dog care, walks, pups, road trip, support, email, criteria
+      links: [2] same-topic, [7] extends, [8] extends  (+23 more not in this list: same-topic:13, extends:9, semantic:1)
+
+[6] 28 October 2023 · said by Andrew · about: Andrew
+      • Andrew shared a photo of himself and his dog hiking last time and noted how happy the dog was.
+      turn: "[Andrew] You bet! Can't wait to see their happy face! This was my dog and I when we were hiking last
+             time, see how happy he was? (image: a photography of a man and his dog on a trail)"
+      topics: dog, hiking, photo, happy face
+      links: [2] extends, [8] same-topic  (+2 more not in this list: extends:1, same-topic:1)
+
+[7] 24 September 2023 · said by Andrew · about: Andrew, Audrey
+      • Andrew asked whether Audrey's dogs enjoy playing in the garden too, and also complimented her dog in a
+        sweater and asked if they enjoy the dog park.
+      turn: "[Andrew] Awesome! Do they enjoy playing in the garden too?"
+      topics: andrew, dogs, garden, playing, dog park, sweater, question
+      links: [5] extends, [1] same-topic, [8] extends  (+8 more not in this list: same-topic:6, extends:1, semantic:1)
+
+[8] 13 October 2023 · said by Andrew · about: Andrew
+      • Andrew complimented Audrey's dog in a sweater and asked if they enjoy the dog park.
+      turn: "[Andrew] Aww, they look so sweet in that sweater! Do they enjoy going to the dog park?"
+      topics: andrew, sweater, dog park, sweet
+      links: [7] extends, [5] extends, [6] same-topic  (+4 more not in this list: extends:2, same-topic:2)
+

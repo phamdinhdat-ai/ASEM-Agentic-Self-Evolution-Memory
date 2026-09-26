@@ -1,0 +1,54 @@
+# system=FastASEM idx=505 conv=locomo_0003 category=temporal (harness label=temporal)
+# question: When did Nate get his first two turtles?
+# gold: 2019
+# pred (real run): 5 September 2022
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['4800fbb3-8801-49a7-87b9-7ae95f494abf', 'f73b0040-d498-4545-8628-303f2318bf32'] evidence_in_prompt=None
+# prompt_chars=2419 prompt_tokens~604
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 18 March 2022 · said by Nate · about: Nate
+      • Nate owns two tortoises.
+      topics: tortoises, pets
+      links: [2] temporal, [3] temporal, [4] semantic, [6] same-entity  (+17 more not in this list: same-entity:14, semantic:2, temporal:1)
+
+[2] 18 March 2022 · said by Nate · about: Nate
+      • Nate owns three turtles.
+      topics: turtles, pets
+      links: [1] temporal, [3] temporal, [4] semantic  (+21 more not in this list: same-entity:15, semantic:4, temporal:2)
+
+[3] 18 March 2022 · said by Nate · about: Nate
+      • Nate is drawn to turtles because they are unique, slow-paced, low-maintenance, and calming.
+      topics: turtles, unique, low-maintenance, calming
+      links: [2] temporal, [8] semantic  (+23 more not in this list: same-entity:15, semantic:7, temporal:1)
+
+[4] 5 September 2022 · said by Nate · about: Nate, turtles
+      • Nate has two turtles. | Nate likes holding his turtles.
+      topics: turtles, pets, holding
+      links: [2] semantic, [1] semantic, [5] same-entity, [6] semantic, [8] semantic  (+13 more not in this list: same-entity:10, semantic:3)
+
+[5] 25 October 2022 · said by Nate · about: Nate, turtles
+      • Nate took his turtles out for a walk on 25 October 2022 because he was bored.
+      topics: turtles, walk, bored
+      links: [4] same-entity, [6] semantic, [7] semantic  (+9 more not in this list: same-entity:5, semantic:4)
+
+[6] 4 November 2022 · said by Nate · about: Nate
+      • On 4 November 2022, Nate said he loves turtles.
+      topics: turtles, love
+      links: [1] same-entity, [5] semantic, [4] semantic, [7] semantic  (+6 more not in this list: same-entity:5, semantic:1)
+
+[7] 11 November 2022 · said by Nate · about: Nate, Tampa
+      • On 10 November 2022, Nate took his turtles to the beach in Tampa.
+      topics: turtles, beach, Tampa
+      links: [5] semantic, [6] semantic  (+5 more not in this list: same-entity:4, semantic:1)
+
+[8] 11 November 2022 · said by Nate · about: Nate
+      • Nate loves having his turtles around because they make him feel calm and require little looking after.
+      topics: turtles, calm, low maintenance
+      links: [3] semantic, [4] semantic  (+6 more not in this list: same-entity:5, semantic:1)
+
+Question: When did Nate get his first two turtles?
+
+Answer:

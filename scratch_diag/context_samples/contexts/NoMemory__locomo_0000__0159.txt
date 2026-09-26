@@ -1,0 +1,13 @@
+# system=NoMemory idx=159 conv=locomo_0000 category=adversarial (harness label=adversarial)
+# question: What was grandma's gift to Melanie?
+# gold: necklace
+# pred (real run): Unknown.
+# judge_correct=False judge_error=hallucination f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=302 prompt_tokens~75
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Caroline and Melanie. Question: What was grandma's gift to Melanie?
+
+Answer:

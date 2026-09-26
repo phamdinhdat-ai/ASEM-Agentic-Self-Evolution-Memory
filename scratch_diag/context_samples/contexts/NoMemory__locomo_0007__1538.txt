@@ -1,0 +1,13 @@
+# system=NoMemory idx=1538 conv=locomo_0007 category=adversarial (harness label=adversarial)
+# question: What are the names of Deborah's snakes?
+# gold: Susie, Seraphim
+# pred (real run): Unknown.
+# judge_correct=False judge_error=missing_info f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=304 prompt_tokens~76
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Deborah and Jolene. Question: What are the names of Deborah's snakes?
+
+Answer:

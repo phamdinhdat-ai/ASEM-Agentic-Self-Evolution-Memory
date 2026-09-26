@@ -1,0 +1,59 @@
+# system=FastASEM idx=760 conv=locomo_0004 category=open_domain (harness label=commonsense)
+# question: Would Tim enjoy reading books by C. S. Lewis or John Greene?
+# gold: C. S.Lewis
+# pred (real run): No, Tim would not enjoy reading books by C. S. Lewis or John Greene.
+# judge_correct=True judge_error=contradiction f1=0.3529 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=2831 prompt_tokens~707
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 2 August 2023 · said by Tim · about: Tim, Harry Potter, Game of Thrones, George R. R. Martin
+      • Tim's favorite books to write about are Harry Potter and Game of Thrones. | Tim has read just the Game
+        of Thrones series by George R.
+      • R.
+      • Martin. | Tim loves reading books in his downtime and one of his favorite series is Harry Potter. |
+        Tim's favorite book is Harry Potter.
+      topics: favorite books, Harry Potter, Game of Thrones, George R. R. Martin, read, reading, books, favorite series
+      links: [2] temporal, [5] semantic, [8] semantic  (+25 more not in this list: same-entity:19, semantic:6)
+
+[2] 2 August 2023 · said by Tim · about: Tim
+      • Tim has been writing about different fantasy novels, studying characters, themes, and making book
+        recommendations.
+      topics: fantasy novels, characters, themes, book recommendations
+      links: [1] temporal, [3] semantic, [4] semantic, [6] same-entity  (+29 more not in this list: semantic:15, same-entity:12, temporal:2)
+
+[3] 9 August 2023 · said by Tim · about: Tim
+      • Tim finds peace in reading fantasy books.
+      topics: fantasy books, reading, peace
+      links: [2] semantic, [5] same-entity  (+18 more not in this list: same-entity:16, semantic:1, temporal:1)
+
+[4] 26 August 2023 · said by Tim · about: Tim
+      • Tim is more into reading and fantasy novels.
+      topics: reading, fantasy novels
+      links: [2] semantic, [5] same-entity, [7] semantic, [8] same-entity  (+17 more not in this list: same-entity:9, semantic:7, temporal:1)
+
+[5] 17 October 2023 · said by Tim · about: Tim
+      • Tim is currently reading a book and is totally hooked on it.
+      topics: reading, book, hooked
+      links: [4] same-entity, [3] same-entity, [6] semantic, [1] semantic  (+12 more not in this list: same-entity:6, semantic:5, temporal:1)
+
+[6] 11 November 2023 · said by Tim · about: Tim
+      • Tim has been reading as usual.
+      topics: reading, books
+      links: [2] same-entity, [5] semantic, [8] semantic  (+11 more not in this list: same-entity:6, semantic:4, temporal:1)
+
+[7] 1 December 2023 · said by Tim · about: Tim, John
+      • Tim and John both enjoy fantasy books and movies.
+      topics: fantasy books, fantasy movies
+      links: [4] semantic  (+12 more not in this list: same-entity:7, semantic:4, temporal:1)
+
+[8] 2 January 2024 · said by Tim · about: Tim
+      • Tim loves reading and has a collection of books.
+      topics: reading, books, collection
+      links: [4] same-entity, [6] semantic, [1] semantic  (+6 more not in this list: same-entity:4, semantic:2)
+
+Question: Would Tim enjoy reading books by C. S. Lewis or John Greene?
+
+Answer:

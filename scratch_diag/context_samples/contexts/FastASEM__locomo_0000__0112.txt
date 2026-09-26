@@ -1,0 +1,58 @@
+# system=FastASEM idx=112 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What did Mel and her kids paint in their latest project in July 2023?
+# gold: a sunset with a palm tree
+# pred (real run): They painted a sunset with a palm tree and purple flowers.
+# judge_correct=True judge_error=None f1=0.6154 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['d2ee6f2f-fb97-4478-b4a8-6913ccf49bb3'] evidence_in_prompt=None
+# prompt_chars=3001 prompt_tokens~750
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 8 May 2023 · said by Melanie · about: Melanie
+      • Melanie painted a lake sunrise in 2022.
+      topics: painting, lake sunrise
+      links: [3] semantic  (+20 more not in this list: same-entity:19, semantic:1)
+
+[2] 6 July 2023 · said by Melanie · about: Melanie
+      • On 5 July 2023, Melanie took her kids to the museum.
+      topics: museum, kids, outing
+      links: [5] same-entity, [3] semantic  (+19 more not in this list: same-entity:11, semantic:7, temporal:1)
+
+[3] 15 July 2023 · said by Melanie · about: Melanie, kids, paintings, sunset, palm tree, purple flowers
+      • Melanie and her kids painted nature-inspired paintings on the weekend of 8-9 July 2023. | Melanie and
+        her kids painted a sunset with a palm tree on the weekend of 8-9 July 2023. | Melanie and her kids found
+        a field of purple flowers on the weekend of 8-9 July 2023. | Melanie and her kids finished another
+        painting similar to their last one before 17 July 2023.
+      topics: painting, nature-inspired, art, sunset, palm tree, flowers, purple, nature
+      links: [4] same-entity, [5] temporal, [2] semantic, [1] same-entity, [7] semantic, [8] semantic  (+8 more not in this list: same-entity:6, semantic:2)
+
+[4] 15 July 2023 · said by Melanie · about: Melanie, kids, pots, cup, dog face
+      • Melanie and her kids each made their own pots at the pottery workshop on 7 July 2023. | Melanie's kids
+        made a cup with a dog face on it at the pottery workshop on 7 July 2023.
+      topics: pots, pottery, made, cup, dog face
+      links: [3] same-entity, [5] temporal  (+10 more not in this list: same-entity:9, semantic:1)
+
+[5] 15 July 2023 · said by Melanie · about: Melanie, pottery workshop
+      • Melanie took her kids to a pottery workshop on 7 July 2023.
+      topics: pottery, workshop, kids, clay
+      links: [2] same-entity, [4] temporal, [3] temporal, [6] semantic  (+9 more not in this list: same-entity:7, semantic:2)
+
+[6] 17 August 2023 · said by Melanie · about: Melanie
+      • Melanie finished another pottery project before 17 August 2023.
+      topics: pottery, project, art
+      links: [5] semantic, [7] semantic  (+12 more not in this list: same-entity:7, semantic:4, temporal:1)
+
+[7] 13 October 2023 · said by Melanie · about: Melanie
+      • On 13 October 2023, Melanie stated she has been painting to keep busy.
+      topics: painting, keeping busy
+      links: [8] temporal, [6] semantic, [3] semantic  (+5 more not in this list: same-entity:5)
+
+[8] 13 October 2023 · said by Melanie · about: Melanie
+      • In the week of 2-8 October 2023, Melanie painted a painting inspired by sunsets.
+      topics: painting, sunset, art
+      links: [3] semantic, [7] temporal  (+6 more not in this list: same-entity:5, semantic:1)
+
+Question: What did Mel and her kids paint in their latest project in July 2023?
+
+Answer:

@@ -401,6 +401,28 @@ def build_pipeline_from_config(config_path: str, db_path: str) -> ASEMPipeline:
 		delta=hp["delta"],
 		lambda_weight=hp["lambda"],
 	)
+	if cfg.get("use_enhanced_retriever", True):
+		from asem.enhanced_retriever import EnhancedHybridRetriever
+		enh_cfg = cfg.get("enhanced_retriever", {}) or {}
+		retriever = EnhancedHybridRetriever(
+			backend=backend,
+			k1=hp["k1"],
+			k2=hp["k2"],
+			delta=hp["delta"],
+			lambda_weight=hp["lambda"],
+			max_hops=enh_cfg.get("max_hops", 2),
+			alpha=enh_cfg.get("alpha", 0.35),
+			beta=enh_cfg.get("beta", 0.25),
+			gamma=enh_cfg.get("gamma", 0.40),
+		)
+	else:
+		retriever = HybridRetriever(
+			backend=backend,
+			k1=hp["k1"],
+			k2=hp["k2"],
+			delta=hp["delta"],
+			lambda_weight=hp["lambda"],
+		)
 	answer_agent = AnswerAgent(
 		backend=backend,
 		prompt_template=distil_prompt,

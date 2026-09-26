@@ -1,0 +1,54 @@
+# system=FastASEM idx=1791 conv=locomo_0009 category=temporal (harness label=temporal)
+# question: When did a mishap occur with Calvin's musical gear and favorite mic?
+# gold: On a week before 16 May, 2023
+# pred (real run): 11:50 am on 16 May, 2023
+# judge_correct=False judge_error=contradiction f1=0.6154 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['99a0cb13-b344-4916-99a4-bfef59727a1d', '9ba388b6-fb57-4326-9df8-4fd19bde8009', 'b74aa072-a1d3-46ce-823f-8bb0628d5eef', 'f31d43fb-0f5b-4915-afdc-76705acf0c3f'] evidence_in_prompt=None
+# prompt_chars=2529 prompt_tokens~632
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 26 March 2023 · said by Calvin · about: Calvin
+      • Calvin had a few studio sessions during the week of 20 March 2023 to 26 March 2023.
+      topics: studio sessions, music, recording
+      links: [2] semantic, [3] semantic, [6] same-entity  (+23 more not in this list: same-entity:19, semantic:4)
+
+[2] 16 May 2023 · said by Calvin · about: Calvin
+      • Calvin saved his music gear and favorite microphone during the flood around 9 May 2023.
+      topics: music gear, microphone, flood
+      links: [1] semantic  (+18 more not in this list: same-entity:17, temporal:1)
+
+[3] 16 May 2023 · said by Calvin · about: Calvin
+      • Calvin has a music studio with a keyboard, synthesizer, and other musical equipment.
+      topics: music studio, keyboard, synthesizer, musical equipment
+      links: [1] semantic, [4] semantic  (+17 more not in this list: same-entity:15, semantic:2)
+
+[4] 9 June 2023 · said by Calvin · about: Calvin
+      • Calvin has been working with a team in the studio on his music.
+      topics: studio, team, music
+      links: [3] semantic, [5] semantic, [7] semantic  (+23 more not in this list: semantic:12, same-entity:10, temporal:1)
+
+[5] 3 August 2023 · said by Calvin · about: Calvin
+      • Calvin shared a photo of himself performing with the band on stage with lights on.
+      topics: photo, band, stage, lights
+      links: [6] temporal, [4] semantic  (+11 more not in this list: same-entity:8, semantic:3)
+
+[6] 3 August 2023 · said by Calvin · about: Calvin
+      • On 2 August 2023, Calvin performed with a band on stage.
+      topics: performance, band, stage
+      links: [1] same-entity, [5] temporal  (+13 more not in this list: same-entity:7, semantic:6)
+
+[7] 22 August 2023 · said by Calvin · about: Calvin
+      • Someone noticed Calvin's performance at the Tokyo festival and now Calvin is working with them.
+      topics: collaboration, performance, opportunity
+      links: [4] semantic, [8] semantic  (+11 more not in this list: same-entity:8, semantic:3)
+
+[8] 13 November 2023 · said by Calvin · about: Calvin
+      • Calvin freestyled and talked about getting famous with his friend when they were teenagers.
+      topics: freestyled, getting famous, teenagers
+      links: [7] semantic  (+8 more not in this list: same-entity:5, semantic:3)
+
+Question: When did a mishap occur with Calvin's musical gear and favorite mic?
+
+Answer:

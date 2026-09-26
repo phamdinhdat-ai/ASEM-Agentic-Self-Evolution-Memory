@@ -468,6 +468,49 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
 # Builders
 # ---------------------------------------------------------------------------
 
+def _rv(rt_cfg: Any, key: str, default: Any) -> Any:
+    """Read a retriever knob from a YAML dict OR a typed config object.
+
+    `build_asem_system` receives the parsed YAML (`dict`), while
+    `build_fast_asem_system` receives `ASEMConfig.retriever` (a dataclass), so the
+    same parser has to serve both shapes.
+    """
+    if rt_cfg is None:
+        return default
+    if isinstance(rt_cfg, dict):
+        value = rt_cfg.get(key, default)
+    else:
+        value = getattr(rt_cfg, key, default)
+    return default if value is None else value
+
+
+def _retriever_kwargs(rt_cfg: Any) -> Dict[str, Any]:
+    """Map a config `retriever:` block onto `HybridRetriever` fields.
+
+    ONE parser for both builders, so a config knob cannot be honoured by one system
+    and silently dropped by the other (ASEM v1 used to construct the retriever with
+    positional defaults only — `max_hops: 2` in every model config was decorative).
+    Unknown keys are ignored so a config can carry experiment notes.
+    """
+    mode = str(_rv(rt_cfg, "mode", "rrf")).lower()
+    kwargs: Dict[str, Any] = {
+        "use_rrf": mode != "classic",
+        "use_bm25": bool(_rv(rt_cfg, "use_bm25", True)),
+        "use_entity_filter": bool(_rv(rt_cfg, "use_entity_filter", True)),
+        "use_temporal_boost": bool(_rv(rt_cfg, "use_temporal_boost", True)),
+        "max_link_hops": int(_rv(rt_cfg, "max_hops", 1) or 1),
+        "hop_decay": float(_rv(rt_cfg, "hop_decay", 0.7)),
+        "use_masked_query": bool(_rv(rt_cfg, "use_masked_query", True)),
+        "use_dedupe": bool(_rv(rt_cfg, "use_dedupe", True)),
+    }
+    for key in ("dense_weight", "bm25_weight", "entity_weight", "temporal_weight",
+                "rrf_k", "masked_weight", "dedupe_tau"):
+        value = _rv(rt_cfg, key, None)
+        if value is not None:
+            kwargs[key] = type(getattr(HybridRetriever, key))(value)
+    return kwargs
+
+
 def build_asem_system(
     config_path: str,
     db_dir: str,
@@ -494,6 +537,8 @@ def build_asem_system(
     summary_prompt = _load_text("data/prompts/P_summary.txt")
     batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
     batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+    qa_prompt_path = os.path.join("data", "prompts", "P_temporal_qa.txt")
+    qa_prompt = _load_text(qa_prompt_path) if os.path.exists(qa_prompt_path) else _RETRIEVAL_PROMPT
 
     retry_cfg = cfg.get("llm_retry", {}) or {}
     max_retries = int(retry_cfg.get("max_retries", 0))
@@ -520,17 +565,29 @@ def build_asem_system(
         backend=backend,
         k1=hp["k1"], k2=hp["k2"],
         delta=hp["delta"], lambda_weight=hp["lambda"],
+        **_retriever_kwargs(cfg.get("retriever", {}) or {}),
     )
     ans_cfg = cfg.get("answer", {}) or {}
+    # ASEM v1 follows the config like every other system: `answer.direct_mode`
+    # selects the single-call graph-QA path (`P_temporal_qa`, `direct_answer`) and
+    # falls back to the distil path (`P_distil`, JSON `selected_ids`) otherwise.
+    # The builder used to ignore the key, so a config asking for direct mode still
+    # ran distillation — i.e. the two systems were not on the same answering
+    # protocol while the results table implied they were.
+    direct_mode = bool(ans_cfg.get("direct_mode", False))
+    qa_prompt = _load_text("data/prompts/P_temporal_qa.txt") if os.path.exists(
+        os.path.join("data", "prompts", "P_temporal_qa.txt")) else _RETRIEVAL_PROMPT
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
-        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        baseline_prompt_template=qa_prompt if direct_mode else _RETRIEVAL_PROMPT,
+        direct_mode=direct_mode,
         max_retries=max_retries,
         max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
         context_window=int(ans_cfg.get("context_window") or 0) or None,
         max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
         content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
+        fact_char_limit=int(ans_cfg.get("fact_char_limit", 420)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -666,6 +723,159 @@ def build_asem_v2_system(
     )
 
     return ASEMSystemV2(pipeline=pipeline, batch_ingestor=batch_ingestor)
+
+
+
+
+@dataclass
+class ASEMTHGSystem:
+    """Temporal Hyper-Graph System (ASEM-THG): 1-pass session ingest + THG + Enhanced Retriever."""
+
+    pipeline: ASEMPipeline
+    single_pass_ingestor: object
+
+    _ingested: bool = False
+
+    def ingest_conversation(
+        self,
+        dialogue_turns: Any,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> int:
+        if not dialogue_turns:
+            return 0
+        from asem.temporal import parse_session_datetime
+
+        first_item = dialogue_turns[0]
+        total_notes = 0
+
+        if isinstance(first_item, dict):
+            for i, s in enumerate(dialogue_turns):
+                turns = s.get("turns", [])
+                s_date = s.get("date") or s.get("session_date")
+                s_id = s.get("session_id", f"session_{i+1}")
+                notes = self.single_pass_ingestor.ingest_session(
+                    dialogue_turns=turns,
+                    memory_bank=self.pipeline.memory_bank,
+                    session_date=s_date,
+                    session_id=s_id,
+                )
+                total_notes += len(notes)
+        elif isinstance(first_item, (tuple, list)):
+            for label, turns in dialogue_turns:
+                dt_obj, date_str = parse_session_datetime(label)
+                notes = self.single_pass_ingestor.ingest_session(
+                    dialogue_turns=turns,
+                    memory_bank=self.pipeline.memory_bank,
+                    session_date=date_str,
+                    session_id=label,
+                )
+                total_notes += len(notes)
+        elif isinstance(first_item, str):
+            notes = self.single_pass_ingestor.ingest_session(
+                dialogue_turns=dialogue_turns,
+                memory_bank=self.pipeline.memory_bank,
+                session_date=session_date,
+                session_id=session_id,
+            )
+            total_notes += len(notes)
+        else:
+            raise TypeError(f"Unsupported dialogue_turns type: {type(first_item)}")
+
+        self._ingested = True
+        return total_notes
+
+    def answer(self, query: str, history: List[str] = None) -> str:
+        if not self._ingested and history:
+            self.ingest_conversation(history)
+        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        return answer
+
+    def reset(self) -> None:
+        self._ingested = False
+        self.pipeline.memory_bank.clear()
+
+
+def build_asem_thg_system(
+    config_path: str,
+    db_dir: str,
+    backend: Optional[InferenceBackend] = None,
+) -> ASEMTHGSystem:
+    """Build ASEM-THG system with SinglePassSessionIngestor & EnhancedHybridRetriever."""
+    cfg = _load_config(config_path)
+    backend = backend if backend is not None else build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+    ans_cfg = cfg.get("answer", {}) or {}
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
+
+    from asem.single_pass_ingest import SinglePassSessionIngestor
+    from asem.enhanced_retriever import EnhancedHybridRetriever
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"], max_retries=max_retries,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt, max_retries=max_retries,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend, link_prompt_template=link_prompt, evolve_prompt_template=evolve_prompt, k=hp["k"],
+    )
+    retriever = EnhancedHybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=hp["k2"],
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+        max_hops=2, hop_decay=0.7, multi_hop_topn=5,
+        alpha=0.35, beta=0.25, gamma=0.40,
+        enable_global_semantics=True,
+        enable_intent_q=True,
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
+        max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
+        context_window=int(ans_cfg.get("context_window") or 0) or None,
+        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
+        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend, alpha=hp["alpha"], q0=hp["q0"], summary_prompt_template=summary_prompt, note_constructor=note_constructor,
+    )
+    single_pass_ingestor = SinglePassSessionIngestor(
+        backend=backend, q0=hp["q0"], max_retries=max_retries,
+    )
+    wg_cfg = cfg.get("write_gate", {}) or {}
+    write_gate = WriteGate(
+        enabled=bool(wg_cfg.get("enabled", True)),
+        tau_high=float(wg_cfg.get("tau_high", 0.45)),
+        tau_redund=float(wg_cfg.get("tau_redund", 0.92)),
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "asem_thg")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+        write_gate=write_gate,
+    )
+
+    return ASEMTHGSystem(pipeline=pipeline, single_pass_ingestor=single_pass_ingestor)
 
 
 def build_baselines(
@@ -871,17 +1081,7 @@ def build_fast_asem_system(
         backend=backend,
         k1=hp.k1, k2=hp.k2,
         delta=hp.delta, lambda_weight=hp.lambda_weight,
-        use_rrf=True,
-        use_bm25=rt_cfg.use_bm25,
-        use_entity_filter=rt_cfg.use_entity_filter,
-        use_temporal_boost=rt_cfg.use_temporal_boost,
-        dense_weight=rt_cfg.dense_weight,
-        bm25_weight=rt_cfg.bm25_weight,
-        entity_weight=rt_cfg.entity_weight,
-        temporal_weight=rt_cfg.temporal_weight,
-        rrf_k=rt_cfg.rrf_k,
-        max_link_hops=rt_cfg.max_hops,
-        enable_link_traversal=True,
+        **_retriever_kwargs(rt_cfg),
     )
     answer_agent = AnswerAgent(
         backend=backend,
@@ -939,6 +1139,7 @@ def get_systems(
     systems["ASEM"] = build_asem_system(config_path, db_dir)
     systems["ASEMv2"] = build_asem_v2_system(config_path, db_dir)
     systems["FastASEM"] = build_fast_asem_system(config_path, db_dir)
+    systems["ASEM-THG"] = build_asem_thg_system(config_path, db_dir)
     return systems
 
 
@@ -950,6 +1151,7 @@ def get_systems(
 #: their builder creates inside ``db_dir``. Used by the phase runner to place
 #: one bank per conversation so ingestion can be done once and reused.
 BANK_FILE_NAMES: Dict[str, str] = {
+    "ASEM-THG": "asem_thg",
     "ASEM": "asem",
     "ASEMv2": "asem_v2",
     "FastASEM": "fast_asem",
@@ -964,7 +1166,7 @@ NO_BANK_SYSTEMS: Tuple[str, ...] = ("NoMemory", "FullContext")
 
 #: Canonical evaluation system order.
 ALL_SYSTEMS: List[str] = [
-    "NoMemory", "FullContext", "SimRetrieval", "AtomicLinking",
+    "NoMemory", "FullContext", "ASEM-THG", "SimRetrieval", "AtomicLinking",
     "RLManagerOnly", "ValueRetrievalOnly", "ASEM", "ASEMv2", "FastASEM",
 ]
 
@@ -981,6 +1183,8 @@ def build_system(
     SQLite file in place (they never delete the main database), so the same
     call works for both the ingest and the retrieval phase.
     """
+    if name in ("ASEM-THG", "ASEM_THG"):
+        return build_asem_thg_system(config_path, db_dir, backend=backend)
     if name == "ASEM":
         return build_asem_system(config_path, db_dir, backend=backend)
     if name == "ASEMv2":

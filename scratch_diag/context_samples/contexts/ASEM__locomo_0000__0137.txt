@@ -1,0 +1,202 @@
+# system=ASEM idx=137 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What painting did Melanie show to Caroline on October 13, 2023?
+# gold: A painting inspired by sunsets with a pink sky.
+# pred (real run): Melanie showed Caroline her blue abstract painting on October 13, 2023.
+# judge_correct=False judge_error=contradiction f1=0.1111 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=12246 prompt_tokens~3061
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What painting did Melanie show to Caroline on October 13, 2023?
+
+## Memory notes
+[1] 17 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie asked Caroline if she had any previews of her art show painting, and Caroline shared a photo of
+        her painting of a tree with a bright sun in the background; Caroline has also been busy painting,
+        sharing a photo of a sunset painting on a small easel and another painting on an easel with a red and
+        blue background, and noted she hasn't tried pottery but is open to trying new art forms.
+      turn: "[Melanie] Wow, Caroline, that sounds awesome! Can't wait to see your art - got any previews? (image: a
+             photo of a painting with a blue and yellow design)"
+      topics: melanie, caroline, art show, painting, tree, sun, sunset, easel
+      links: [3] same-topic, [5] extends, [7] extends, [4] same-topic  (+7 more not in this list: same-topic:6, extends:1)
+
+[2] 17 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie praised Caroline's painting for its vivid colors, unified look, and themes of self-acceptance
+        and love, asking what inspired it and how art aids Caroline's self-discovery and acceptance journey;
+        Caroline explained she painted it after visiting an LGBTQ center to capture everyone's unity and
+        strength, also shared a self-portrait from the previous week featuring a woman with a blue face, and
+        noted that her …
+      • [+4 more fact(s) in this note, not shown]
+      turn: "[Melanie] Wow, Caroline, that painting is awesome! Those colors are so vivid and the whole thing looks
+             really unified. What inspired you?"
+      topics: melanie, caroline, painting, abstract art, colors, unity, lgbtq center, self-acceptance
+      links: [8] extends, [7] extends, [6] extends, [4] extends  (+18 more not in this list: same-topic:10, extends:7, semantic:1)
+
+[3] 17 July 2023 · said by Caroline · about: Caroline
+      • Caroline announced that in August 2023 she will hold an LGBTQ art show featuring her paintings and other
+        LGBTQ artists' talents, reflecting her commitment to inclusivity, diversity, and the trans community;
+        she describes it as a great night aimed at spreading understanding and acceptance.
+      turn: "[Caroline] Yay! Next month I'm having an LGBTQ art show with my paintings - can't wait!"
+      topics: caroline, lgbtq art show, paintings, august, inclusivity, diversity, trans experience, lgbtq artists
+      links: [1] same-topic  (+8 more not in this list: same-topic:5, extends:2, semantic:1)
+
+[4] 13 October 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline complimented Melanie's blue abstract painting and asked what feelings she hoped to portray;
+        Melanie answered that she wanted peaceful blue streaks to convey tranquility and a serene yet vibrant
+        vibe.
+      turn: "[Caroline] Wow, that looks great! The blue adds so much to it. What feelings were you hoping to portray?"
+      topics: caroline, blue painting, feelings, art, melanie, tranquility, serene, vibrant colors
+      links: [2] extends, [6] same-topic, [1] same-topic  (+3 more not in this list: same-topic:2, extends:1)
+
+[5] 17 July 2023 · said by Caroline · about: Caroline
+      • Caroline shared a recent painting for the art show—a tree with a bright sun in the background—and said
+        representing inclusivity and diversity in her art matters to her as a way to advocate for the LGBTQ+
+        community; she has also been busy painting, including a sunset painting on a small easel that she
+        created after visiting the beach around mid-August 2023, inspired by the calming colors of the sun
+        dipping below the …
+      • [+2 more fact(s) in this note, not shown]
+      turn: "[Caroline] Check out my painting for the art show! Hope you like it. (image: a photography of a painting
+             of a tree with a bright sun in the background)"
+      topics: caroline, painting, art show, tree, sun, inclusivity, diversity, lgbtq+
+      links: [1] extends, [7] extends, [6] same-topic  (+9 more not in this list: same-topic:4, extends:3, semantic:2)
+
+[6] 13 October 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline praised Melanie's sunset painting and shared that she has been trying abstract art as a freeing
+        form of self-expression.
+      turn: "[Caroline] Wow Mel, that's stunning! Love the colors and the chilled-out sunset vibe. What made you
+             paint it? I've been trying out abstract stuff recently. It's kinda freeing, just putting my …"
+      topics: caroline, abstract art, self-expression, sunset painting
+      links: [7] same-topic, [2] extends, [5] same-topic, [4] same-topic  (+1 more not in this list: extends:1)
+
+[7] 25 August 2023 · said by Caroline · about: Caroline
+      • Caroline explains she painted the sunset after visiting the beach around mid-August 2023 (the previous
+        week), inspired by the calming colors of the sun dipping below the horizon.
+      turn: "[Caroline] Thanks, Melanie! I painted it after I visited the beach last week. Just seeing the sun dip
+             below the horizon, all the amazing colors - it was amazing and calming. So I just had to try to …"
+      topics: caroline, beach, sunset, painting, inspiration
+      links: [1] extends, [5] extends, [2] extends, [6] same-topic  (+4 more not in this list: same-topic:4)
+
+[8] 23 August 2023 · said by Caroline · about: Caroline
+      • Caroline said painting helps her express herself and shared a self-portrait she made the previous week
+        (around mid-August 2023) featuring a woman with a blue face; painting it made her feel liberated and
+        empowered, and she finds painting therapeutic for exploring her identity.
+      • Melanie agreed that art helps people show who they are and get in touch with themselves, and asked what
+        else helps Caroline; Caroline also …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Caroline] Painting's great for expressing myself. I love creating art! Here's a recent self-portrait I
+             made last week. (image: a photo of a painting of a woman with a blue face)"
+      topics: self-portrait, painting, art, blue face, liberated, empowered, identity, therapeutic
+      links: [2] extends  (+6 more not in this list: extends:6)
+

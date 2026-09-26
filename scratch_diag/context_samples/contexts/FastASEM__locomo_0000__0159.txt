@@ -1,0 +1,56 @@
+# system=FastASEM idx=159 conv=locomo_0000 category=adversarial (harness label=adversarial)
+# question: What was grandma's gift to Melanie?
+# gold: necklace
+# pred (real run): There is no information about grandma's gift to Melanie in the memory notes.
+# judge_correct=False judge_error=hallucination f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['0837ba0c-ceed-4598-bc7d-61fc657dc28e'] evidence_in_prompt=None
+# prompt_chars=2493 prompt_tokens~623
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 9 June 2023 · said by Melanie · about: Melanie
+      • Melanie is married to her husband.
+      topics: husband, marriage
+      links: [2] temporal, [4] semantic  (+18 more not in this list: same-entity:16, semantic:1, temporal:1)
+
+[2] 9 June 2023 · said by Melanie · about: Melanie
+      • Melanie has kids.
+      topics: kids, children, family
+      links: [1] temporal, [3] semantic, [5] semantic  (+26 more not in this list: semantic:12, same-entity:11, temporal:3)
+
+[3] 6 July 2023 · said by Melanie · about: Melanie
+      • Melanie loves being a mom.
+      topics: mom, motherhood
+      links: [2] semantic, [5] same-entity  (+14 more not in this list: same-entity:12, semantic:2)
+
+[4] 15 July 2023 · said by Melanie · about: Melanie, partner, wedding
+      • Melanie's favorite part of her wedding was marrying her partner and promising to be together forever.
+      topics: wedding, marrying, promise
+      links: [1] semantic  (+10 more not in this list: same-entity:9, semantic:1)
+
+[5] 20 July 2023 · said by Melanie · about: Melanie, Melanie's kids, beach
+      • Melanie went to the beach recently with her kids. | Melanie's kids had a blast at the beach. | Melanie
+        goes to the beach with her kids only once or twice a year.
+      topics: beach trip, kids, family outing, happy, beach, frequency, once or twice a year, beach trips
+      links: [3] same-entity, [2] semantic  (+9 more not in this list: same-entity:7, semantic:2)
+
+[6] 13 October 2023 · said by Melanie · about: Melanie
+      • In September 2023, Melanie got hurt and had to take a break from pottery.
+      topics: injury, pottery, break
+      links: (+8 more not in this list: same-entity:5, semantic:3)
+
+[7] 20 October 2023 · said by Melanie · about: Melanie, Melanie's children
+      • Melanie's children loved the walk on the trail on 19 October 2023 and it was a nice way to relax after
+        the road trip.
+      topics: walk, trail, relax, children
+      links: [8] temporal  (+5 more not in this list: same-entity:4, semantic:1)
+
+[8] 20 October 2023 · said by Melanie · about: Melanie, Melanie's child
+      • Melanie went on a walk on a trail with her child on 19 October 2023.
+      topics: walk, trail, nature
+      links: [7] temporal  (+6 more not in this list: same-entity:4, semantic:2)
+
+Question: What was grandma's gift to Melanie?
+
+Answer:

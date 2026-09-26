@@ -1,0 +1,13 @@
+# system=NoMemory idx=518 conv=locomo_0003 category=temporal (harness label=temporal)
+# question: Who was the new addition to Nate's family in May 2022?
+# gold: Max
+# pred (real run): Joanna's child, born in May 2022.
+# judge_correct=True judge_error=None f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=316 prompt_tokens~79
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Joanna and Nate. Question: Who was the new addition to Nate's family in May 2022?
+
+Answer:

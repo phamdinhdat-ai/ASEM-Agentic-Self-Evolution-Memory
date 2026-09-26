@@ -1,0 +1,194 @@
+# system=ASEM idx=118 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What did Melanie and her family see during their camping trip last year?
+# gold: Perseid meteor shower
+# pred (real run): Melanie and her family enjoyed marshmallow roasting, campfire stories, and spending time together in the forest during their camping trip around 3 July 2023.
+# judge_correct=False judge_error=missing_info f1=0.0000 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['6c9fb6f7-19f1-45d6-b0aa-b1f1b34eebf6', '782836b7-7e54-4beb-9d44-a8cb2cd3ad09', 'cfc31c1e-7d32-4ac2-8abe-d5e6bcd0e28c'] evidence_in_prompt=None
+# prompt_chars=11397 prompt_tokens~2849
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What did Melanie and her family see during their camping trip last year?
+
+## Memory notes
+[1] 20 July 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline asked Melanie what her best camping memory is; Melanie recalled her family's 2022 camping trip
+        watching the Perseid meteor shower, making wishes, and feeling at one with the universe, sharing a photo
+        of a star-filled sky.
+      turn: "[Caroline] Wow, Mel, that's awesome! What's your best camping memory?"
+      topics: camping memory, melanie, perseid meteor shower, camping trip, wishes, universe
+      links: (+7 more not in this list: same-topic:5, extends:1, semantic:1)
+
+[2] 17 July 2023 · said by Melanie · about: Melanie
+      • Melanie had a quiet weekend after going camping with her family two weekends before 17 July 2023, around
+        3 July 2023, and enjoyed unplugging and spending time with her kids.
+      • She described the family's annual camping trip with marshmallow roasting and campfire stories as the
+        highlight of their summer, sharing a photo of a fire pit.
+      turn: "[Melanie] Hey Caroline, hope all's good! I had a quiet weekend after we went camping with my fam two
+             weekends ago. It was great to unplug and hang with the kids. What've you been up to? Anything fun …"
+      topics: melanie, camping, family, weekend, quiet, marshmallows, campfire, summer
+      links: [4] extends, [7] same-topic  (+5 more not in this list: same-topic:3, extends:1, semantic:1)
+
+[3] 15 July 2023 · said by Melanie · about: Melanie
+      • Melanie said her family has been awesome, helping out and showing lots of love and support, which helped
+        her through tough times and makes hard times easier; they also went on another camping trip in the
+        forest, and she agreed her family is her biggest motivation and support, sharing a photo of a woman and
+        child on a trail.
+      • Caroline agreed family support is huge, asked what else Melanie's family likes doing together …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Melanie] My fam's been awesome - they helped out and showed lots of love and support."
+      topics: family, support, love, camping trip, forest, motivation, rock, hard times
+      links: [4] extends, [6] same-topic, [5] extends  (+8 more not in this list: same-topic:5, extends:3)
+
+[4] 15 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie said her family's love and support helped her through tough times and makes hard times easier;
+        she went camping with her family in the forest around 3 July 2023, enjoyed unplugging and spending time
+        with her kids, and described the family's annual camping trip with marshmallow roasting and campfire
+        stories as the highlight of their summer, also sharing a photo of a woman and child on a trail; she
+        added that …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Melanie] Yeah, Caroline, my family's been great - their love and support really helped me through tough
+             times. It's awesome! We even went on another camping trip in the forest. (image: a photo of a …"
+      topics: melanie, family, support, camping trip, forest, kids, campfire, trail walk
+      links: [8] causal, [3] extends, [2] extends  (+22 more not in this list: same-topic:14, extends:5, semantic:2, temporal:1)
+
+[5] 20 October 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline said it is sweet to see Melanie's love for her family and that they are her rock.
+      turn: "[Caroline] It's so sweet to see your love for your family, Melanie. They really are your rock."
+      topics: family, love, rock
+      links: [3] extends  (+3 more not in this list: extends:3)
+
+[6] 17 August 2023 · said by Melanie · about: Melanie
+      • Melanie agreed the Pride fest was fun and proposed a family outing for the summer of 2023.
+      turn: "[Melanie] That was a blast! So much fun with the whole gang! Wanna do a family outing this summer?"
+      topics: pride fest, family outing, summer, gang
+      links: [3] same-topic  (+4 more not in this list: same-topic:3, semantic:1)
+
+[7] 28 August 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie said that since they last spoke she took her kids to a park on 27 August 2023, where they had
+        fun exploring and playing outdoors, and she shared a photo of a playground.
+      turn: "[Melanie] Hey Caroline! Since we last spoke, I took my kids to a park yesterday. They had fun exploring
+             and playing. It was nice seeing them have a good time outdoors. Time flies, huh? What's new …"
+      topics: melanie, kids, park, playground, outdoors
+      links: [2] same-topic  (+7 more not in this list: same-topic:6, semantic:1)
+
+[8] 9 June 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline was glad Melanie had a great time and got rest and relaxation after the drive, advising her to
+        cherish the moments; she noted that nature refreshes us, following Melanie's family camping trip in the
+        mountains, which included exploring nature, roasting marshmallows, hiking, an amazing view, and her
+        younger kids loving nature as a special family moment.
+      turn: "[Caroline] Sounds great, Mel! Glad you had a great time. Cherish the moments - they're the best!"
+      topics: cherish moments, melanie, family, camping, nature, marshmallows, hike, rest
+      links: [4] causal  (+12 more not in this list: same-topic:9, extends:2, semantic:1)
+

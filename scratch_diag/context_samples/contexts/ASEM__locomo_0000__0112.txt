@@ -1,0 +1,194 @@
+# system=ASEM idx=112 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What did Mel and her kids paint in their latest project in July 2023?
+# gold: a sunset with a palm tree
+# pred (real run): Mel and her kids painted a dog-faced cup in their pottery workshop on 7 July 2023.
+# judge_correct=False judge_error=missing_info f1=0.0000 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['109648cd-ba31-4193-be18-444452069e00', '505647be-29e0-4c33-b2da-bbf79ccc0bd6', '6b13df5b-06c6-46c0-9e1c-0e63a6832b9a', 'e695bcc2-ec09-43c5-8b6b-34232675bd56'] evidence_in_prompt=None
+# prompt_chars=11270 prompt_tokens~2817
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What did Mel and her kids paint in their latest project in July 2023?
+
+## Memory notes
+[1] 15 July 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline remarked that Melanie and her kids seemed to have had a great time and asked how the kids liked
+        the pottery workshop; Melanie said the kids loved getting their hands dirty with clay and showed a cup
+        with a dog face they made, and Caroline called the cup cute and asked what other creative projects
+        Melanie does with her kids besides pottery.
+      turn: "[Caroline] Wow, Mel! Sounds like you and the kids had a blast. How'd they like it?"
+      topics: kids, pottery, clay, dog cup, creativity, creative projects
+      links: [2] extends, [6] extends, [5] extends, [8] semantic  (+9 more not in this list: same-topic:9)
+
+[2] 15 July 2023 · said by Melanie · about: Melanie
+      • On Friday 7 July 2023, Melanie took her kids to a pottery workshop where they each made their own pots
+        and showed a dog-faced cup they made; Melanie has been into art for seven years, finding her muses in
+        painting and pottery, and shared a photo of her pottery bowls and a starfish.
+      turn: "[Melanie] Hey Caroline, it's been super busy here. So much since we talked! Last Fri I finally took my
+             kids to a pottery workshop. We all made our own pots, it was fun and therapeutic! (image: a …"
+      topics: melanie, pottery workshop, kids, clay pots, dog cup, painting, seven years, muses
+      links: [1] extends, [6] extends, [5] extends  (+5 more not in this list: same-topic:5)
+
+[3] 8 May 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie painted the lake sunrise in 2022 and said it is special to her; she also said painting is a fun
+        way to express her feelings, get creative, and relax after a long day, and she and her kids have been
+        enjoying nature-inspired painting, including a sunset with a palm tree from the weekend of 8-9 July
+        2023.
+      turn: "[Melanie] Yeah, I painted that lake sunrise last year! It's special to me."
+      topics: melanie, lake sunrise, painting, nature-inspired, sunset, palm tree, relaxation, creativity
+      links: (+9 more not in this list: extends:5, same-topic:3, temporal:1)
+
+[4] 13 October 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline praised Melanie's sunset painting and shared that she has been trying abstract art as a freeing
+        form of self-expression.
+      turn: "[Caroline] Wow Mel, that's stunning! Love the colors and the chilled-out sunset vibe. What made you
+             paint it? I've been trying out abstract stuff recently. It's kinda freeing, just putting my …"
+      topics: caroline, abstract art, self-expression, sunset painting
+      links: [7] extends  (+4 more not in this list: same-topic:3, extends:1)
+
+[5] 15 July 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline called the cup cute and asked what other creative projects Melanie does with her kids besides
+        pottery.
+      turn: "[Caroline] Aww, that's so sweet! That cup is so cute. It's awesome to see how kids show their
+             personalities through art. What other creative projects do you do with them, besides pottery?"
+      topics: cup, kids, art, creative projects
+      links: [6] extends, [1] extends, [2] extends  (+5 more not in this list: same-topic:4, semantic:1)
+
+[6] 15 July 2023 · said by Melanie · about: Melanie
+      • Melanie said her kids loved getting their hands dirty with clay and showed a cup with a dog face they
+        made; Caroline called the cup cute and asked what other creative projects Melanie does with her kids
+        besides pottery.
+      turn: "[Melanie] The kids loved it! They were so excited to get their hands dirty and make something with clay.
+             It was special to watch their creativity and imagination come to life, they made this! (image …"
+      topics: kids, clay, creativity, dog cup, pottery, creative projects
+      links: [1] extends, [2] extends, [5] extends  (+3 more not in this list: same-topic:2, semantic:1)
+
+[7] 17 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie praised Caroline's painting for its vivid colors, unified look, and themes of self-acceptance
+        and love, asking what inspired it and how art aids Caroline's self-discovery and acceptance journey;
+        Caroline explained she painted it after visiting an LGBTQ center to capture everyone's unity and
+        strength, also shared a self-portrait from the previous week featuring a woman with a blue face, and
+        noted that her …
+      • [+4 more fact(s) in this note, not shown]
+      turn: "[Melanie] Wow, Caroline, that painting is awesome! Those colors are so vivid and the whole thing looks
+             really unified. What inspired you?"
+      topics: melanie, caroline, painting, abstract art, colors, unity, lgbtq center, self-acceptance
+      links: [4] extends  (+21 more not in this list: extends:10, same-topic:10, semantic:1)
+
+[8] 20 July 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline remarked that the meteor shower experience must have been breathtaking.
+      turn: "[Caroline] Wow, Mel. That must've been breathtaking!"
+      topics: melanie, breathtaking, meteor shower
+      links: [1] semantic  (+5 more not in this list: same-topic:2, semantic:2, extends:1)
+

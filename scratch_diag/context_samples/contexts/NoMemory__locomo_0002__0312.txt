@@ -1,0 +1,13 @@
+# system=NoMemory idx=312 conv=locomo_0002 category=open_domain (harness label=commonsense)
+# question: What might John's financial status be?
+# gold: Middle-class or wealthy
+# pred (real run): Unknown without more context.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=299 prompt_tokens~74
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between John and Maria. Question: What might John's financial status be?
+
+Answer:

@@ -1,0 +1,192 @@
+# system=ASEM idx=505 conv=locomo_0003 category=temporal (harness label=temporal)
+# question: When did Nate get his first two turtles?
+# gold: 2019
+# pred (real run): Nate got his first two turtles on 25 October 2022.
+# judge_correct=True judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['2336fa06-f238-4d11-890e-dc9ab056e918', '42b00441-bdd9-4a71-a1c7-4d74b0410369', 'eba034ab-627e-4ab5-8537-8549ebdd2f86'] evidence_in_prompt=None
+# prompt_chars=11034 prompt_tokens~2758
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+When did Nate get his first two turtles?
+
+## Memory notes
+[1] 25 October 2022 · said by Nate · about: Nate
+      • Nate said he was bored on 25 October 2022, so he took his turtles out for a walk, sharing a photo of two
+        turtles on a log in a pond; afterward, the turtles looked tired from all the walking and were relaxing
+        in their tank.
+      turn: "[Nate] I was bored today, so I just took my turtles out for a walk. (image: a photography of two turtles
+             sitting on a log in a pond)"
+      topics: turtles, walk, bored, pond, tired, tank, relaxing
+      links: [8] extends, [2] same-topic  (+5 more not in this list: extends:3, same-topic:2)
+
+[2] 11 November 2022 · said by Nate · about: Nate, Tampa
+      • Nate says he took his turtles to the beach in Tampa on 10 November 2022 and that they bring him peace.
+      turn: "[Nate] Wow Joanna, that must have been so exciting! It's incredible when you get those moments of joy.
+             Anyway, I took my turtles to the beach in Tampa yesterday! They always bring me peace in the …"
+      topics: nate, turtles, beach, tampa, peace
+      links: [1] same-topic, [3] extends, [7] extends, [4] same-topic
+
+[3] 9 November 2022 · said by Nate · about: Nate, Joanna
+      • Nate says turtles bring him joy and peace; he got another turtle from a pet store and now has a tank big
+        enough for three, and on 10 November 2022 he took his turtles to the beach in Tampa.
+      turn: "[Nate] Turtles really bring me joy and peace. They have such an effect on us - best buddies ever! I saw
+             another at a pet store and just hade to get him. The tank is big enough now for three, so I …"
+      topics: nate, turtles, pet store, tank, joy, beach, tampa, peace
+      links: [8] extends, [5] extends, [7] same-topic, [2] extends  (+19 more not in this list: extends:13, semantic:4, same-topic:2)
+
+[4] 9 November 2022 · said by Nate · about: Nate, Joanna
+      • Nate says he will give the turtles a bath before Joanna arrives so they're ready to play.
+      turn: "[Nate] Sounds good. Well I'll make sure I give the turtles a bath before you get here so they're ready
+             to play."
+      topics: nate, turtles, bath, visit
+      links: [5] same-topic, [7] same-topic, [2] same-topic, [6] same-topic  (+2 more not in this list: same-topic:2)
+
+[5] 25 October 2022 · said by Nate · about: Nate
+      • Nate said he has always liked turtles since he was a boy and knows all about them, and that his turtles
+        bring him joy and calm; he also compares turtles to zen masters and is experimenting with flavors,
+        showing colorful bowls of coconut milk ice cream he made.
+      turn: "[Nate] I've always liked turtles since I was a boy, so I know all about them!"
+      topics: nate, turtles, childhood, knowledge, joy, calm, zen, coconut milk ice cream
+      links: [3] extends, [7] extends, [4] same-topic  (+4 more not in this list: extends:4)
+
+[6] 11 November 2022 · said by Joanna · about: Joanna, Nate
+      • Joanna says Nate must enjoy having his turtles around and asks what he loves most about having them;
+        Nate explains he loves their calming presence, low maintenance, and how they enjoy soaking in the sun,
+        while Joanna also remarks that the turtles look serene and happy and that it is great to have something
+        like that.
+      turn: "[Joanna] Woah, that's awesome, Nate! You must really enjoy having them around - they're so cool! What do
+             you love most about having them?"
+      topics: joanna, turtles, nate, calm, low maintenance, sun, serene, happy
+      links: [7] extends, [4] same-topic  (+4 more not in this list: same-topic:2, causal:1, extends:1)
+
+[7] 7 November 2022 · said by Nate · about: Nate, Joanna
+      • Nate said his turtles bring him joy, calm, and peace, and asked Joanna what brings her happiness; he got
+        another turtle from a pet store and now has a tank big enough for three, and on 10 November 2022 he took
+        his turtles to the beach in Tampa.
+      • Joanna remarked on how life surprises people, noting that just last week (around 2 November 2022) Nate
+        would never have thought he'd get a third turtle this year, said Nate …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Nate] Great actually! These little guys sure bring joy to my life! Watching them is so calming and
+             fascinating. I've really grown fond of them. So, what about you, Joanna? What brings you happiness?"
+      topics: nate, turtles, joanna, joy, happiness, calm, pet store, tank
+      links: [5] extends, [3] same-topic, [4] same-topic, [2] extends, [6] extends  (+6 more not in this list: extends:4, same-topic:2)
+
+[8] 25 October 2022 · said by Nate · about: Nate
+      • Nate said the turtles looked tired from all the walking and were relaxing in their tank.
+      turn: "[Nate] Of course! They look tired from all the walking, so they're relaxing in the tank right now.
+             (image: a photography of a dog laying on a rock in a zoo)"
+      topics: turtles, tired, tank, relaxing
+      links: [3] extends, [1] extends  (+3 more not in this list: same-topic:3)
+

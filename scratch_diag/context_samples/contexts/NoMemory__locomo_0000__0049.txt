@@ -1,0 +1,13 @@
+# system=NoMemory idx=49 conv=locomo_0000 category=temporal (harness label=temporal)
+# question: When did Caroline and Melanie go to a pride fesetival together?
+# gold: 2022
+# pred (real run): Unknown.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=330 prompt_tokens~82
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Caroline and Melanie. Question: When did Caroline and Melanie go to a pride fesetival together?
+
+Answer:

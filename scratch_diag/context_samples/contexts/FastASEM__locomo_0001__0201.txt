@@ -1,0 +1,60 @@
+# system=FastASEM idx=201 conv=locomo_0001 category=single_hop (harness label=conversational)
+# question: How do Jon and Gina both like to destress?
+# gold: by dancing
+# pred (real run): The memory notes do not mention how Jon and Gina destress.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['0431cc16-22b5-48ce-957d-4e03646c6c52', '16e9adf6-7269-4815-b672-a5960aa083b8', '2a905287-105d-4fc5-9e94-80b8b3f69924', '30046efc-893c-47da-8b4f-b53455385ddc', '319699da-6d73-43c0-9a06-229992420281', '3a7a05d0-fd0e-44cc-b034-58c9111da7b1', '41a01287-8363-4228-a069-8dfb54d9b06c', '644a90cb-4825-4fb5-8a99-cc9daf8abdd6', '6ad8d299-0cf2-4e92-bc24-b992777bf049', '6f48ded9-4047-4868-ab25-7e58a090b7ca', '6f55fc57-d2e3-4f8a-bf50-b60bcadb915f', '800b3d62-d24d-412c-b365-a2109585fd99', '8230d114-77f0-4bed-8ebb-0e77ae1f756d', '8723613c-9481-4b17-9ada-0fc3ad9b6609', '90abcdbd-2cdb-4a2d-a5fa-5df6ad2471a0', 'b92bb1e2-4370-4d78-a7a2-16bc7a3ba4ed', 'ba1be9c1-3fa4-4aa1-82c8-e4617062d209', 'c8843224-7065-4610-ae7e-e7632809b83e'] evidence_in_prompt=None
+# prompt_chars=3117 prompt_tokens~779
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 4 February 2023 · said by Gina · about: Gina, Jon
+      • Gina tells Jon she is always there to cheer him on. | Gina and Jon are chasing their dreams and helping
+        each other out. | Gina is glad she can be part of Jon's journey. | Gina finds it nice to be part of
+        something positive and thinks supporting Jon's dreams is awesome. | Gina is rooting for Jon all the way.
+        | Gina considers herself part of Jon's solid community cheering him on. | Gina believes Jon's studio
+        will be a …
+      • [+1 more fact(s) in this note, not shown]
+      topics: support, encouragement, friendship, chasing dreams, helping each other, journey, glad, positive
+      links: [2] temporal, [3] semantic, [4] semantic, [5] semantic  (+26 more not in this list: same-entity:18, semantic:8)
+
+[2] 4 February 2023 · said by Gina · about: Gina, Jon
+      • Gina tells Jon she is there for him no matter what.
+      topics: support, friendship, loyalty
+      links: [1] same-entity, [3] semantic, [4] same-entity, [5] semantic, [8] same-entity, [7] semantic  (+22 more not in this list: same-entity:18, semantic:4)
+
+[3] 11 May 2023 · said by Gina · about: Gina, Jon
+      • Gina expressed she is always here to help Jon and is proud of him. | Gina is supportive of Jon and
+        encourages him to keep going. | Gina is always proud of Jon.
+      topics: support, help, pride, encouragement, proud
+      links: [1] semantic, [2] semantic, [4] semantic, [5] same-entity  (+13 more not in this list: same-entity:11, semantic:2)
+
+[4] 19 June 2023 · said by Jon · about: Jon, Gina
+      • Jon appreciates Gina's pride and support. | Gina's support means a ton to Jon.
+      topics: pride, support, appreciation, means a ton
+      links: [3] semantic, [1] semantic, [2] same-entity, [6] same-entity  (+12 more not in this list: same-entity:11, semantic:1)
+
+[5] 9 July 2023 · said by Jon · about: Jon, Gina
+      • Jon considers Gina a great friend.
+      topics: great friend, friendship
+      links: [3] same-entity, [2] semantic, [1] semantic, [8] same-entity  (+6 more not in this list: same-entity:5, semantic:1)
+
+[6] 23 July 2023 · said by Gina · about: Gina, Jon
+      • Gina encourages Jon to keep up his good work and not forget his passion for dance.
+      topics: encouragement, passion for dance
+      links: [4] same-entity  (+6 more not in this list: same-entity:4, semantic:2)
+
+[7] 23 July 2023 · said by Gina · about: Gina, Jon
+      • Gina tells Jon that every step is getting him closer to his dream and to never give up.
+      topics: dream, perseverance
+      links: [2] semantic, [8] temporal  (+5 more not in this list: same-entity:4, semantic:1)
+
+[8] 23 July 2023 · said by Gina · about: Gina, Jon
+      • Gina tells Jon she is there to support him.
+      topics: support
+      links: [2] same-entity, [5] same-entity, [7] temporal  (+4 more not in this list: same-entity:3, semantic:1)
+
+Question: How do Jon and Gina both like to destress?
+
+Answer:

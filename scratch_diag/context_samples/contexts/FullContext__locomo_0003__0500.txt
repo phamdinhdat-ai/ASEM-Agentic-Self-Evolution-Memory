@@ -1,0 +1,38 @@
+# system=FullContext idx=500 conv=locomo_0003 category=temporal (harness label=temporal)
+# question: When did Nate win his first video game tournament?
+# gold: the week before 21Janury, 2022
+# pred (real run): Last week on 21 January, 2022.
+# judge_correct=False judge_error=contradiction f1=0.4000 em=0.0
+# diagnosis=FULL_CONTEXT gold_bearing_notes=[] evidence_in_prompt=True
+# prompt_chars=2361 prompt_tokens~590
+====================================================================================================
+Use the conversation excerpts below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Conversation:
+[Session 1 — 7:31 pm on 21 January, 2022]
+[Nate] Hey Joanna! Long time no see! What's up? Anything fun going on?
+[Joanna] Hey Nate! Long time no see! I've been working on a project lately - it's been pretty cool. What about you - any fun projects or hobbies?
+[Nate] Hey Joanna! That's cool! I won my first video game tournament last week - so exciting!
+[Joanna] Wow Nate! Congrats on winning! Tell me more - what game was it?
+[Nate] Thanks! it's a team shooter game.
+[Joanna] Wow, great job! What was is called?
+[Nate] The game was called Counter-Strike: Global Offensive, and me and my team had a blast to the very end!
+[Joanna] Cool, Nate! Sounds like a fun experience, even if I'm not into games.
+[Nate] It was! How about you? Do you have any hobbies you love?
+[Joanna] Yeah! Besides writing, I also enjoy reading, watching movies, and exploring nature. Anything else you enjoy doing, Nate?
+[Nate] Playing video games and watching movies are my main hobbies.
+[Joanna] Cool, Nate! So we both have similar interests. What type of movies do you like best?
+[Nate] I love action and sci-fi movies, the effects are so cool! What about you, what's your favorite genre?
+[Joanna] I'm all about dramas and romcoms. I love getting immersed in the feelings and plots.
+[Nate] Wow, movies can be so powerful! Do you have any recommendations for me?
+[Joanna] Yeah, totally! Have you seen this romantic drama that's all about memory and relationships? It's such a good one. (image: a photo of a poster of a man and a woman sitting on a bench)
+[Nate] Oh cool! I might check that one out some time soon! I do love watching classics.
+[Joanna] Yep, that movie is awesome. I first watched it around 3 years ago. I even went out and got a physical copy! (image: a photo of a dvd on a table with a blurry background)
+[Nate] Sounds cool! Have you seen it a lot? sounds like you know the movie well!
+[Joanna] A few times. It's one of my favorites! I really like the idea and the acting.
+[Nate] Cool! I'll definitely check it out. Thanks for the recommendation!
+[Joanna] No problem, Nate! Let me know if you like it!
+
+Question: Conversation between Joanna and Nate. Question: When did Nate win his first video game tournament?
+
+Answer:

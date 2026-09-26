@@ -1,0 +1,62 @@
+# system=FastASEM idx=118 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What did Melanie and her family see during their camping trip last year?
+# gold: Perseid meteor shower
+# pred (real run): Melanie and her family explored nature, roasted marshmallows, went on a hike, and told stories around the campfire during their camping trip.
+# judge_correct=False judge_error=missing_info f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['d74d6ed3-ec93-4fd3-a948-8a626ae63b75'] evidence_in_prompt=None
+# prompt_chars=3610 prompt_tokens~902
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 25 May 2023 · said by Melanie · about: Melanie, family, camping, mountains, camping trip, forest
+      • Melanie and her family are thinking about going camping in June 2023. | Melanie took her family camping
+        in the mountains during the week of approximately 20 June 2023. | During the camping trip around 20 June
+        2023, Melanie explored nature, roasted marshmallows around the campfire, and went on a hike with her
+        family. | Melanie and her family went on a camping trip in the forest at an unspecified time before 15
+        July …
+      • [+1 more fact(s) in this note, not shown]
+      topics: camping, summer, plan, family, mountains, nature, marshmallows, campfire
+      links: [2] semantic, [3] semantic, [5] semantic, [6] semantic, [7] semantic  (+25 more not in this list: same-entity:19, semantic:5, temporal:1)
+
+[2] 6 July 2023 · said by Melanie · about: Melanie
+      • Melanie's family loves camping at the beach and it brings them closer.
+      topics: camping, beach, family
+      links: [1] semantic, [5] semantic, [4] semantic, [8] semantic  (+14 more not in this list: same-entity:10, semantic:4)
+
+[3] 17 July 2023 · said by Melanie · about: Melanie
+      • Melanie went camping with her family two weekends before 17 July 2023, around 1-2 July 2023.
+      topics: camping, family, weekend
+      links: [1] semantic, [6] semantic  (+12 more not in this list: same-entity:9, semantic:2, temporal:1)
+
+[4] 20 July 2023 · said by Melanie · about: Melanie, Melanie's family
+      • Melanie's family camping trip is the highlight of their summer.
+      topics: highlight of summer, camping trip
+      links: [5] same-entity, [2] semantic, [8] same-entity  (+9 more not in this list: same-entity:7, semantic:2)
+
+[5] 20 July 2023 · said by Melanie · about: Melanie, Melanie's family
+      • Melanie's family always looks forward to their family camping trip. | Melanie's family roasts
+        marshmallows on their camping trips. | Melanie's family tells stories around the campfire on their
+        camping trips.
+      topics: family camping trip, tradition, summer, roast marshmallows, camping, stories, campfire
+      links: [4] same-entity, [2] semantic, [1] semantic, [7] semantic, [8] same-entity  (+8 more not in this list: same-entity:8)
+
+[6] 13 September 2023 · said by Melanie · about: Melanie
+      • In late August 2023, Melanie went camping with her kids and explored the forest and hiked.
+      topics: camping, kids, forest, hiking
+      links: [1] semantic, [3] semantic, [7] temporal  (+9 more not in this list: same-entity:6, semantic:3)
+
+[7] 13 September 2023 · said by Melanie · about: Melanie
+      • In late August 2023, Melanie roasted marshmallows and shared stories around the campfire with her kids.
+      topics: marshmallows, campfire, stories
+      links: [1] semantic, [5] semantic, [6] temporal  (+6 more not in this list: same-entity:6)
+
+[8] 20 October 2023 · said by Melanie · about: Melanie, Melanie's family
+      • Melanie loves camping trips with her family because nature brings her peace and serenity. | Melanie
+        enjoys bonding with her family over stories, campfires, and nature during camping trips.
+      topics: camping, nature, peace, serenity, bonding, campfires, stories
+      links: [4] same-entity, [5] semantic, [2] semantic  (+5 more not in this list: same-entity:4, semantic:1)
+
+Question: What did Melanie and her family see during their camping trip last year?
+
+Answer:

@@ -42,10 +42,10 @@ logger = get_logger(__name__)
 
 
 CATEGORY_NAMES: Dict[int, str] = {
-    1: "single_hop",
+    1: "multi_hop",
     2: "temporal",
-    3: "commonsense",
-    4: "conversational",
+    3: "open_domain",
+    4: "single_hop",
     5: "adversarial",
 }
 
@@ -278,6 +278,10 @@ def system_bank_size(system: Any) -> int:
 
 def ingest_system(system: Any, name: str, sessions: Sequence[Session]) -> None:
     """Ingest all sessions of one conversation into ``system``."""
+    if name in ("ASEM-THG", "ASEM_THG"):
+        system.ingest_conversation(sessions_to_fast(sessions))
+        return
+
     if name == "FastASEM":
         system.ingest_conversation(sessions_to_fast(sessions))
         return

@@ -1,0 +1,203 @@
+# system=ASEM idx=312 conv=locomo_0002 category=open_domain (harness label=commonsense)
+# question: What might John's financial status be?
+# gold: Middle-class or wealthy
+# pred (real run): John is experiencing financial strain due to car trouble and money problems, but has recently been promoted to assistant manager, which he views as a positive step forward.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=12149 prompt_tokens~3037
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What might John's financial status be?
+
+## Memory notes
+[1] 7 April 2023 · said by Maria · about: Maria, John
+      • Maria commented on how lack of resources affects kids' dreams and asked what the sign in John's photo
+        says; John replied that the sign reads 'Always look on the bright side of life' and noted that kids can
+        reach their dreams with the right help, while Maria agreed to keep pushing for the kids and said they
+        can make a difference and help many people.
+      turn: "[Maria] Wow, John, what an amazing experience! It's so sad how a lack of resources can make such a
+             difference in these kids' dreams. Being able to help them was an awesome experience. What does the …"
+      topics: maria, john, sign, bright side of life, kids dreams, help, lack of resources, make a difference
+      links: (+6 more not in this list: extends:3, same-topic:3)
+
+[2] 10 April 2023 · said by John · about: John, Maria
+      • John tells Maria his car broke down on Friday 7 April 2023 on his way to work, straining his finances,
+        though he is staying positive and seeking a solution; Maria sympathizes and praises his resilience,
+        encouraging him that tough times pass, and John later thanks her while noting his car and money troubles
+        continue.
+      turn: "[John] Hey Maria, haven't talked for a few days. Had a wild week, my car broke down last Fri on my way
+             to work. Trying to get it fixed but it's tough & putting a strain on my wallet. Staying positive …"
+      topics: john, maria, car breakdown, work commute, financial strain, positivity, sympathy, encouragement
+      links: [7] extends, [3] same-topic  (+6 more not in this list: same-topic:3, semantic:2, extends:1)
+
+[3] 6 May 2023 · said by Maria · about: Maria, John
+      • Maria sympathized with John's power cut experience and asked what else in the area needs fixing; John
+        identified the pothole-filled roadways as dangerous to drivers and damaging to cars, and Maria offered
+        to help improve the situation.
+      • John later told Maria that his old area was hit by a severe flood in the week before 30 June 2023,
+        ruining many homes due to poor infrastructure and reminding him of the need to fix …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Maria] Wow, John, that's rough. Anything else around here that needs to be fixed so it doesn't happen
+             again?"
+      topics: maria, infrastructure, repairs, roadways, potholes, drivers, flood, homes
+      links: [2] same-topic  (+7 more not in this list: extends:4, same-topic:3)
+
+[4] 17 December 2022 · said by Maria · about: Maria, John
+      • Maria said the funding really made a difference for schools and students, noted it must have been great
+        to be involved, observed that even minor tweaks to the system can make a big difference, and praised
+        John's enthusiasm and commitment; she encouraged John by saying she believes in his power to make a
+        positive difference and that his passion inspires her, then asked John what his next move in politics
+        was.
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Maria] Wow John, it really made a difference for schools and students! It must have been great to be
+             involved. What's your next move in politics?"
+      topics: maria, john, schools, students, politics, next move, local leaders, organizations
+      links: [8] extends  (+15 more not in this list: extends:9, same-topic:6)
+
+[5] 16 June 2023 · said by John · about: John
+      • John was promoted to assistant manager after long-awaited hard work, is over the moon and excited, views
+        it as a stepping stone to bigger things, and shared an image of a golden trophy.
+      turn: "[John] Yeah, sure thing. I'll let you know. Oh, also...something massive happened since we last spoke. I
+             got promoted at work! It's been a loooong time coming, and I'm over the moon about it!"
+      topics: john, promotion, assistant manager, hard work, stepping stone, trophy
+      links: [6] extends  (+5 more not in this list: semantic:3, same-topic:2)
+
+[6] 16 June 2023 · said by John · about: John, Maria
+      • John says he was excited about the promotion, feels his hard work paid off, is now an assistant manager,
+        and views it as a stepping stone to bigger things; he shares an image of a golden trophy.
+      turn: "[John] Thanks, Maria! I was really excited. It feels like all the hard work I've put in has paid off now
+             that I'm an assistant manager- it's like a stepping stone for bigger things. (image: a …"
+      topics: john, assistant manager, hard work, stepping stone, trophy
+      links: [5] extends  (+3 more not in this list: same-topic:2, temporal:1)
+
+[7] 10 April 2023 · said by John · about: John, Maria
+      • John thanks Maria, mentions ongoing car and money troubles, and shares a photo of a mountain sunset that
+        reminds him of a road trip taken in 2022.
+      turn: "[John] Thanks, Maria. Your kind words mean a lot. Yeah, it's been tough with car trouble and money
+             problems, but I stay positive and find a way. This picture reminds me of a road trip we took last …"
+      topics: john, gratitude, car trouble, money problems, road trip, photo
+      links: [2] extends  (+4 more not in this list: extends:2, same-topic:1, semantic:1)
+
+[8] 17 December 2022 · said by Maria · about: Maria, John
+      • Maria said it was great to hear about John's focus areas and asked what got him interested in education
+        and infrastructure, which John traced to growing up seeing how lack of education and crumbling
+        infrastructure affected his neighborhood; he also said talking to someone who shared amazing stories
+        fired up his passion to improve education in their area.
+      • Maria noted that even minor tweaks to the system can make a big …
+      • [+3 more fact(s) in this note, not shown]
+      turn: "[Maria] Wow, John! It's great to hear that. Could you tell me what got you interested in those topics?"
+      topics: maria, john, education, infrastructure, neighborhood, funding, school, students
+      links: [4] extends  (+20 more not in this list: extends:10, same-topic:6, semantic:4)
+

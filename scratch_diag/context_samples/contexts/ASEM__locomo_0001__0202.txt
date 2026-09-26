@@ -1,0 +1,199 @@
+# system=ASEM idx=202 conv=locomo_0001 category=multi_hop (harness label=single_hop)
+# question: What do Jon and Gina both have in common?
+# gold: They lost their jobs and decided to start their own businesses.
+# pred (real run): Jon and Gina both have a shared passion for dance and believe in each other's potential to make a difference through collaboration.
+# judge_correct=False judge_error=missing_info f1=0.1250 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=11517 prompt_tokens~2879
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What do Jon and Gina both have in common?
+
+## Memory notes
+[1] 21 July 2023 · said by Gina · about: Gina, Jon
+      • Gina said they can make a difference and do amazing things together.
+      turn: "[Gina] Yeah Jon! Let's make a difference and show 'em what we got. We can do amazing things together!"
+      topics: gina, difference, collaboration
+      links: [2] extends, [7] same-topic, [6] extends, [3] same-topic  (+2 more not in this list: same-topic:2)
+
+[2] 21 July 2023 · said by Jon · about: Jon, Gina
+      • Jon expressed excitement about collaborating with Gina and bringing dance magic to the world, while Gina
+        is pumped to collaborate with him and believes they can make a difference and do amazing things
+        together.
+      turn: "[Jon] Definitely, Gina! Let's make our collaboration awesome and bring some dance magic to the world.
+             Can't wait to see what we can do together!"
+      topics: jon, gina, collaboration, dance, goals, make a difference, amazing things
+      links: [6] extends, [8] extends, [1] extends  (+3 more not in this list: same-topic:2, extends:1)
+
+[3] 25 April 2023 · said by Gina · about: Gina, Jon
+      • Gina encouraged Jon to go for it, reassured him he can do it, told him not to let anything stop him and
+        that he has potential, offered to help if he needs anything, and told him they are in this together; she
+        later congratulated him on the successful night and asked what his plans are with the advice he
+        received, while Jon says knowing she has his back keeps him going, that her help matters to him, that he
+        is …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Gina] Go for it, Jon! You got this! Don't let anything stop you. We're in this together!"
+      topics: gina, jon, encouragement, potential, support, motivation, plans, writing
+      links: [5] same-topic, [7] same-topic, [1] same-topic  (+18 more not in this list: extends:9, same-topic:9)
+
+[4] 9 April 2023 · said by Jon · about: Jon, Gina
+      • Jon said dance has special meaning for both of them, recalled taking lessons with friends when younger,
+        and thanked Gina for her support; Gina told him he is talented and passionate about dance and urged him
+        to believe in himself and keep shining through obstacles.
+      • Jon admits it is a bit scary but focuses on his love for dance, which has been his stress-buster since
+        childhood, helps him de-stress, is where he feels …
+      • [+3 more fact(s) in this note, not shown]
+      turn: "[Jon] Nice, Gina! I'm happy that dance has such a special meaning to both of us. It's a really cool way
+             to express ourselves. I loved taking lessons with my friends when I was younger. Those memories …"
+      topics: jon, gina, dance, dance studio, friends, fun, memories, talent
+      links: [6] extends, [8] same-topic  (+8 more not in this list: extends:6, same-topic:2)
+
+[5] 16 March 2023 · said by Jon · about: Jon, Gina
+      • Jon expresses sympathy and asks Gina what is wrong and whether he can help; he later tells her that her
+        help matters to him and that he is writing all his plans down.
+      turn: "[Jon] Oof, sorry to hear that. What's up? Is there anything I can do to help?"
+      topics: jon, gina, offer help, concern, plans, writing
+      links: [3] same-topic  (+9 more not in this list: same-topic:6, causal:2, extends:1)
+
+[6] 9 April 2023 · said by Gina · about: Gina, Jon
+      • Gina encouraged Jon to show his true self and keep dancing, affirming his talent and passion and urging
+        him to believe in himself through obstacles; Jon thanked her, noting dance is second nature to him and
+        central to his life, and that he is living his dream by running his own dance studio and teaching
+        others.
+      • He agreed to send Gina a video of one of his routines once she lets him know her availability, and Gina
+        …
+      • [+6 more fact(s) in this note, not shown]
+      turn: "[Gina] Wow Jon, you look so happy when you dance! Show the world your true self and keep dancing!"
+      topics: gina, jon, dance, true self, encouragement, self-expression, happiness, talent
+      links: [8] same-topic, [4] extends, [7] extends, [2] extends, [1] extends  (+20 more not in this list: extends:11, same-topic:9)
+
+[7] 11 May 2023 · said by Gina · about: Gina, Jon
+      • Gina confirms she will watch Jon's routine and says she is proud of him.
+      turn: "[Gina] Yeah, Jon, I'll watch your routine! So proud of you!"
+      topics: gina, watch routine, proud
+      links: [6] extends, [3] same-topic, [1] same-topic  (+7 more not in this list: same-topic:6, extends:1)
+
+[8] 9 April 2023 · said by Gina · about: Gina, Jon
+      • Gina praised Jon for turning his passion into a business and complimented the dance studio, while Jon
+        said losing his job pushed him to pursue the studio and later reported it was still progressing; Gina
+        developed a video presentation to teach styling her fashion pieces and agreed to send it later, and she
+        congratulated Jon on the studio's 20 June 2023 launch.
+      • In early July 2023 Gina shared that fashion editors had …
+      • [+2 more fact(s) in this note, not shown]
+      turn: "[Gina] Hey Jon! Wow, way to take your passion and make it into a biz! The dance studio looks awesome.
+             (image: a photo of a display of a dress and a flamingo)"
+      topics: gina, jon, dance studio, business, job loss, video presentation, fashion pieces, young girls
+      links: [6] same-topic, [4] same-topic, [2] extends  (+22 more not in this list: extends:14, same-topic:8)
+

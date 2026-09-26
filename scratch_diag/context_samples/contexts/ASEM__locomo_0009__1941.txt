@@ -1,0 +1,202 @@
+# system=ASEM idx=1941 conv=locomo_0009 category=adversarial (harness label=adversarial)
+# question: What advice did Calvin receive from the chef at the music festival?
+# gold: to stay true to himself and sound unique
+# pred (real run): Calvin received advice from a producer to stay true to himself and sound unique.
+# judge_correct=True judge_error=None f1=0.7619 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['23e8ff1e-ec96-4289-98df-02002101b171', '7594e920-a7ff-4d1e-a73a-a05dc35a8b8a', '7b09e5df-5cd4-441c-b912-8f181b4868fe', 'c2a86835-eb0c-4004-9bda-e07ac44b79d9', 'c8eb7cfe-2988-4646-890b-f7bcf2192ccf'] evidence_in_prompt=None
+# prompt_chars=11867 prompt_tokens~2966
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What advice did Calvin receive from the chef at the music festival?
+
+## Memory notes
+[1] 20 April 2023 · said by Calvin · about: Calvin
+      • Calvin learned a lot and received great advice from music industry professionals, including a producer
+        who told him to stay true to himself and sound unique, prompting him to think about his music's
+        direction; Dave found Calvin's authenticity motivating and asked where he sees his music taking him.
+      • Calvin also said he started making music to follow his dreams and stays motivated through collaboration,
+        learning from …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Calvin] I learned a lot and got some great advice from professionals in the music industry. It was
+             inspiring!"
+      topics: calvin, advice, music industry, professionals, producer, unique sound, music direction, dave
+      links: [5] same-topic, [6] extends  (+7 more not in this list: extends:3, same-topic:3, semantic:1)
+
+[2] 15 October 2023 · said by Dave · about: Dave, Calvin
+      • Dave recently returned from an amazing music festival full of energy and crowd excitement that made him
+        feel alive, and he also recalled good times at concerts in September 2023, sharing a crowd photo and
+        noting that music connects people and creates memories; he remarked on the amazing indescribable
+        connection between artist and crowd and is glad Calvin gets to experience it, comparing music's
+        bringing-together of …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Dave] That's a great approach, Cal! Reminding yourself of the passion for the goals and getting help
+             from others is really important. Taking a break and having fun sounds so refreshing. Oh, I just …"
+      topics: dave, music festival, concerts, music, connection, memories, crowd buzz, repair work
+      links: [7] extends  (+10 more not in this list: same-topic:6, extends:4)
+
+[3] 15 September 2023 · said by Calvin · about: Calvin, Dave, Disney
+      • Calvin expressed disappointment about the missing recording, reflected that some memories can't be
+        captured, and shared a Disney poster image.
+      turn: "[Calvin] Aww, bummer! I would've loved to hear that music. Oh well, some of the best memories can't be
+             captured on video or audio. It's like those special moments that stay in our hearts and minds …"
+      topics: calvin, memories, disney poster
+      links: [8] causal  (+7 more not in this list: same-topic:4, semantic:3)
+
+[4] 4 October 2023 · said by Dave · about: Dave, Calvin
+      • Dave responded enthusiastically to Calvin's artist meeting and asked how the meeting was arranged and
+        whether a photo showed musicians Calvin is collaborating with; Calvin explained that a mutual friend
+        connected him with the artists, and he now reports great collaborations, an almost-finished album, and
+        plans to send previews and arrange a catch-up.
+      • Calvin also describes an inspiring conversation with an artist at …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Dave] Awesome, Calvin! Connecting with all those talented artists must have been an inspiring
+             experience. Can't wait to hear what you come up with in your collaboration. Let me know how it goes! …"
+      topics: dave, calvin, artists, collaboration, meeting arrangement, mutual friend, album, previews
+      links: [7] same-topic  (+33 more not in this list: same-topic:16, semantic:11, extends:4, temporal:2)
+
+[5] 23 March 2023 · said by Calvin · about: Dave, Calvin, Japan
+      • Calvin said his agent found him the place and expressed gratitude.
+      turn: "[Calvin] Wow, my agent found me this awesome place, so thankful!"
+      topics: calvin, agent, accommodation, gratitude
+      links: [1] same-topic, [6] semantic  (+12 more not in this list: semantic:6, same-topic:4, extends:2)
+
+[6] 20 April 2023 · said by Calvin · about: Calvin
+      • Calvin shared that a producer advised him to stay true to himself and sound unique, prompting him to
+        think about his music's direction; Dave found this motivating and asked where Calvin sees his music
+        taking him.
+      • Calvin also said embracing nature and learning about Japanese culture have been calming, and he has been
+        experimenting with different genres and adding electronic elements to his songs as an exciting process …
+      • [+4 more fact(s) in this note, not shown]
+      turn: "[Calvin] The producer gave me some advice to stay true to myself and sound unique. It got me thinking
+             about where I want my music to go. It's really motivating!"
+      topics: calvin, producer, advice, unique sound, music direction, dave, motivation, creativity block
+      links: [1] extends, [5] semantic  (+22 more not in this list: extends:13, same-topic:8, semantic:1)
+
+[7] 23 October 2023 · said by Dave · about: Dave, Calvin
+      • Dave remarked on how amazing the indescribable connection between artist and crowd is and said he is
+        glad Calvin gets to experience it.
+      turn: "[Dave] Wow, it's amazing how that connection between artist and crowd can be indescribable. So glad you
+             get to experience that!"
+      topics: artist, crowd, connection, experience
+      links: [4] same-topic, [2] extends  (+3 more not in this list: extends:2, same-topic:1)
+
+[8] 15 September 2023 · said by Dave · about: Dave, Calvin, Boston
+      • Dave said they forgot to record the jam because they were too absorbed in playing; Calvin expressed
+        disappointment about the missing recording, reflected that some memories can't be captured, and shared a
+        Disney poster image.
+      turn: "[Dave] Hey Calvin! I wish we had recorded the jam, but we were way too into it and totally forgot."
+      topics: dave, jam, recording, forgot, calvin, memories, disney poster
+      links: [3] causal  (+7 more not in this list: same-topic:5, semantic:2)
+

@@ -1,0 +1,54 @@
+# system=FastASEM idx=157 conv=locomo_0000 category=adversarial (harness label=adversarial)
+# question: What does Melanie's necklace symbolize?
+# gold: love, faith, and strength
+# pred (real run): The memory notes do not mention Melanie's necklace or its symbolism.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['0837ba0c-ceed-4598-bc7d-61fc657dc28e'] evidence_in_prompt=None
+# prompt_chars=2207 prompt_tokens~551
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 9 June 2023 · said by Melanie · about: Melanie
+      • Melanie is married to her husband.
+      topics: husband, marriage
+      links: [2] temporal, [8] same-entity  (+18 more not in this list: same-entity:15, semantic:2, temporal:1)
+
+[2] 9 June 2023 · said by Melanie · about: Melanie
+      • Melanie has kids.
+      topics: kids, children, family
+      links: [1] temporal, [5] same-entity  (+27 more not in this list: semantic:14, same-entity:10, temporal:3)
+
+[3] 6 July 2023 · said by Melanie · about: Melanie, Charlotte's Web
+      • Melanie loved reading 'Charlotte's Web' as a kid.
+      topics: Charlotte's Web, childhood, book
+      links: (+11 more not in this list: same-entity:11)
+
+[4] 17 August 2023 · said by Melanie · about: Melanie
+      • Melanie considers art both a sanctuary and a source of comfort.
+      topics: art, sanctuary, comfort
+      links: [5] temporal  (+10 more not in this list: same-entity:7, semantic:3)
+
+[5] 17 August 2023 · said by Melanie · about: Melanie
+      • Melanie has always felt a strong connection to art.
+      topics: art, connection
+      links: [2] same-entity, [6] temporal, [4] temporal  (+11 more not in this list: same-entity:6, semantic:5)
+
+[6] 17 August 2023 · said by Melanie · about: Melanie
+      • Melanie is obsessed with colors and patterns, which inspired her pottery design.
+      topics: colors, patterns, inspiration
+      links: [5] temporal, [7] same-entity  (+10 more not in this list: same-entity:7, semantic:2, temporal:1)
+
+[7] 13 September 2023 · said by Melanie · about: Melanie
+      • Melanie's preferred art forms are painting and pottery.
+      topics: painting, pottery, muses
+      links: [6] same-entity  (+8 more not in this list: same-entity:5, semantic:2, temporal:1)
+
+[8] 13 October 2023 · said by Melanie · about: Melanie
+      • Melanie uses pottery for self-expression and peace.
+      topics: pottery, self-expression, peace
+      links: [1] same-entity  (+7 more not in this list: same-entity:4, semantic:3)
+
+Question: What does Melanie's necklace symbolize?
+
+Answer:

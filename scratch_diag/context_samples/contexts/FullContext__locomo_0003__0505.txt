@@ -1,0 +1,70 @@
+# system=FullContext idx=505 conv=locomo_0003 category=temporal (harness label=temporal)
+# question: When did Nate get his first two turtles?
+# gold: 2019
+# pred (real run): Nate got his first two turtles three years before Session 2, which is on 23 January, 2022.
+
+So, the date is 23 January, 2019.
+# judge_correct=True judge_error=None f1=0.0833 em=0.0
+# diagnosis=FULL_CONTEXT gold_bearing_notes=[] evidence_in_prompt=True
+# prompt_chars=5794 prompt_tokens~1448
+====================================================================================================
+Use the conversation excerpts below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Conversation:
+[Session 1 — 7:31 pm on 21 January, 2022]
+[Nate] Hey Joanna! Long time no see! What's up? Anything fun going on?
+[Joanna] Hey Nate! Long time no see! I've been working on a project lately - it's been pretty cool. What about you - any fun projects or hobbies?
+[Nate] Hey Joanna! That's cool! I won my first video game tournament last week - so exciting!
+[Joanna] Wow Nate! Congrats on winning! Tell me more - what game was it?
+[Nate] Thanks! it's a team shooter game.
+[Joanna] Wow, great job! What was is called?
+[Nate] The game was called Counter-Strike: Global Offensive, and me and my team had a blast to the very end!
+[Joanna] Cool, Nate! Sounds like a fun experience, even if I'm not into games.
+[Nate] It was! How about you? Do you have any hobbies you love?
+[Joanna] Yeah! Besides writing, I also enjoy reading, watching movies, and exploring nature. Anything else you enjoy doing, Nate?
+[Nate] Playing video games and watching movies are my main hobbies.
+[Joanna] Cool, Nate! So we both have similar interests. What type of movies do you like best?
+[Nate] I love action and sci-fi movies, the effects are so cool! What about you, what's your favorite genre?
+[Joanna] I'm all about dramas and romcoms. I love getting immersed in the feelings and plots.
+[Nate] Wow, movies can be so powerful! Do you have any recommendations for me?
+[Joanna] Yeah, totally! Have you seen this romantic drama that's all about memory and relationships? It's such a good one. (image: a photo of a poster of a man and a woman sitting on a bench)
+[Nate] Oh cool! I might check that one out some time soon! I do love watching classics.
+[Joanna] Yep, that movie is awesome. I first watched it around 3 years ago. I even went out and got a physical copy! (image: a photo of a dvd on a table with a blurry background)
+[Nate] Sounds cool! Have you seen it a lot? sounds like you know the movie well!
+[Joanna] A few times. It's one of my favorites! I really like the idea and the acting.
+[Nate] Cool! I'll definitely check it out. Thanks for the recommendation!
+[Joanna] No problem, Nate! Let me know if you like it!
+[Session 2 — 2:01 pm on 23 January, 2022]
+[Joanna] Hey Nate! Haven't talked in a few days. Crazy things happened to me!
+[Nate] Hi Joanna! Long time no see! What's been going on? You sound excited!
+[Joanna] Woo! I finally finished my first full screenplay and printed it last Friday. I've been working on for a while, such a relief to have it all done! (image: a photography of a book with a page of text on it)
+[Nate] Wow, that sounds awesome! What's it about? Glad it's all down!
+[Joanna] Thanks, Nate! It's a mix of drama and romance!
+[Nate] Wow, that's amazing! How do you feel now that it's finished? Do you have any new plans for it?
+[Joanna] Woohoo, Nate! I'm feeling a rollercoaster of emotions - relief, excitement, some anxiety - over finishing this project. Now I'm gonna submit it to some film festivals and (hopefully) get producers and directors to check it out. Here's hoping!
+[Nate] Congrats, Joanna! That sounds like a wild experience. Rock on and I hope they love it!
+[Joanna] Thanks Nate! A mix of emotions for sure. Hopefully, it leads to positive feedback and new opportunities.
+[Nate] Yeah, for sure. Hoping for the best! I like having some of these little ones around to keep me calm when things are super important and I'm nervous. (image: a photography of a turtle and a turtleling sitting on a rock)
+[Joanna] Awww! How long have you had them?
+[Nate] I've had them for 3 years now and they bring me tons of joy!
+[Joanna] They sure lookl like they do! Adorable!
+[Nate] Thanks! The turtles might be small, but both sure have big personalities. I really reccomend having something like these little guys for times of stress.
+[Joanna] Good idea, Nate! I'll think about it and maybe get pets of my own soon if I can find any I'm not allergic to. Have you been up to anything recently?
+[Nate] Yeah actually! I start to hang out with some people outside of my circle at the tournament. They're pretty cool!
+[Joanna] Oh? That sounds sweet! Is it a weird relationship with them being competitors and all?
+[Nate] Oh, kind of. Some people are more competitive then others, so I tend to just stick around the more chill people here.
+[Joanna] That makes sense! Are you gonna cheer them on even if you lose?
+[Nate] Absolutely! I don't expect to win big here, I just like playing for fun!  You mentioned you were allergic to pets earlier, how bad is it?
+[Joanna] Oh, its really bad. My face gets all puffy and itchy when I'm around certain animals, so I've always just stayed away.
+[Nate] Sorry to hear that. Allergies can be tough. What specifically are you allergic to?
+[Joanna] I'm allergic to most reptiles and animals with fur. It can be a bit of a drag, but I find other ways to be happy.
+[Nate] Awesome! There are lots of things that can bring you joy without pets. What else brings you joy?
+[Joanna] Writing and hanging with friends! That way I can express myself through stories, or just have a good time with people.
+[Nate] That's great to hear! Those are both great things. I'm glad to hear you've got other things to help you get through times of axiousness despite not being able to have animals!
+[Joanna] Thanks, Nate! Writing helps me create wild worlds with awesome characters. Plus, it's a great way to express my feelings. I can't imagine life without it.
+[Nate] Wow, Joanna, that sounds amazing! Keep doing what you love!
+[Joanna] Thanks, Nate! I'll definitely keep pursuing my passion for writing. It means a lot.
+
+Question: Conversation between Joanna and Nate. Question: When did Nate get his first two turtles?
+
+Answer:

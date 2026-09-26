@@ -1,0 +1,54 @@
+# system=FastASEM idx=1161 conv=locomo_0006 category=temporal (harness label=temporal)
+# question: When did John resume playing drums in his adulthood?
+# gold: February 2022
+# pred (real run): John resumed playing drums in his adulthood on 18 September, 2022.
+# judge_correct=True judge_error=None f1=0.1538 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=2353 prompt_tokens~588
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 27 March 2022 · said by John · about: John
+      • John has been playing drums for a month as of 27 March 2022.
+      topics: drums, playing, one month
+      links: [2] temporal, [5] semantic  (+20 more not in this list: same-entity:18, temporal:2)
+
+[2] 27 March 2022 · said by James · about: James
+      • James practices the instrument daily as of 27 March 2022.
+      topics: daily practice, instrument
+      links: [1] temporal, [6] semantic  (+19 more not in this list: same-entity:16, temporal:2, semantic:1)
+
+[3] 29 April 2022 · said by John · about: John, AC Valhalla
+      • John is currently playing AC Valhalla.
+      topics: video game, AC Valhalla
+      links: (+15 more not in this list: same-entity:12, semantic:3)
+
+[4] 10 August 2022 · said by John · about: John, strategy games, RPG games, shooters
+      • John has been playing strategy and RPG games instead of his usual shooters.
+      topics: strategy, RPG, shooters, gaming genres
+      links: (+10 more not in this list: same-entity:6, semantic:3, temporal:1)
+
+[5] 18 September 2022 · said by John · about: John, drums
+      • John used to play drums when John was younger but hasn't played in a while.
+      topics: drums, played, younger, past
+      links: [1] semantic, [6] temporal, [7] temporal, [8] temporal  (+5 more not in this list: same-entity:5)
+
+[6] 18 September 2022 · said by James · about: James, guitar
+      • James used to play guitar when James was younger but hasn't played in a while.
+      topics: guitar, played, younger, past
+      links: [2] semantic  (+6 more not in this list: same-entity:5, semantic:1)
+
+[7] 18 September 2022 · said by John · about: John
+      • John has no recordings or videos from the jam sessions with friends.
+      topics: recordings, videos, jam sessions, none
+      links: [8] temporal, [5] temporal  (+6 more not in this list: same-entity:6)
+
+[8] 18 September 2022 · said by John · about: John, friends
+      • John jammed with friends before, and it was a lot of fun.
+      topics: jammed, friends, fun, music
+      links: [7] temporal, [5] temporal  (+6 more not in this list: same-entity:5, semantic:1)
+
+Question: When did John resume playing drums in his adulthood?
+
+Answer:

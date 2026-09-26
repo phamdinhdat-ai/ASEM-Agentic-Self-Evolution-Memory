@@ -1,0 +1,126 @@
+# system=FullContext idx=312 conv=locomo_0002 category=open_domain (harness label=commonsense)
+# question: What might John's financial status be?
+# gold: Middle-class or wealthy
+# pred (real run): John's financial status is not explicitly stated in the conversation.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=FULL_CONTEXT gold_bearing_notes=[] evidence_in_prompt=True
+# prompt_chars=16185 prompt_tokens~4046
+====================================================================================================
+Use the conversation excerpts below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Conversation:
+[Session 1 — 11:01 am on 17 December, 2022]
+[Maria] Hey John! Long time no see! What's up?
+[John] Hey Maria! Good to see you. Just got back from a family road trip yesterday, it was fun! Anything exciting happening for you?
+[Maria] Been busy volunteering at the homeless shelter and keeping fit. Just started doing aerial yoga, it's great. Have you tried any other cool workout classes?
+[John] Woah, Maria, that sounds cool! I'm doing kickboxing and it's giving me so much energy.
+[Maria] Cool, John. Kickboxing is a perfect way to stay in shape and de-stress. Do you have any goals you're working towards?
+[John] Yeah Maria, I'm really hoping to get into local politics. I love helping the community and making it a better place.
+[Maria] Woohoo, John! That's awesome! Any specific areas you want to tackle?
+[John] I'm passionate about improving education and infrastructure in our community. Those are my main focuses.
+[Maria] Wow, John! It's great to hear that. Could you tell me what got you interested in those topics?
+[John] Growing up, I saw how lack of education and crumbling infrastructure affected my neighborhood. I don't want future generations to go through that, so I think schools and infrastructure should be funded properly. Here's a pic of a school last year, after they got the funding. (image: a photo of a group of men working on a building)
+[Maria] Looks good! How did the extra funding help with building the school?
+[John] It enabled needed repairs and renovations, making the learning environment safer and more modern for students.
+[Maria] Wow John, it really made a difference for schools and students! It must have been great to be involved. What's your next move in politics?
+[John] I'm gonna chat with local leaders and organizations, get support and gather ideas for my next move.
+[Maria] Sounds good, John. Let's get support and great ideas from local leaders and organizations. Keep me posted on how your campaign is going.
+[John] Got it! Thanks, Maria. I definitely will.
+[Session 2 — 6:10 pm on 22 December, 2022]
+[Maria] Hey John, been a few days since we chatted. In the meantime, I donated my old car to a homeless shelter I volunteer at yesterday. How's the campaign going? I'm keen to hearabout it.
+[John] Hi Maria! It's been an interesting ride so far. I've been networking with some people to get their input.
+[Maria] That's awesome, John! Networking is great for gaining new perspectives and insights. Have you had any interesting conversations or revelations so far?
+[John] I just talked to someone who shared some amazing stories. It really fired up my passion to make education better in our area.
+[Maria] Wow, John! Hearing that can really make an impact and get us fired up to make a difference. It's great to hear that you're feeling motivated to make improvements to our community's education!
+[John] Definitely, Maria. Investing in our future generations is key, giving them the right tools for success. It's the foundation of progress and opportunity.
+[Maria] Yeah, John. It's amazing how even minor tweaks to the system can make a big difference for lots of people. I'm really impressed with your enthusiasm and commitment to it!
+[John] Thanks, Maria. Your encouragement means a lot to me. It's true that with effort and support, we can make a real difference in our community.
+[Maria] You got this, John! I believe in your power to make a positive difference. Your passion inspires me. Keep going - I'm here for you.
+[John] Thanks a lot, Maria. Your help is really motivating and makes me more determined. Here's a pic of my family - they're the reason why I never give up. Their love gives me strength. (image: a photography of a family having a picnic in the park)
+[Maria] Wow, John, that's a great pic! Your family looks so cheerful and loving. It's wonderful to have such a supportive and loving family.
+[John] Thanks, Maria. They really help me stay centered. They remind me why I'm so passionate about making a positive impact.
+[Maria] Family's love really grounds us and gives us strength. Their support certainly boosts your motivation.
+[John] Yeah, they are my rock in tough times and always cheer me on. I'm really thankful for their love. Family time means a lot to me. (image: a photography of a family enjoying a ride on a swing)
+[Maria] Wow, John, that playground looks cool! What kind of stuff do you and your family do there?
+[John] Thanks, Maria! We love climbing, sliding, and playing games. It's an awesome way to connect and have a blast. What do you enjoy doing with your family?
+[Maria] My fam's small, but I love spending time with the friends I have. We usually watch movies, hike, and have game nights at my place. Quality connections matter most to me.
+[John] Sounds nice, Maria! Spending time with loved ones is important.
+[Maria] Definitely, John. They bring us joy, support, and a feeling of being part of something special. We should cherish every moment with them.
+[John] Yeah Maria, making memories with family is priceless! Life is so much more meaningful when we spend time together. Here's a pic of us at dinner. (image: a photo of a group of people standing around a kitchen table)
+[Maria] Woah, that's a nice pic, John! You all obviously had a blast at dinner. Nothing beats getting together with loved ones for a good meal - it makes some awesome memories!
+[John] Thanks, Maria! Meal times are always fun. Good food, laughs, and chats help us stay close.
+[Maria] Yeah, John! It definitely builds a strong bond. Those shared meals really make life enjoyable and meaningful. What did you make? (image: a photo of a table with pizzas and salads on it)
+[John] We made pizza! We had so much fun making them together. It was great picking out toppings and sharing a tasty meal with family. Have you made anything lately?
+[Maria] I can picture you all laughing and having a blast making your own pizzas - a great way to bond! I made some peach cobbler recently, it was great.
+[John] Yeah Maria, it's awesome! We get our creative on and have a blast together.
+[Maria] Sure, John! It's those moments of creativity and laughter that bring us closer. Let's make happy memories with our family and keep them close.
+[John]  Yep, let's keep making great memories with our loved ones and cherishing the time we have. I'm off to do some taekwondo!
+[Session 3 — 8:30 pm on 1 January, 2023]
+[John] Hey Maria, great to chat again! I joined a service-focused online group last week and it's been an emotional ride. Everyone there is incredible with their own inspiring stories. They've opened my eyes to new perspectives, and I'm feeling a sense of connection and purpose with them. (image: a photo of a man sitting on a bed using a laptop)
+[Maria] Wow, John! That's amazing news. It's great to see you finding such a supportive community that is making a difference.
+[John] Thanks, Maria! It's great to have a group of people with the same passion for serving. It's been really inspiring sharing stories, advice, and encouragement.
+[Maria] That's great to hear! It's always inspiring to share thos things with like-minded individuals. By the way, have you had the chance to meet any of them in person?
+ (image: a photo of a poster on a table with a santa clause)
+[John] We held some events and got to meet some people. We went to a homeless shelter to give out food and supplies. Seeing the smiles on their faces, we knew we made a real difference. We also organized a toy drive for kids in need. It was amazing seeing the community come together to spread some joy.
+[Maria] That sounds great, John. It's nice to see the difference you're making. Do you have any ideas for future projects?
+[John] We're brainstorming some to help underserved communities get access to education, mentorship, job training, and resume building. The goal is to empower individuals in achieving their aspirations.
+[Maria] That's great, John! Empowering individuals through education and mentorship is crucial for helping them reach their goals. Can't wait to see the initiatives you come up with!
+[John] Thanks, Maria! I'm really excited about them too. I believe that providing the right assistance and resources can make a lasting impact.
+[Maria] Yep John, a bit of support can make an amazing change. You're spot on about it, it really is powerful. Keep doing what you're doing, it's really inspiring!
+[John] Thanks, Maria! I really appreciate your support, It means a lot to me. Especially after I failed the military aptitude test recently, I've been feeling a bit stressed out.
+[Maria] No worries, John. I'm here for you and I got your back. Nature's beauty reminds me to slow down and enjoy the small stuff. (image: a photo of a sunset over the ocean with a wave coming in)
+[John] That's a chill pic! Where did you find it?
+[Maria] I took it at the beach last month. Watching the sunset was so peaceful, it made me feel connected to nature and appreciate life's small moments.
+[John] Wow, nature can be so beautiful! It reminds me of the film camera I had as a kid, I took plenty of beach pics. Thanks for sharing.
+[Maria] Glad you enjoyed it, John! It's amazing how beautiful it can be.
+[John] Yeah, it does. It helps us remember the small joys, especially when life gets busy. (image: a photo of a group of people standing around a field)
+[Session 4 — 7:06 pm on 9 January, 2023]
+[Maria] Hey John, great news - I'm now friends with one of my fellow volunteers! We both love helping others. How have you been since we last chatted?
+[John] Hey Maria, I've been busy with work and family, but last week I had an unexpected incident on my way home. It reminded me how life can throw unexpected troubles our way. (image: a photo of a car with a broken windshield and a broken windshield)
+[Maria] Oh John, that sounds tough. I'm glad you're alright. Life does throw us some surprises, doesn't it?
+
+ (image: a photo of a tattoo with a quote on it)
+[John] Thanks, Maria. This is a reminder to stay strong during tough times.
+[Maria] Yeah John, when stuff like that happens, it's good to tap into our own inner strength. How did you handle it?
+[John] I tried to stay calm and asked for assistance, which helped me handle the situation and make it back safely.
+[Maria] Hey, John that's awesome! You really showed your resilience and resourcefulness. How did you feel afterwards?
+[John] I felt relieved and grateful to make it through without incident.
+[Maria] Yeah, it's tough. Appreciate what you've got. You got through it - stay strong. Are there any things you like to do to calm down during times like this?
+[John] Thanks, Maria! I like to just take a look at the sunset- it reminds me to enjoy the small things in life.
+[Maria] It's great to hear that you appreciate the beauty of sunsets! By the way, have there been any developments regarding your political goals?
+[John] I've been keeping busy since we last talked! I've been looking into local politics, talking to community leaders, and getting to know the needs and hopes of our neighborhood. It's been super informative, and I'm feeling optimistic about it all.
+[Maria] Wow, John! Your dedication to our community is amazing. Keep up the great work! I've been taking some notes about local politics in my notebook. (image: a photo of a notebook with a pencil and a notepad on a table)
+[John] Thanks, Maria! You're super helpful. That gives me some new ideas and plans for our community!
+[Maria] Glad I could help, John. What's up next for you?
+[John] Next week I have a community meeting coming up, we'll be discussing education and infrastructure upgrades.
+[Maria] Good luck on that! Hope your ideas and concerns get heard. (image: a photo of a microphone, a charger, and a charger on a table)
+[John] Thanks, Maria! I'm hoping so. I'll definitely stick up for our community. Discussing it is important.
+[Maria] Definitely, John! Talking and working together will make a great difference. You're really doing our community a service by speaking out. It's admirable and inspiring.
+[John] Maria, thank you! Your support means a lot. Let's make some change in our community! (image: a photo of a group of people sitting around a table with a laptop)
+[Maria] Yeah, let's do it, John! Working together, we can bring positive changes to the neighborhood as a team.
+[John] Yeah, Maria! We can achieve great things if we join forces together. (image: a photography of a man and a woman shaking hands)
+[Maria] Agreed, John! Uniting is essential for making a difference. if we stand together we can tackle any problems and build a great community.
+[John] Yeah, Maria! I couldn't agree more. Thanks for being an awesome friend.
+[Maria] No worries, John. It's really nice to help. We make a great team.
+[John] Yup, we rock as a team! Glad to have you.
+[Session 5 — 1:17 pm on 28 January, 2023]
+[John] Hey Maria, since we last spoke I went to that community mtg. It was really interesting hearing everyone's worries and how it affects our area. It made me realize how crucial the upgrades are, especially for the kids. I'm really upset seeing the state of our education. How do you think we can make things better? (image: a photo of a wooden floor with a white wall and a wooden floor)
+[Maria] Hey John, cool that you made it. You're right, it's really sad to see the state of education. We should fight for more money and resources for schools and raise awareness about the importance of education. It's not just for our kids, but for all of us too!
+[John] Yup, education is essential for a successful society. I totally agree that we should fight for more money and resources for our schools. It breaks my heart that our kids don't have the proper stuff they need. They deserve better.
+[Maria] Yeah, John. Our kids are our future; they should have the best. It kills me to think about all the kids without the proper stuff they need. It's just not right.
+[John] It's definitely isn't, Maria. My kids have so much and others don't. We really need to do something about it.
+[Maria] Sure, it's not right that some kids get all they need while others have nothing to help them succeed. We gotta do something! Last week I volunteered at a shelter during an event for kids, and it's been a great experience. (image: a photo of three women in green aprons holding pots and cups)
+[John] Wow, Maria! That's really making a big impact. What made you decide to get involved with that?
+[Maria] I started volunteering to help make a difference. My aunt believed in volunteering, and used to help my family out when we were struggling, so I'm inspired by her. It makes me happy knowing I can brighten somebody's day.
+[John] Wow, Maria. That's amazing! I can imagine it's incredibly rewarding. Is there a particular moment that stands out to you as the most impactful?
+[Maria] For me, it was when I noticed a little girl around 8 sitting all alone. She seemed so sad. So, I sat with her and we talked. Turns out she had no other family - it broke my heart. I was able to give her some comfort and a listening ear. We ended up laughing and having a good time.
+[John] Wow, what a touching moment, Maria. I'm glad you were there for her when she needed someone. I'm sure it made a big impact. (image: a photography of a little girl kissing a doll with a doll in her lap)
+[Maria] That's nice of you, John. What's the photo about?
+[John] It reminds me of something from my childhood. I had a little doll like this and it always made me feel better. It reminds me to always look out for others, especially when they're feeling down.
+[Maria] That's sweet. Spreading kindness and support can really make a difference, especially when someone is feeling down. Thanks for sharing.
+[John] No problem, Maria. It's important to support each other when we're feeling down. You never know the difference a kind gesture can make.
+[Maria] Yep, kindness is key and a little compassion can really turn someone's day around. So glad we're on the same page here.
+
+Question: Conversation between John and Maria. Question: What might John's financial status be?
+
+Answer:

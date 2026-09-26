@@ -1,0 +1,13 @@
+# system=NoMemory idx=157 conv=locomo_0000 category=adversarial (harness label=adversarial)
+# question: What does Melanie's necklace symbolize?
+# gold: love, faith, and strength
+# pred (real run): Melanie's necklace symbolizes her connection to her past and family.
+# judge_correct=False judge_error=missing_info f1=0.1333 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=306 prompt_tokens~76
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Caroline and Melanie. Question: What does Melanie's necklace symbolize?
+
+Answer:

@@ -1,0 +1,13 @@
+# system=NoMemory idx=112 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What did Mel and her kids paint in their latest project in July 2023?
+# gold: a sunset with a palm tree
+# pred (real run): Unknown – no information provided about Mel's project in July 2023.
+# judge_correct=False judge_error=hallucination f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=336 prompt_tokens~84
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Caroline and Melanie. Question: What did Mel and her kids paint in their latest project in July 2023?
+
+Answer:

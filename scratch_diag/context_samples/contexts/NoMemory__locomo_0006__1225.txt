@@ -1,0 +1,13 @@
+# system=NoMemory idx=1225 conv=locomo_0006 category=single_hop (harness label=conversational)
+# question: What type of mobile application does James plan to build with John?
+# gold: An app for dog walking and pet care
+# pred (real run): Unknown – no information provided about the app type.
+# judge_correct=False judge_error=contradiction f1=0.1429 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=328 prompt_tokens~82
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between James and John. Question: What type of mobile application does James plan to build with John?
+
+Answer:

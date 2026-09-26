@@ -178,6 +178,9 @@ class ASEMPipeline:
                     self.recovery_topn,
                     getattr(self.retriever, "link_traversal_topn", 3),
                 ),
+                # The widened pass exists to RECOVER a missed fact, so the
+                # precision-oriented dedupe must not shrink it.
+                use_dedupe=False,
             )
         except TypeError:
             # Non-dataclass retriever (e.g. EnhancedHybridRetriever) — reuse it.

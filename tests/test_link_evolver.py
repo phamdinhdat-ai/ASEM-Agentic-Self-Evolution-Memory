@@ -95,3 +95,50 @@ def test_link_and_evolve() -> None:
         )
 
         bank.close()
+
+
+def test_link_writeback_survives_legacy_null_entities() -> None:
+    """Regression: a JSON null in the entities column aborted ASEM v1 ingestion.
+
+    ``ASEMPipeline._merge_update`` used to persist ``"entities": null`` whenever
+    it merged two notes that had no entities. Reading that row back produced
+    ``entities=None``, and the Link Evolver's write-back
+    (``M.update(id, {"L": ...})``) then crashed inside ``Note.to_dict()`` with
+    "TypeError: 'NoneType' object is not iterable". The caller logged
+    "write_batch failed" and threw away the whole conversation.
+
+    ``MemoryBank._decode_entities`` now repairs such rows on read, so banks
+    already on disk still load.
+    """
+    pytest.importorskip("faiss")
+
+    backend = _QueueBackend([
+        '[{"source": "new", "target": "n1", "relation": "semantic"}]',
+    ])
+
+    with tempfile.TemporaryDirectory() as tmp:
+        bank = MemoryBank(f"{tmp}/bank.sqlite")
+
+        n1 = _note("n1", "Old")
+        bank.add(n1)
+        new_note = _note("new", "New")
+        bank.add(new_note)
+
+        # Simulate a bank written by the buggy code.
+        bank._conn.execute("UPDATE notes SET entities = 'null'")
+        bank._conn.commit()
+        assert bank.get_note("new").entities == []
+
+        evolver = LinkEvolver(
+            backend=backend,
+            link_prompt_template="{new_note} {neighbors}",
+            evolve_prompt_template="{existing_note} {new_note}",
+            k=1,
+        )
+        evolver.link_and_evolve(new_note, bank)   # must not raise
+
+        written = bank.get_note("new")
+        assert written.entities == []
+        assert [l.target_id for l in written.L] == ["n1"]
+
+        bank.close()

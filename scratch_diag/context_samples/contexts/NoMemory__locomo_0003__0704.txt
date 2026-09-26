@@ -1,0 +1,13 @@
+# system=NoMemory idx=704 conv=locomo_0003 category=adversarial (harness label=adversarial)
+# question: What are Nate's plans for his finished screenplay in January 2022?
+# gold: submit it to film festivals and get producers and directors to check it out
+# pred (real run): Nate plans to submit his screenplay to producers in January 2022.
+# judge_correct=True judge_error=None f1=0.3200 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=328 prompt_tokens~82
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Joanna and Nate. Question: What are Nate's plans for his finished screenplay in January 2022?
+
+Answer:

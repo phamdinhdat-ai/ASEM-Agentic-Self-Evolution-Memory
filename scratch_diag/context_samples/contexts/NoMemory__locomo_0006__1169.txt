@@ -1,0 +1,13 @@
+# system=NoMemory idx=1169 conv=locomo_0006 category=open_domain (harness label=commonsense)
+# question: Did James have a girlfriend during April 2022?
+# gold: Presumably not
+# pred (real run): No information is provided about James's relationship in April 2022.
+# judge_correct=True judge_error=None f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=307 prompt_tokens~76
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between James and John. Question: Did James have a girlfriend during April 2022?
+
+Answer:

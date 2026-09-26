@@ -1,0 +1,196 @@
+# system=ASEM idx=1351 conv=locomo_0007 category=temporal (harness label=temporal)
+# question: When did Jolene's mom gift her a pendant?
+# gold: in 2010
+# pred (real run): Jolene's mom gifted her a pendant that gives her strength and energy, and Deborah brings her mother's amulet to feel her love, but the exact timing of the gift is not specified in the notes.
+# judge_correct=False judge_error=missing_info f1=0.0571 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=11275 prompt_tokens~2818
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+When did Jolene's mom gift her a pendant?
+
+## Memory notes
+[1] 23 January 2023 · said by Deborah · about: Deborah, Jolene
+      • Deborah has a pendant that reminds her of her mother and asked Jolene what is special about her jewelry;
+        Jolene explained her jewelry bears a symbol representing freedom and a reminder to pursue her goals
+        without being held back, and Deborah told her the pendant should give her strength and energy.
+      • Deborah also brings her mother's amulet whenever she visits the spot, feeling her mother's love and
+        staying close to her …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Deborah] Yes, I also have a pendant that reminds me of my mother. And what is special for you about
+             your jewelry?"
+      topics: pendant, amulet, mother, jewelry, symbol, freedom, goals, strength
+      links: [7] extends, [8] same-topic, [3] same-topic, [6] extends, [2] extends  (+8 more not in this list: same-topic:7, semantic:1)
+
+[2] 4 February 2023 · said by Deborah · about: Deborah, Anna
+      • Deborah shared that Anna also wears a pendant in memory of her mother, which brought Deborah and Anna
+        closer.
+      turn: "[Deborah] Anna also has a pendant that she wears in memory of her mother! This also brought us closer."
+      topics: deborah, anna, pendant, mother, bond
+      links: [1] extends, [6] same-topic, [7] same-topic  (+2 more not in this list: extends:1, same-topic:1)
+
+[3] 4 February 2023 · said by Jolene · about: Jolene, Deborah
+      • Jolene found Deborah's reflection touching and asked if she has any little traditions when she comes to
+        reflect on her mom, after Deborah told her she has been thinking about her mother's influence and that
+        remembering loved ones is important; Deborah also shared that her mother had a passion for cooking and
+        made loving meals, that she still remembers the smell of her mother's special dish, and that at a music
+        …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Jolene] That's so touching! Do you have any little traditions that you do when you come to reflect on
+             your mom?"
+      topics: jolene, deborah, mother, traditions, reflection, mother's influence, cooking, special dish
+      links: [1] same-topic  (+9 more not in this list: extends:4, same-topic:3, semantic:2)
+
+[4] 4 February 2023 · said by Jolene · about: Jolene, Deborah
+      • Jolene admired the bouquet and asked Deborah for its backstory; Deborah explained a friend gave it to
+        her while she was struggling, and it gives her hope, courage, warmth, and appreciation.
+      turn: "[Jolene] Wow, Deb! That's beautiful! Can you tell me the backstory of that bouquet?"
+      topics: jolene, deborah, bouquet, backstory, friend, hope, courage
+      links: [8] same-topic  (+6 more not in this list: semantic:3, same-topic:2, extends:1)
+
+[5] 4 February 2023 · said by Jolene · about: Jolene
+      • Jolene said such reminders can keep lost loved ones close in our hearts every day, and Deborah says she
+        is always rooting for Jolene and advises listening to her heart as a reminder to find peace in chaos;
+        Jolene thanks Deborah, saying her words mean something, promises to keep prioritizing self-care, and
+        reflects that places and moments like that can mean so much and that it is a gift to find peace and
+        gratitude in …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Jolene] It can keep them close in our hearts every day."
+      topics: jolene, deborah, hearts, memory, loved ones, support, peace, chaos
+      links: (+14 more not in this list: same-topic:8, extends:5, semantic:1)
+
+[6] 4 February 2023 · said by Deborah · about: Deborah
+      • Deborah said she brings her mother's amulet whenever she visits the spot, feeling her mother's love and
+        staying close to her through it.
+      turn: "[Deborah] Do you remember this amulet from her? Whenever I come here, I bring it with me. It's how I
+             feel her love and stay close to her. Holding it brings me comfort. (image: a photo of a woman …"
+      topics: deborah, amulet, mother, comfort, love
+      links: [1] extends, [7] extends, [2] same-topic  (+4 more not in this list: extends:2, same-topic:2)
+
+[7] 23 January 2023 · said by Deborah · about: Deborah, Jolene
+      • Deborah told Jolene that the pendant should give her strength and energy, and she brings her mother's
+        amulet whenever she visits the spot, feeling her mother's love and staying close to her through it; she
+        also shared the saying 'Can't pour from an empty cup,' noting that self-care gives energy to help others
+        and that Jolene is worth it too, while agreeing that even small things can make a big difference.
+      turn: "[Deborah] It should really give you strength and energy!"
+      topics: strength, energy, encouragement, amulet, mother, comfort, love, self-care
+      links: [1] extends, [6] extends, [2] same-topic  (+9 more not in this list: same-topic:5, extends:2, semantic:2)
+
+[8] 27 January 2023 · said by Jolene · about: Jolene
+      • Jolene remarked that Deborah's parents were a beautiful couple.
+      turn: "[Jolene] They were a beautiful couple!"
+      topics: beautiful couple, compliment
+      links: [1] same-topic, [4] same-topic  (+22 more not in this list: same-topic:13, semantic:8, extends:1)
+

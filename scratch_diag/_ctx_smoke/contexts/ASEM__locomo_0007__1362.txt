@@ -1,0 +1,81 @@
+# system=ASEM idx=1362 conv=locomo_0007 category=single_hop (harness label=conversational)
+# question: What pets does Jolene have?
+# gold: snakes
+# pred (real run): Jolene has a snake named Seraphim and cats, including Max.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['09d0dbb5-1ef0-4201-9fa6-a824fb87e6d3', '1c263cf5-3641-454c-bddf-7341ebf4e967', '715cc18f-2158-4896-9b62-00d6e6d155b3', 'e3963b85-cc5f-4c5e-ac94-4de36d3a4086', 'f83f1438-b86d-4ac2-b2e6-21b4b1728f3d'] evidence_in_prompt=None
+# prompt_chars=13356 prompt_tokens~3339
+====================================================================================================
+You are a memory retrieval agent. Given a question and a set of candidate memory notes from a memory graph, select the notes needed to answer and produce a concise factual answer.
+
+Each note carries: id, speaker (who said it), entities (people/places named), keywords, description, session_date, and relations — typed edges to OTHER NOTES IN THIS SAME LIST, referenced by target_id. A note may also carry `also_linked`: a count of its remaining edges to notes that are NOT in this list (e.g. "same-topic:14, extends:3"). Those targets cannot be read, but the counts tell you whether a note is heavily corroborated, contradicted or extended elsewhere in the memory.
+
+## Task
+Output a JSON object with two fields:
+- **selected_ids**: The ids of the candidate notes whose information is actually used in the answer. Empty list if no note is relevant.
+- **answer**: The concise answer (a few words to one sentence). Answer from the notes even if they only PARTIALLY cover the question — say "I don't know" ONLY when no note contains any information related to the question. For time or date questions, give the exact date, month, or year using the notes' session_date and descriptions, resolving any relative timeframe into an absolute date.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question and identify what fact it asks for.
+Step 2: Skim each candidate note's description, keywords, entities, speaker, and session_date.
+Step 3: Keep every note that contributes information related to the question. Follow `relations` (especially temporal / causal / contradicts / extends) to reach the notes the question depends on. Use `also_linked` only as a hint about how well-connected a note is — never invent the content of a note that is not listed.
+Step 4: Write the answer strictly from the kept notes, resolving dates to absolute dates when asked about time.
+Step 5: Attribute each fact to the note's `speaker`. If the question credits a fact to the wrong person, STILL GIVE THE FACT and name the correct speaker — a name mismatch is never a reason to refuse.
+Step 6: Only if NO note is related at all, set selected_ids to [] and answer "I don't know".
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": ["id1", ...], "answer": "concise answer"}
+
+## Examples
+
+Example 1:
+Query: "Where does Alex work?"
+Memory notes: [{"id": "n1", "description": "Alex is a data scientist at Google in Mountain View.", "keywords": ["alex", "google", "mountain view"]}, {"id": "n2", "description": "Alex has a golden retriever named Buddy.", "keywords": ["alex", "buddy", "dog"]}]
+Reasoning: Only n1 mentions Alex's work. n2 is about a dog — irrelevant.
+{"selected_ids": ["n1"], "answer": "Alex works at Google in Mountain View."}
+
+Example 2 (no relevant note):
+Query: "What is Alex's phone number?"
+Memory notes: [{"id": "n1", "description": "Alex is a data scientist.", "keywords": ["alex", "data scientist"]}]
+Reasoning: No note contains a phone number — cannot answer.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 2b (temporal question with session_date):
+Query: "When did Caroline go to the support group?"
+Memory notes: [{"id": "n1", "speaker": "Caroline", "session_date": "8 May 2023", "description": "On 7 May 2023, Caroline went to the LGBTQ support group.", "keywords": ["caroline", "support group"]}]
+Reasoning: Note n1 gives the exact event date (7 May 2023).
+{"selected_ids": ["n1"], "answer": "7 May 2023"}
+
+Example 3 (partial evidence — answer what the notes cover):
+Query: "What events has Alex participated in?"
+Memory notes: [{"id": "n1", "speaker": "Alex", "description": "Alex spoke at a school event.", "keywords": ["alex", "school event"]}, {"id": "n2", "speaker": "Alex", "description": "Alex has a pet cat.", "keywords": ["alex", "cat"]}]
+Reasoning: n1 lists one event (school event). n2 is unrelated. Answer with the one event — do not refuse.
+{"selected_ids": ["n1"], "answer": "Alex spoke at a school event."}
+
+Example 4 (attribution / person swap — use speaker and relations):
+Query: "What was Melanie's grandmother's gift?"
+Memory notes: [{"id": "n1", "speaker": "Caroline", "entities": ["Caroline", "Sweden"], "description": "Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.", "keywords": ["necklace", "grandmother", "sweden"], "relations": [{"relation": "same-topic", "target_id": "n2"}]}, {"id": "n2", "speaker": "Melanie", "entities": ["Melanie"], "description": "Melanie complimented the necklace.", "keywords": ["necklace"], "relations": [{"relation": "contradicts", "target_id": "n1"}]}]
+Reasoning: The necklace belongs to Caroline (n1); n2 only comments on it. The question credits it to the wrong person — answer with the correct person.
+{"selected_ids": ["n1", "n2"], "answer": "It was Caroline's necklace, from her grandmother in Sweden — not Melanie's."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["n1", "n2"], "answer": "Alex works at Google."}
+→ Do not select notes whose information was not used in the answer.
+WRONG: {"selected_ids": ["n1"], "answer": "Alex works at Meta."}
+→ Answer only what the notes say. Never invent or guess facts.
+WRONG: Answering "last week" when the note gives the session date 8 May 2023 and the date was early May 2023.
+→ Give the resolved absolute date whenever possible.
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include any commentary, markdown fences, or extra text.
+- selected_ids must only contain ids from the provided memory notes.
+- Keep the answer short — a few words or one sentence.
+- `relations` is a READING AID, not part of the answer: do not mention it, and do not answer with a note that is not in the list.
+
+## Query
+What pets does Jolene have?
+
+## Memory notes
+[{"id": "b6c85d65-282f-4596-9936-0dab3cbd36bd", "keywords": ["jolene", "pets", "life", "brighter"], "description": "Jolene added that pets make life a lot brighter.", "session_date": "2023-09-15T15:09:00Z", "entities": ["Jolene"], "speaker": "Jolene", "relations": [{"relation": "extends", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "extends", "target_id": "c008d2e9-8e60-4313-b4a2-e9dc0deb4e71"}, {"relation": "extends", "target_id": "09d0dbb5-1ef0-4201-9fa6-a824fb87e6d3"}, {"relation": "extends", "target_id": "b33d2bfe-105e-4686-9148-23d966ac1ef9"}], "also_linked": "semantic:1", "content": "[Jolene] Plus, they make life a lot brighter!"}, {"id": "94250268-7f8b-450d-a41b-e948f4ad3173", "keywords": ["pets", "taming", "pride"], "description": "Jolene said she is proud of Deborah's action in taming her pets.", "session_date": "2023-08-26T17:33:00Z", "entities": ["Jolene", "Deborah"], "speaker": "Jolene", "relations": [{"relation": "same-topic", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "extends", "target_id": "a556a2c2-ec30-4bff-be00-fc6919af294e"}], "also_linked": "same-topic:2", "content": "[Jolene] I am proud of your action to tame these pets!"}, {"id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06", "keywords": ["pets", "happiness", "responsibility", "comfort", "susie", "strength", "joy", "gratitude", "max", "loving owner", "cats", "love", "priceless", "life", "brighter"], "description": "Deborah said animals bring happiness and comfort and teach responsibility, encouraging Jolene to cherish Susie; Jolene thanked her, saying Susie helps her stay strong and find joy in small things. Deborah also noted her cats, including Max, bring lots of joy and peace to their home, that Jolene called her a loving owner to her cats, and that the love pets give is priceless; Jolene added that pets make life a lot brighter.", "session_date": "2023-08-01T09:26:00Z", "entities": ["Deborah", "Jolene", "Susie"], "speaker": "Deborah", "relations": [{"relation": "same-topic", "target_id": "c008d2e9-8e60-4313-b4a2-e9dc0deb4e71"}, {"relation": "same-topic", "target_id": "09d0dbb5-1ef0-4201-9fa6-a824fb87e6d3"}, {"relation": "same-topic", "target_id": "b33d2bfe-105e-4686-9148-23d966ac1ef9"}, {"relation": "same-topic", "target_id": "fe41832e-8469-490c-a70e-d9bfe1fe6361"}, {"relation": "extends", "target_id": "a556a2c2-ec30-4bff-be00-fc6919af294e"}, {"relation": "same-topic", "target_id": "94250268-7f8b-450d-a41b-e948f4ad3173"}], "also_linked": "same-topic:14, semantic:7, extends:4", "content": "[Deborah] That's great, Jolene! Animals sure have a way of bringing us happiness. They understand us and provide us with comfort. Plus, having a pet teaches us responsibility. She came at the perfect \u2026"}, {"id": "a556a2c2-ec30-4bff-be00-fc6919af294e", "keywords": ["loving owner", "cats", "pets", "taming", "pride", "love", "priceless"], "description": "Jolene said it is wonderful that Deborah has become a loving owner to her cats and is proud of Deborah's action in taming her pets; Deborah added that the love pets give is priceless.", "session_date": "2023-08-26T17:33:00Z", "entities": ["Jolene", "Deborah"], "speaker": "Jolene", "relations": [{"relation": "extends", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "same-topic", "target_id": "fe41832e-8469-490c-a70e-d9bfe1fe6361"}, {"relation": "extends", "target_id": "94250268-7f8b-450d-a41b-e948f4ad3173"}], "also_linked": "same-topic:2, extends:1, semantic:1", "content": "[Jolene] It\u2019s wonderful that you have become their loving owner!"}, {"id": "b33d2bfe-105e-4686-9148-23d966ac1ef9", "keywords": ["jolene", "snake", "love", "gratitude", "bed", "pets", "life", "brighter"], "description": "Jolene says seeing her snake snuggled under the bed made her feel love and gratitude and realize how important she is to her, and she added that pets make life a lot brighter.", "session_date": "2023-07-09T19:37:00Z", "entities": ["Jolene"], "speaker": "Jolene", "relations": [{"relation": "extends", "target_id": "09d0dbb5-1ef0-4201-9fa6-a824fb87e6d3"}, {"relation": "same-topic", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "extends", "target_id": "b6c85d65-282f-4596-9936-0dab3cbd36bd"}], "also_linked": "same-topic:6, semantic:3, extends:1", "content": "[Jolene] Seeing her snuggled under the bed made me feel so much love and gratitude. It made me realize how important she is to me."}, {"id": "c008d2e9-8e60-4313-b4a2-e9dc0deb4e71", "keywords": ["jolene", "seraphim", "pet", "reptiles", "nature", "comfort", "peace", "life", "brighter"], "description": "Jolene said she got Seraphim in 2022, describing her as a great pet who cheers her up and brings peace and comfort; she was fascinated by reptiles and considers her snake the perfect pet, calming to care for and a way to connect with nature, and she added that pets make life a lot brighter.", "session_date": "2023-06-26T09:17:00Z", "entities": ["Jolene", "Susie", "Seraphim"], "speaker": "Jolene", "relations": [{"relation": "same-topic", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "extends", "target_id": "09d0dbb5-1ef0-4201-9fa6-a824fb87e6d3"}, {"relation": "extends", "target_id": "b6c85d65-282f-4596-9936-0dab3cbd36bd"}], "also_linked": "same-topic:10, extends:7, semantic:1", "content": "[Jolene]  I got her last year, she's a great pet. She always cheers me up and brings a sense of peace. Spending time with her is so comforting."}, {"id": "09d0dbb5-1ef0-4201-9fa6-a824fb87e6d3", "keywords": ["jolene", "reptiles", "snake", "pet", "nature", "escape", "bed", "calm", "company", "life", "brighter"], "description": "Jolene is fascinated by reptiles and sees her snake as the perfect pet, calming to care for and a way to connect with nature; her snakes like watching her chill, and one is great company that brings a sense of calm. When the snake escaped and was found hours later snuggled under the bed, seeing it there made her feel love and gratitude and realize how important she is to it; she also added that pets make life a lot brighter.", "session_date": "2023-07-09T19:37:00Z", "entities": ["Jolene"], "speaker": "Jolene", "relations": [{"relation": "same-topic", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "extends", "target_id": "c008d2e9-8e60-4313-b4a2-e9dc0deb4e71"}, {"relation": "extends", "target_id": "b33d2bfe-105e-4686-9148-23d966ac1ef9"}, {"relation": "extends", "target_id": "b6c85d65-282f-4596-9936-0dab3cbd36bd"}], "also_linked": "same-topic:3, extends:1", "content": "[Jolene]  I was fascinated by reptiles, and it felt like the perfect pet for me. Taking care of it has been really calming, and it's a great way to connect with nature."}, {"id": "fe41832e-8469-490c-a70e-d9bfe1fe6361", "keywords": ["jolene", "cats", "exercise", "question", "deborah", "run", "park", "nature"], "description": "Jolene comments that Deborah's cats look like they are having a blast and asks how often she takes them out; Deborah takes her cats for a run in the park every morning and evening as part of her exercise and nature routine.", "session_date": "2023-07-09T19:37:00Z", "entities": ["Jolene", "Deborah"], "speaker": "Jolene", "relations": [{"relation": "same-topic", "target_id": "8c1c75ee-4894-4727-93c5-5c2e9acbbe06"}, {"relation": "same-topic", "target_id": "a556a2c2-ec30-4bff-be00-fc6919af294e"}], "also_linked": "semantic:2, extends:1", "content": "[Jolene] Looks like they're having a blast! How often do you take them out?"}]
+

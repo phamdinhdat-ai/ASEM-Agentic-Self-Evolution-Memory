@@ -34,7 +34,7 @@ from .llm_validator import (
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .memory_manager import Op
-from .note import LinkRecord, Note, cap_description, cap_keywords
+from .note import LinkRecord, Note
 from .temporal import extract_session_header, parse_session_datetime
 
 _log = get_logger("batch_ingest")
@@ -56,7 +56,6 @@ def _extract_json(raw: str, expect_array: bool = True) -> Any:
     cleaned = raw.strip()
 
     # 1. Strip markdown fences
-    #    Handles: ```json ... ```, ``` ... ```, and leading/trailing backticks
     fence_patterns = [
         (r"```json\s*", r"\s*```"),
         (r"```\s*", r"\s*```"),
@@ -87,20 +86,14 @@ def _extract_json(raw: str, expect_array: bool = True) -> Any:
         pass
 
     # 5. Try naive fix: replace single quotes with double quotes
-    #    (only if the content looks like it uses single quotes)
     if expect_array and cleaned.count("'") > cleaned.count('"'):
         try:
-            # Replace single quotes only outside of strings (heuristic)
             fixed = cleaned.replace("'", '"')
             return json.loads(fixed)
         except json.JSONDecodeError:
             pass
 
-    # 6. Salvage a truncated array: models often hit their output token cap
-    #    mid-array (large link lists). Every complete object before the cut
-    #    is still valid JSON — cut after the last complete '}' and close the
-    #    bracket. Flat objects make the last '}' the best cut point, so the
-    #    backwards scan typically succeeds on its first try.
+    # 6. Salvage a truncated array
     if expect_array:
         for cut in range(len(cleaned) - 1, -1, -1):
             if cleaned[cut] == "}":
@@ -169,7 +162,6 @@ class BatchIngestor:
             _log.info("No dialogue turns to ingest")
             return []
 
-        dialogue_text = "\n".join(dialogue_turns)
         # Auto-detect session date and ID if not explicitly provided
         if not session_date:
             for turn in dialogue_turns[:2]:
@@ -195,13 +187,13 @@ class BatchIngestor:
             session_date,
         )
 
-        # Step 1 — Extract all notes from the dialogue
+        # Step 1 -- Extract all notes from the dialogue
         extracted = self._extract_notes(dialogue_text, session_date=session_date)
         if not extracted:
             _log.warning("No notes extracted from dialogue")
             return []
 
-        # Step 2 — Embed all extracted notes with temporal grounding
+        # Step 2 -- Embed all extracted notes with temporal grounding
         raw_notes = self._embed_notes(
             extracted,
             dt_obj=dt_obj,
@@ -211,54 +203,45 @@ class BatchIngestor:
         )
         _log.info("Extracted {} raw notes", len(raw_notes))
 
-        # --- Detailed note listing ---
         for i, n in enumerate(raw_notes):
             _log.debug(
                 "  note[{}] | date={} | K=[{}]  G=[{}]  X={!r}",
                 i,
                 n.session_date,
-                ", ".join(n.K[:5]) if n.K else "—",
-                ", ".join(n.G[:3]) if n.G else "—",
+                ", ".join(n.K[:5]) if n.K else "-",
+                ", ".join(n.G[:3]) if n.G else "-",
                 n.X[:100],
             )
 
-        # Step 3 — Batch memory operations
+        # Step 3 -- Batch memory operations
         bank_size_before = memory_bank.size()
         ops = self._batch_memory_ops(raw_notes, memory_bank)
         n_add = sum(1 for o in ops if o["op"] == "ADD")
         n_update = sum(1 for o in ops if o["op"] == "UPDATE")
         n_delete = sum(1 for o in ops if o["op"] == "DELETE")
         n_noop = sum(1 for o in ops if o["op"] == "NOOP")
-        _log.info("Memory ops | adds={}  updates={}  deletes={}  noops={}  "
-                  "bank_before={}",
-                  n_add, n_update, n_delete, n_noop, bank_size_before)
+        _log.info(
+            "Memory ops | adds={}  updates={}  deletes={}  noops={}  bank_before={}",
+            n_add, n_update, n_delete, n_noop, bank_size_before,
+        )
 
-        # Step 4 — Execute operations (track which notes actually get added)
+        # Step 4 -- Execute operations (track which notes actually get added)
         added_notes = self._execute_ops(raw_notes, ops, memory_bank)
 
-        # Step 5 — Batch link generation (cross-session aware)
+        # Step 5 -- Batch link generation (cross-session aware)
         link_count = 0
         cross_session_links = 0
         if added_notes:
             link_count, cross_session_links = self._batch_link(added_notes, memory_bank)
 
-        # Step 6 — Rebuild FAISS once (fast for small banks)
+        # Step 6 -- Rebuild FAISS once (fast for small banks)
         if added_notes or n_update > 0 or n_delete > 0:
             memory_bank._rebuild_index()
 
-        # --- Per-note summary ---
         for i, n in enumerate(raw_notes):
             op_label = ops[i]["op"] if i < len(ops) else "?"
-            marker = ""
-            if op_label == "ADD":
-                marker = "+"
-            elif op_label == "UPDATE":
-                marker = "~"
-            elif op_label == "DELETE":
-                marker = "-"
-            elif op_label == "NOOP":
-                marker = "."
-            kw_str = ", ".join(n.K[:4]) if n.K else "—"
+            marker = {"ADD": "+", "UPDATE": "~", "DELETE": "-", "NOOP": "."}.get(op_label, "?")
+            kw_str = ", ".join(n.K[:4]) if n.K else "-"
             _log.info(
                 "  {} [{}] {} | {} links | K=[{}]",
                 marker, op_label, n.X[:80],
@@ -275,7 +258,7 @@ class BatchIngestor:
         return added_notes
 
     # ------------------------------------------------------------------
-    # Step 1 — Batch note extraction
+    # Step 1 -- Batch note extraction
     # ------------------------------------------------------------------
 
     def _extract_notes(
@@ -312,7 +295,7 @@ class BatchIngestor:
                     return [item for item in data[key] if isinstance(item, dict)]
 
         _log.warning(
-            "Failed to parse batch extraction JSON — trying fallback\n"
+            "Failed to parse batch extraction JSON -- trying fallback\n"
             "  raw[:500] = {!r}",
             raw[:500],
         )
@@ -334,7 +317,7 @@ class BatchIngestor:
         return results
 
     # ------------------------------------------------------------------
-    # Step 2 — Embed extracted notes
+    # Step 2 -- Embed extracted notes
     # ------------------------------------------------------------------
 
     def _embed_notes(
@@ -353,16 +336,15 @@ class BatchIngestor:
         dropped = 0
         for item in extracted:
             c = str(item.get("content", ""))
-            K = cap_keywords(item.get("keywords", []))
+            K = list(item.get("keywords", []))
             G = list(item.get("tags", []))
-            X = cap_description(str(item.get("description", "")))
+            X = str(item.get("description", ""))
 
             if not c.strip():
                 dropped += 1
                 continue
 
-            # `or []` guards an explicit `"entities": null` from the LLM.
-            entities = [str(e).strip() for e in (item.get("entities") or []) if str(e).strip()]
+            entities = [str(e).strip() for e in item.get("entities", []) if str(e).strip()]
             speaker = str(item.get("speaker", "")).strip() or None
             if not speaker:
                 spk_match = re.match(r"^\s*\[([A-Za-z0-9_\s-]+)\]", c)
@@ -394,7 +376,7 @@ class BatchIngestor:
             notes.append(note)
         if dropped:
             _log.warning(
-                "Dropped {} of {} extracted entries — missing non-empty 'content' "
+                "Dropped {} of {} extracted entries -- missing non-empty 'content' "
                 "(wrong output shape? keys were: {})",
                 dropped, len(extracted),
                 sorted({tuple(item.keys()) for item in extracted if isinstance(item, dict)}),
@@ -402,7 +384,7 @@ class BatchIngestor:
         return notes
 
     # ------------------------------------------------------------------
-    # Step 3 — Batch memory operations
+    # Step 3 -- Batch memory operations
     # ------------------------------------------------------------------
 
     def _batch_memory_ops(
@@ -461,7 +443,7 @@ class BatchIngestor:
                 return result
 
         _log.warning(
-            "Failed to parse batch memory ops — defaulting to ADD all\n"
+            "Failed to parse batch memory ops -- defaulting to ADD all\n"
             "  raw[:500] = {!r}",
             raw[:500],
         )
@@ -469,7 +451,7 @@ class BatchIngestor:
                 for i in range(len(new_notes))]
 
     # ------------------------------------------------------------------
-    # Step 4 — Execute operations
+    # Step 4 -- Execute operations
     # ------------------------------------------------------------------
 
     def _execute_ops(
@@ -494,9 +476,7 @@ class BatchIngestor:
             elif op == "UPDATE" and target_id:
                 target = memory_bank.get_note(str(target_id))
                 if target is not None:
-                    merged_entities = list(dict.fromkeys(
-                        (target.entities or []) + (note.entities or [])
-                    ))
+                    merged_entities = list(dict.fromkeys(target.entities + note.entities))
                     merged = Note(
                         id=target.id,
                         c=note.c,
@@ -524,13 +504,13 @@ class BatchIngestor:
             elif op == "NOOP":
                 pass
             else:
-                # Unknown or invalid op — default to ADD
+                # Unknown or invalid op -- default to ADD
                 memory_bank.add(note)
                 added.append(note)
         return added
 
     # ------------------------------------------------------------------
-    # Step 5 — Batch link generation
+    # Step 5 -- Batch link generation
     # ------------------------------------------------------------------
 
     def _batch_link(
@@ -601,7 +581,7 @@ class BatchIngestor:
 
         if not isinstance(relations, list) or not relations:
             _log.warning(
-                "Failed to parse batch link generation — no links created\n"
+                "Failed to parse batch link generation -- no links created\n"
                 "  raw[:500] = {!r}",
                 raw[:500],
             )

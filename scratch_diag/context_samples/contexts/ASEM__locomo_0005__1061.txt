@@ -1,0 +1,192 @@
+# system=ASEM idx=1061 conv=locomo_0005 category=single_hop (harness label=conversational)
+# question: What did Andrew express missing about exploring nature trails with his family's dog?
+# gold: The peaceful moments
+# pred (real run): Andrew missed hiking with his family's dog because he lives in the city and has been unable to find pet-friendly housing, and he recently adopted a puppy from a shelter, adding a dog trip to his bucket list.
+# judge_correct=False judge_error=hallucination f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['82f1a37e-da76-4d3c-837c-30b08220e0c5', 'fff80286-ddc5-4f77-af0b-3ac7a06b6984'] evidence_in_prompt=None
+# prompt_chars=11159 prompt_tokens~2789
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What did Andrew express missing about exploring nature trails with his family's dog?
+
+## Memory notes
+[1] 19 October 2023 · said by Andrew · about: Andrew, Buddy
+      • Andrew said Buddy loves exploring new hiking trails and is excited by nature.
+      turn: "[Andrew] Yep, he loves checking out new hiking trails with us. It's awesome to see him so stoked and
+             interested in everything nature has to offer."
+      topics: andrew, buddy, hiking trails, nature
+      links: [2] same-topic, [4] extends  (+3 more not in this list: same-topic:3)
+
+[2] 8 July 2023 · said by Andrew · about: Andrew
+      • Andrew says the dogs make everyone smile and he can't wait to go hiking with them, hoping to take Toby
+        along since German Shepherds would make great, smart, and loyal hiking buddies; Audrey adds that German
+        Shepherds are loyal and smart, love new journeys, and can picture Andrew and his pup conquering trails
+        together.
+      • Andrew also shared a photo of himself and his dog hiking last time, noting how happy the dog was …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Andrew] They make everyone smile. Can't wait to go hiking with them!"
+      topics: dogs, hiking, smile, andrew, toby, german shepherd, hiking buddies, audrey
+      links: [7] extends, [4] same-topic, [6] extends, [8] same-topic, [1] same-topic  (+9 more not in this list: same-topic:6, extends:3)
+
+[3] 27 March 2023 · said by Andrew · about: Andrew
+      • Andrew loves animals and believes pets bring joy and feel like family, saying he cannot imagine life
+        without them; he previously had no pets but adopted a puppy named Toby despite living in the city, after
+        searching websites, shelters, and friends for a dog and struggling to find pet-friendly housing, and he
+        has since shared that he recently adopted another puppy from a shelter.
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Andrew] No, no pets right now. But I do love animals."
+      topics: andrew, loves animals, furry buddy, family dog, hiking, nature trails, city living, audrey
+      links: [4] extends, [6] extends  (+19 more not in this list: extends:10, same-topic:6, semantic:3)
+
+[4] 2 April 2023 · said by Andrew · about: Andrew
+      • Andrew said hiking with a dog is fun and a great way to bond and create memories, and that his dog Buddy
+        loves exploring new hiking trails and is excited by nature.
+      turn: "[Andrew] Hiking with a dog is way fun, it's a great way to bond and create memories together. (image: a
+             photography of a man sitting on a rock with a dog)"
+      topics: hiking, dog, buddy, bond, memories, hiking trails, nature
+      links: [3] extends, [7] same-topic, [2] same-topic, [1] extends  (+11 more not in this list: same-topic:6, extends:4, semantic:1)
+
+[5] 6 October 2023 · said by Audrey · about: Audrey, Andrew
+      • Audrey recalled being unable to walk her dogs due to a knee injury and shared a photo of her two dogs
+        running in a field after she recovered; she also noted it's been a while since she walked her dogs but
+        those moments are the best.
+      turn: "[Audrey] Hey Andrew, I was thinking about what you said about missing nature the other day. It reminded
+             me of when I couldn't walk my dogs because of a knee injury. It was tough 'cause they bring me …"
+      topics: audrey, dogs, knee injury, nature, recovery, walk
+      links: (+9 more not in this list: same-topic:4, extends:3, semantic:2)
+
+[6] 28 October 2023 · said by Andrew · about: Andrew
+      • Andrew said he can't wait for their nature day with the dogs.
+      turn: "[Andrew] Can't wait for our nature day with the fur babies! We're gonna have a good time!"
+      topics: nature day, fur babies, hike
+      links: [3] extends, [7] extends, [2] extends  (+12 more not in this list: same-topic:6, extends:5, semantic:1)
+
+[7] 8 July 2023 · said by Andrew · about: Andrew, Audrey
+      • Andrew looks forward to hiking with both dogs next month (August 2023), sharing a trail map and asking
+        about their training; he notes there is a lake near the trail and says it will be awesome, can't wait
+        for their nature day with the dogs, and suggested going to the trail on the next trip to enjoy the
+        beautiful autumn colors.
+      turn: "[Andrew] Looking forward to seeing them have fun hiking. Let's get planning for next month! Here's the
+             map for the trail. (image: a photo of a map of a park with a lot of trees)"
+      topics: hike planning, next month, trail map, dogs, training, andrew, both dogs, trails
+      links: [4] same-topic, [6] extends, [2] extends, [8] extends  (+16 more not in this list: same-topic:10, extends:4, semantic:1, temporal:1)
+
+[8] 4 August 2023 · said by Andrew · about: Andrew
+      • Andrew asks how the dogs' training is going and shares a photo of a trail he was just at.
+      turn: "[Andrew] Awesome! You're having fun with them and keeping them busy - how's that going? Btw look at the
+             trail that I was just at. Cool right? (image: a photography of a dirt path in the woods with …"
+      topics: andrew, trail, dogs, keeping busy
+      links: [2] same-topic, [7] extends  (+6 more not in this list: same-topic:6)
+

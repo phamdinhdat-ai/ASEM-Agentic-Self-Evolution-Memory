@@ -1,0 +1,198 @@
+# system=ASEM idx=157 conv=locomo_0000 category=adversarial (harness label=adversarial)
+# question: What does Melanie's necklace symbolize?
+# gold: love, faith, and strength
+# pred (real run): The necklace symbolizes love, faith, strength, and family roots.
+# judge_correct=True judge_error=None f1=0.6667 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['102b8191-3634-4b80-a9e9-1800fcaf17a5', '109648cd-ba31-4193-be18-444452069e00', '1b21c4eb-7b2a-4ff7-abf4-c94df1ea4415', '5840eca8-f4f4-4be9-814f-85c7cbdd02ae', '63a5f698-9d5e-499f-aad5-3436f0974e73', '8ad3b67e-ff28-4959-b9a3-71a92ba635f3', 'cdc9433e-cdfc-46b0-995e-b3fe1fae1c99', 'fa475609-e412-465e-b4e0-51b6dc083465'] evidence_in_prompt=None
+# prompt_chars=12007 prompt_tokens~3001
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What does Melanie's necklace symbolize?
+
+## Memory notes
+[1] 27 June 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie complimented Caroline's necklace and asked if it had special meaning; Caroline explained it was
+        a gift from her grandmother in Sweden symbolizing love, faith, strength, and family roots.
+      • Melanie then remarked on the meaning of objects and asked if Caroline had other treasured items, sharing
+        a photo of stacked bowls.
+      turn: "[Melanie] Hey, Caroline! Nice to hear from you! Love the necklace, any special meaning to it?"
+      topics: melanie, caroline, necklace, meaning, grandma, sweden, treasured objects, bowls
+      links: [3] extends, [7] same-topic, [2] extends, [4] extends  (+3 more not in this list: same-topic:3)
+
+[2] 27 June 2023 · said by Caroline · about: Caroline, Sweden
+      • Caroline explained her necklace was a gift from her grandmother in her home country Sweden, given when
+        she was young, symbolizing love, faith, strength, and family roots.
+      turn: "[Caroline] Thanks, Melanie! This necklace is super special to me - a gift from my grandma in my home
+             country, Sweden. She gave it to me when I was young, and it stands for love, faith and strength …"
+      topics: necklace, grandma, sweden, love, faith, strength, roots
+      links: [1] extends, [3] extends, [4] same-topic  (+2 more not in this list: same-topic:2)
+
+[3] 27 June 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline greeted Melanie after a long time and shared a photo of a person holding a cross-and-heart
+        necklace, a gift from her grandmother in Sweden symbolizing love, faith, strength, and family roots;
+        Melanie complimented it, asked about its meaning, and asked if Caroline had other treasured items,
+        sharing a photo of stacked bowls.
+      • Caroline also described a hand-painted bowl made by a friend for her 18th birthday …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Caroline] Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at this.
+             (image: a photo of a person holding a necklace with a cross and a heart)"
+      topics: caroline, melanie, necklace, cross, heart, grandma, sweden, treasured objects
+      links: [7] same-topic, [1] extends, [2] extends, [4] extends, [6] extends  (+6 more not in this list: same-topic:4, semantic:2)
+
+[4] 27 June 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie remarked on the meaning of objects and asked Caroline if she had other treasured items, sharing
+        a photo of stacked bowls; Caroline later described a hand-painted bowl made by a friend for her 18th
+        birthday around 2013, which reminds her of art and self-expression.
+      • Melanie also shared that pottery is a huge part of her life that helps her express emotions and brings
+        her joy, noting its creativity, skill, and …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Melanie] That's gorgeous, Caroline! It's awesome what items can mean so much to us, right? Got any
+             other objects that you treasure, like that necklace? (image: a photo of a stack of bowls with …"
+      topics: melanie, treasured objects, bowls, sentimental, hand-painted bowl, friend, 18th birthday, art
+      links: [1] extends, [3] extends, [2] same-topic, [6] extends, [8] extends  (+4 more not in this list: extends:2, same-topic:2)
+
+[5] 9 June 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie said she has been married for five years (since 2018) and shared a photo of herself as a bride
+        in a wedding dress.
+      turn: "[Melanie] 5 years already! Time flies- feels like just yesterday I put this dress on! Thanks, Caroline!
+             (image: a photo of a bride in a wedding dress holding a bouquet)"
+      topics: married, five years, wedding dress, photo
+      links: [7] semantic  (+5 more not in this list: same-topic:4, extends:1)
+
+[6] 27 June 2023 · said by Caroline · about: Caroline
+      • Caroline described a hand-painted bowl made by a friend for her 18th birthday ten years ago (around
+        2013), which reminds her of art and self-expression.
+      turn: "[Caroline] Yep, Melanie! I've got some other stuff with sentimental value, like my hand-painted bowl. A
+             friend made it for my 18th birthday ten years ago. The pattern and colors are awesome-- it …"
+      topics: hand-painted bowl, friend, 18th birthday, art, self-expression
+      links: [4] extends, [7] same-topic, [3] extends, [8] same-topic  (+4 more not in this list: same-topic:2, semantic:2)
+
+[7] 17 August 2023 · said by Melanie · about: Caroline, Melanie
+      • Melanie is obsessed with bright colors and patterns, aiming to catch the eye and make people smile, and
+        says painting helps her express feelings and be creative; she is now inspired by autumn and planning a
+        few paintings while asking Caroline about cool art projects.
+      turn: "[Melanie] Thanks, Caroline! I'm obsessed with those, so I made something to catch the eye and make
+             people smile. Plus, painting helps me express my feelings and be creative. Each stroke carries a …"
+      topics: colors, patterns, self-expression, creativity, painting, autumn, painting plans, art projects
+      links: [8] extends, [5] semantic, [3] same-topic, [1] same-topic, [6] same-topic  (+30 more not in this list: same-topic:16, extends:10, semantic:3, temporal:1)
+
+[8] 13 September 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie said she has been into art for seven years and found her muses in painting and pottery, sharing
+        a photo of her pottery bowls and a starfish.
+      turn: "[Melanie] Seven years now, and I've finally found my real muses: painting and pottery. It's so calming
+             and satisfying. Check out my pottery creation in the pic! (image: a photo of a group of bowls …"
+      topics: melanie, seven years, painting, pottery, muses, photo
+      links: [7] extends, [6] same-topic, [4] extends  (+13 more not in this list: same-topic:8, extends:5)
+

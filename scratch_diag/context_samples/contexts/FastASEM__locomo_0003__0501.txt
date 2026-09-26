@@ -1,0 +1,54 @@
+# system=FastASEM idx=501 conv=locomo_0003 category=open_domain (harness label=commonsense)
+# question: What pets wouldn't cause any discomfort to Joanna?
+# gold: Hairless cats or pigs,since they don't have fur, which is one of the main causes of Joanna's allergy.
+# pred (real run): Joanna's allergies are to cockroaches and fur, so reptiles might be a possibility, but no specific pet is confirmed as harmless.
+# judge_correct=False judge_error=contradiction f1=0.1951 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=2642 prompt_tokens~660
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 23 January 2022 · said by Joanna · about: Joanna
+      • Joanna is considering getting pets of her own soon if she can find any she is not allergic to.
+      topics: pets, allergies, considering
+      links: [2] temporal, [3] temporal, [4] temporal, [6] semantic, [5] semantic, [8] semantic  (+18 more not in this list: same-entity:17, semantic:1)
+
+[2] 23 January 2022 · said by Joanna · about: Joanna
+      • Joanna has a severe allergy to pets; her face gets puffy and itchy around certain animals.
+      topics: allergy, pets, puffy, itchy
+      links: [1] temporal, [3] temporal, [4] temporal, [6] semantic, [5] semantic, [8] semantic  (+17 more not in this list: same-entity:15, semantic:2)
+
+[3] 23 January 2022 · said by Joanna · about: Joanna
+      • Joanna is allergic to most reptiles and animals with fur.
+      topics: allergy, reptiles, fur, animals
+      links: [2] temporal, [1] temporal, [4] temporal, [5] semantic, [7] same-entity  (+17 more not in this list: same-entity:16, semantic:1)
+
+[4] 23 January 2022 · said by Joanna · about: Joanna
+      • Joanna finds other ways to be happy despite her pet allergies.
+      topics: happy, allergies, coping
+      links: [1] temporal, [2] temporal, [3] temporal  (+17 more not in this list: same-entity:17)
+
+[5] 18 March 2022 · said by Joanna · about: Joanna
+      • Joanna is unsure if she will ever get a pet due to her allergies.
+      topics: pet, allergies, uncertainty
+      links: [1] semantic, [2] semantic, [3] semantic, [8] semantic, [7] semantic  (+13 more not in this list: same-entity:12, semantic:1)
+
+[6] 18 March 2022 · said by Joanna · about: Joanna
+      • Joanna recently found out she is allergic to cockroaches.
+      topics: allergic, cockroaches
+      links: [1] semantic, [2] semantic, [8] same-entity  (+14 more not in this list: same-entity:13, temporal:1)
+
+[7] 20 May 2022 · said by Joanna · about: Joanna
+      • Joanna is too lazy to research alternative pets for her allergies.
+      topics: lazy, research, alternative pets, allergies
+      links: [3] same-entity, [8] temporal, [1] semantic, [5] semantic  (+9 more not in this list: same-entity:9)
+
+[8] 20 May 2022 · said by Joanna · about: Joanna
+      • Joanna has allergies that make her not want to get a pet.
+      topics: allergies, pet
+      links: [6] same-entity, [5] semantic, [1] semantic, [2] semantic, [7] temporal  (+9 more not in this list: same-entity:8, semantic:1)
+
+Question: What pets wouldn't cause any discomfort to Joanna?
+
+Answer:

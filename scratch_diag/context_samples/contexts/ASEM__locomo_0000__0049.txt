@@ -1,0 +1,204 @@
+# system=ASEM idx=49 conv=locomo_0000 category=temporal (harness label=temporal)
+# question: When did Caroline and Melanie go to a pride fesetival together?
+# gold: 2022
+# pred (real run): Caroline and Melanie went to a pride festival together on Friday 11 August 2023.
+# judge_correct=True judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['109648cd-ba31-4193-be18-444452069e00', '316c8d3a-9b08-413a-b85e-ed1e2784ca51', '36b8c3d3-6e43-468f-8f69-c89494e09282', '6b13df5b-06c6-46c0-9e1c-0e63a6832b9a', 'a906711a-efe4-430c-aa75-96b6d3bb5d34', 'ae305eba-c0c5-4f96-a1f6-5fd8228cd4dd', 'cfc31c1e-7d32-4ac2-8abe-d5e6bcd0e28c'] evidence_in_prompt=None
+# prompt_chars=12469 prompt_tokens~3117
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+When did Caroline and Melanie go to a pride fesetival together?
+
+## Memory notes
+[1] 14 August 2023 · said by Caroline · about: Caroline, pride parade, Melanie
+      • Caroline attended a pride parade on Friday 11 August 2023, describing it as energetic and loving and
+        reaffirming her commitment to equality.
+      turn: "[Caroline] Wow, Mel, glad you had a blast at the concert. A lot's happened since we talked. I went to a
+             pride parade last Friday and it was awesome - so much energy and love everywhere. Really made …"
+      topics: caroline, pride parade, equality, energy, love
+      links: [4] same-topic  (+6 more not in this list: same-topic:6)
+
+[2] 9 June 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline commented that Melanie's family looked happy in the photo and asked how the day was; Melanie
+        described the day as fun with games, good food, and hanging out together, said she cherishes time with
+        family when she really feels alive and happy, and Caroline said she was glad Melanie had a great time
+        and advised cherishing the moments.
+      • Melanie also complimented the picnic photo and asked how Caroline's friends …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Caroline] Looks like you had a great day! How was it? You all look so happy!"
+      topics: photo, happy, question, games, food, family time, fun, cherish moments
+      links: [7] extends, [3] extends, [5] same-topic, [8] extends  (+27 more not in this list: same-topic:17, extends:5, semantic:4, temporal:1)
+
+[3] 9 June 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie cherishes time with family as when she feels most alive and happy, saying her favorite memories
+        bring the family together and bring happiness; she thanked Caroline and expressed gladness that Caroline
+        is there to share in it, noting that creativity and family keep her at peace.
+      • Caroline said it is sweet to see Melanie's love for her family and that they are her rock.
+      turn: "[Melanie] Absolutely, Caroline! I cherish time with family. It's when I really feel alive and happy."
+      topics: family time, happiness, alive, melanie, caroline, creativity, peace, memories
+      links: [7] same-topic, [2] extends, [6] extends  (+10 more not in this list: extends:5, same-topic:5)
+
+[4] 17 July 2023 · said by Caroline · about: Caroline
+      • Caroline mentors a transgender teen like herself, working on confidence and positive strategies, and
+        they attended an LGBT pride event in June 2023.
+      turn: "[Caroline] I mentor a transgender teen just like me. We've been working on building up confidence and
+             finding positive strategies, and it's really been paying off! We had a great time at the LGBT …"
+      topics: caroline, transgender teen, mentee, confidence, pride event
+      links: [1] same-topic  (+9 more not in this list: same-topic:9)
+
+[5] 27 June 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline greeted Melanie after a long time and shared a photo of a person holding a cross-and-heart
+        necklace, a gift from her grandmother in Sweden symbolizing love, faith, strength, and family roots;
+        Melanie complimented it, asked about its meaning, and asked if Caroline had other treasured items,
+        sharing a photo of stacked bowls.
+      • Caroline also described a hand-painted bowl made by a friend for her 18th birthday …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Caroline] Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at this.
+             (image: a photo of a person holding a necklace with a cross and a heart)"
+      topics: caroline, melanie, necklace, cross, heart, grandma, sweden, treasured objects
+      links: [2] same-topic, [6] semantic  (+9 more not in this list: extends:4, same-topic:4, semantic:1)
+
+[6] 15 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie said these are some of her favorite memories that bring the family together and bring happiness,
+        and expressed gladness that Caroline is there to share in it; she also thanked Caroline and said she
+        feels lucky to have her family, who bring her joy and love.
+      • Caroline called it a beautiful moment, said Melanie is lucky to have such an awesome family, and added
+        that it is sweet to see Melanie's love for her …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Melanie] Yeah, Caroline, they're some of my fave memories. It brings us together and brings us
+             happiness. Glad you're here to share in it."
+      topics: memories, togetherness, happiness, friendship, melanie, family, beautiful moment, awesome family
+      links: [3] extends, [8] same-topic, [5] semantic  (+16 more not in this list: same-topic:13, extends:2, semantic:1)
+
+[7] 9 June 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline was glad Melanie had a great time and got rest and relaxation after the drive, advising her to
+        cherish the moments; she noted that nature refreshes us, following Melanie's family camping trip in the
+        mountains, which included exploring nature, roasting marshmallows, hiking, an amazing view, and her
+        younger kids loving nature as a special family moment.
+      turn: "[Caroline] Sounds great, Mel! Glad you had a great time. Cherish the moments - they're the best!"
+      topics: cherish moments, melanie, family, camping, nature, marshmallows, hike, rest
+      links: [2] extends, [3] same-topic  (+11 more not in this list: same-topic:8, causal:1, extends:1, semantic:1)
+
+[8] 6 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie complimented the picnic photo, asked how Caroline's friends and family have been helping with
+        her transition, expressed happiness that Caroline has supportive people around her, and emphasized
+        unconditional love while sharing a photo of her family camping at the beach around a campfire; she also
+        encouraged Caroline about her future family and shared a photo of a blue vase with sunflowers and roses.
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Melanie] That's a gorgeous photo, Caroline! Wow, the love around you is awesome. How have your friends
+             and fam been helping you out with your transition?"
+      topics: photo, support, transition, friends, family, caroline, encouragement, camping
+      links: [2] extends, [6] same-topic  (+15 more not in this list: same-topic:7, extends:5, semantic:3)
+

@@ -1,0 +1,58 @@
+# system=FastASEM idx=1550 conv=locomo_0007 category=adversarial (harness label=adversarial)
+# question: How did Jolene and her rival initially meet?
+# gold: In an engineering class in college
+# pred (real run): Jolene and her partner did not meet as rivals. They met in an engineering class in college.
+# judge_correct=True judge_error=None f1=0.4762 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['2d88337f-f382-4d49-9e05-167f2b0e67c8', 'b7dfb4c3-362c-4e64-a3ec-660f7640df86'] evidence_in_prompt=None
+# prompt_chars=3026 prompt_tokens~756
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 27 January 2023 · said by Jolene · about: Jolene, Jolene's partner, Detroit
+      • Jolene and her partner were gaming together in the week before 27 January 2023. | Jolene and her partner
+        played the game 'Detroit' on the console. | Jolene and her partner are both crazy about gaming.
+      topics: gaming, partner, video games, Detroit, console, passion
+      links: [4] same-entity, [3] same-entity, [5] same-entity, [6] same-entity, [7] semantic  (+28 more not in this list: same-entity:22, semantic:5, temporal:1)
+
+[2] 4 February 2023 · said by Jolene · about: Jolene, Sapiens
+      • Jolene is really into the book 'Sapiens' by Yuval Noah Harari, which is a fascinating look at human
+        history and how technology has affected humans.
+      topics: Sapiens, human history, technology, book
+      links: (+16 more not in this list: same-entity:16)
+
+[3] 9 February 2023 · said by Jolene · about: Jolene, green tech
+      • Jolene believes green tech could really make a difference in disadvantaged areas. | Jolene would like to
+        look into green tech and see how she can contribute.
+      topics: green tech, disadvantaged areas, belief, contribution, intention
+      links: [1] same-entity  (+14 more not in this list: same-entity:13, semantic:1)
+
+[4] 9 February 2023 · said by Jolene · about: Jolene
+      • On 1 February 2023, Jolene did a mini retreat to assess where she is at in life.
+      topics: mini retreat, life assessment, self-reflection
+      links: [1] same-entity, [8] same-entity  (+19 more not in this list: same-entity:12, temporal:4, semantic:3)
+
+[5] 25 February 2023 · said by Jolene · about: Jolene, Jolene's partner
+      • Jolene met her partner in an engineering class in college. | Jolene and her partner quickly became
+        friends after meeting in college.
+      topics: met, engineering class, college, friends, relationship origin
+      links: [1] same-entity, [6] same-entity  (+16 more not in this list: same-entity:14, semantic:1, temporal:1)
+
+[6] 9 April 2023 · said by Jolene · about: Jolene, Jolene's partner
+      • Jolene has a partner. | Jolene attended a music festival with her partner in 2022.
+      topics: partner, relationship, music festival, 2022
+      links: [5] same-entity, [1] same-entity, [7] semantic, [8] semantic  (+19 more not in this list: semantic:11, same-entity:8)
+
+[7] 9 July 2023 · said by Jolene · about: Jolene
+      • Jolene has a partner who is also into gaming.
+      topics: partner, gaming
+      links: [1] semantic, [6] semantic  (+14 more not in this list: same-entity:7, semantic:5, temporal:2)
+
+[8] 16 August 2023 · said by Jolene · about: Jolene
+      • Jolene has a boyfriend.
+      topics: boyfriend, relationship
+      links: [4] same-entity, [6] semantic  (+9 more not in this list: same-entity:7, semantic:2)
+
+Question: How did Jolene and her rival initially meet?
+
+Answer:

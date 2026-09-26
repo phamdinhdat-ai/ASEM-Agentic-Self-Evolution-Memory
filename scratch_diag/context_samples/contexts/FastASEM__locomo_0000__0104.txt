@@ -1,0 +1,60 @@
+# system=FastASEM idx=104 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What book did Caroline recommend to Melanie?
+# gold: "Becoming Nicole"
+# pred (real run): Becoming Nicole
+# judge_correct=True judge_error=None f1=1.0000 em=1.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=3722 prompt_tokens~930
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 9 June 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline and Melanie plan to keep motivating and helping each other out as they journey through life. |
+        Caroline and Melanie are friends. | Caroline appreciates Melanie's friendship and support.
+      topics: motivate, help, support, friendship, friends, appreciation
+      links: [2] same-entity, [3] same-entity, [4] same-entity, [5] same-entity, [6] same-entity, [8] semantic  (+24 more not in this list: same-entity:18, semantic:4, temporal:2)
+
+[2] 15 July 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie appreciates Caroline's friendship and considers her a supporter.
+      topics: friendship, supporter, appreciation
+      links: [1] same-entity, [3] same-entity, [4] same-entity, [5] semantic, [7] same-entity, [8] same-entity  (+11 more not in this list: same-entity:9, semantic:2)
+
+[3] 17 August 2023 · said by Melanie · about: Caroline, Melanie
+      • Caroline and Melanie plan to do a family outing in the summer of 2023.
+      topics: family outing, summer, plan
+      links: [1] same-entity, [2] same-entity, [4] same-entity, [5] same-entity, [6] same-entity, [7] semantic  (+8 more not in this list: same-entity:6, semantic:1, temporal:1)
+
+[4] 17 August 2023 · said by Caroline · about: Caroline, Melanie
+      • Caroline and Melanie plan to do something special for the summer of 2023, just the two of them, to catch
+        up and explore nature.
+      topics: special trip, summer, nature, catch up
+      links: [5] same-entity, [1] same-entity, [2] same-entity, [3] temporal, [6] same-entity, [7] same-entity  (+8 more not in this list: same-entity:7, semantic:1)
+
+[5] 17 August 2023 · said by Caroline · about: Caroline, Melanie, Melanie's children, Melanie's family
+      • Caroline and Melanie appreciate their friendship and have always been there for each other. | Caroline
+        commented that Melanie's kids look cute and bring lots of joy. | Caroline told Melanie it is sweet to
+        see Melanie's love for her family and that they are Melanie's rock. | Caroline is glad Melanie has
+        people to lean on during tougher times.
+      topics: friendship, support, appreciation, kids, cute, joy, love, family
+      links: [3] same-entity, [1] same-entity, [2] semantic, [7] same-entity, [4] same-entity, [8] semantic  (+8 more not in this list: same-entity:7, semantic:1)
+
+[6] 13 October 2023 · said by Melanie · about: Melanie, Caroline
+      • On 13 October 2023, Melanie stated she has been reading a book Caroline recommended a while ago.
+      topics: book, reading, recommendation
+      links: [4] same-entity, [3] same-entity, [1] same-entity, [7] temporal  (+4 more not in this list: same-entity:3, semantic:1)
+
+[7] 13 October 2023 · said by Caroline · about: Caroline, Melanie
+      • On 13 October 2023, Caroline and Melanie expressed that being themselves is a great feeling and an
+        ongoing adventure of learning and growing.
+      topics: being ourselves, learning, growing
+      links: [2] same-entity, [5] same-entity, [4] same-entity, [6] temporal, [3] semantic, [8] same-entity  (+2 more not in this list: same-entity:2)
+
+[8] 22 October 2023 · said by Melanie · about: Melanie, Caroline
+      • Melanie is glad that she and Caroline can always be there for each other.
+      topics: mutual support, friendship
+      links: [2] same-entity, [4] same-entity, [7] same-entity, [3] same-entity, [5] semantic, [1] semantic  (+1 more not in this list: same-entity:1)
+
+Question: What book did Caroline recommend to Melanie?
+
+Answer:

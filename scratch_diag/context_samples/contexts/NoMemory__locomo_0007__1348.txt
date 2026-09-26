@@ -1,0 +1,13 @@
+# system=NoMemory idx=1348 conv=locomo_0007 category=multi_hop (harness label=single_hop)
+# question: Which of Deborah`s family and friends have passed away?
+# gold: mother, father, her friend Karlie
+# pred (real run): No information is provided about Deborah's family or friends passing away.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=320 prompt_tokens~80
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Deborah and Jolene. Question: Which of Deborah`s family and friends have passed away?
+
+Answer:

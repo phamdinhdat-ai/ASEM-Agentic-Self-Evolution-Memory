@@ -1,0 +1,59 @@
+# system=FullContext idx=1940 conv=locomo_0009 category=adversarial (harness label=adversarial)
+# question: Which DJ was Dave's favorite at the music festival in April 2023?
+# gold: Aerosmith
+# pred (real run): Dave did not mention a DJ at the music festival in April 2023. He said his favorite band was Aerosmith, which is a rock band, not a DJ. Therefore, there is no information about a DJ being his favorite.
+# judge_correct=False judge_error=contradiction f1=0.0571 em=0.0
+# diagnosis=FULL_CONTEXT gold_bearing_notes=[] evidence_in_prompt=True
+# prompt_chars=5596 prompt_tokens~1399
+====================================================================================================
+Use the conversation excerpts below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Conversation:
+[Session 1 — 11:53 am on 23 March, 2023]
+[Calvin] Hey Dave! Nice to meet you! How's it going since we talked?
+[Dave] Hey Calvin! Nice to meet you too! Things have been going well since we last talked. I attended this awesome event recently. It was like a car lover's paradise! They had so many classic cars on show, I was in awe. I even had the opportunity to speak with some of the owners and hear their fascinating stories. It was super inspiring. What about you? Anything exciting happening in your life lately?
+[Calvin] That event sounds great! Something really exciting happened to me - I just had a big life change! Here's my new mansion - pretty cool huh? (image: a photo of a building with a sign on the front of it)
+[Dave] Wow! Congrats on the big change! What inspired you to start this journey?
+[Calvin] I'm so excited to learn about Japanese culture and get a chance to expand.
+[Dave] Wow, Calvin, learning about new cultures is awesome! Have you ever been to Japan?
+[Calvin] Never been there before. Fascinated by the traditions and can't wait to get a taste of the culture.
+[Dave] Wow, Japan sounds amazing. Can't wait to hear all about it! When are you leaving?
+[Calvin] I'm heading there next month. I'll be staying in such a nice place while I'm there.
+
+ (image: a photo of a living room with a couch, table, and television)
+[Dave] That looks cozy! Where'd you find a place to stay there?
+[Calvin] Wow, my agent found me this awesome place, so thankful!
+[Dave] Awesome! Having a place to stay is key. What are your plans for the trip?
+[Calvin] I'm planning to explore the city, try out different local cuisines, and perhaps collaborate with musicians in the area.
+[Dave] Sounds great! Collaborating with local musicians would be an amazing experience. How long are you planning to stay in Japan?
+[Calvin] I'm gonna be in Japan for a few months then off to Boston! I can't wait!
+[Dave] That's great, can't wait for you to return from your trip. I've been spending lots of time at this beautiful park lately - so calming. Have you been there before? (image: a photography of a park with a lake and a few boats)
+[Calvin] No, I've never been in that park. Looks like a chill spot. I'll definitely check it out when I'm back. Appreciate the tip!
+[Dave] Cool! Enjoy your trip! Let me know if you need any more recommendations. Have fun!
+[Calvin] Thanks, Dave! If I need any help, I'll be sure to let you know. Stay safe!
+[Session 2 — 4:45 pm on 26 March, 2023]
+[Calvin] Hey Dave, been a few days, so I wanted to let you in on some cool news.  I just got a new car and it's amazing! Finally owning a luxury car was a dream come true and I'm so stoked.
+[Dave] Woohoo, Calvin! Congrats on the new car! How's it driving?
+[Calvin] Nice car! It's an amazing ride - super smooth and real powerful. Like a rockstar behind the wheel! Thanks, man!
+[Dave] Wow, Calvin! Owning something like this must feel amazing. Is this your first one? Show me a pic! What's it called?
+[Calvin] Woohoo! I finally got myself this beauty. Here's a pic from yesterday when I took it for a ride. Can't believe I'm actually driving it. Definitely what I deserve after all this hard work. Every time I step in, it's like an adrenaline rush! (image: a photo of a red sports car parked on the side of the road)
+[Dave] Calvin, that car looks awesome! You must feel amazing every time you get inside! You deserved it - congrats buddy!
+[Calvin] Woah, I'm on cloud nine! Hard work pays off. What's up with you, Dave?
+[Dave] Thanks, Calvin! Doing good. Last weekend, I went to a music festival in Boston - it was awesome! So many cool bands playing and the atmosphere was electric. I love music, it reminded me why I love it. Here's a pic, take a look. (image: a photo of a large crowd of people at a concert)
+[Calvin] Wow, sounds like a blast! Which one was your favorite?
+[Dave] Wow, there were so many great bands! If I had to pick a favorite, it would definitely be Aerosmith. Their performance was incredible. I'll show you a pic I took when they were playing. (image: a photo of a concert with a large eagle on the stage)
+[Calvin] Cool! Lovin' Aerosmith.
+[Dave] I finally saw them live and it was such an amazing experience! He was jamming out to one of their hits. Check out this epic picture of them! (image: a photo of two people on stage with guitars and a microphone)
+[Calvin] Cool, Dave! Seeing your favorite singers live must have been wild! Did you get a chance to hang out with them after the show?
+[Dave] Nah, didn't get to hang with them after the show, but seeing them live was cool enough. It's always a dream to see your favorites performing!
+[Calvin] Yeah, it's always a dream to see your favorites doing their thing! So glad you got to experience that.
+[Dave] Thanks, Calvin! Yeah, it was an incredible experience. So, anything new happening in your life?
+[Calvin] Got a new ride and wrote some new tunes - had a few studio sessions last week and I'm excited to collaborate. Can't wait to share it with everyone!
+[Dave] Cool, Calvin! Looking forward to hearing your new tunes. Keep me updated on how your collaborations go!
+[Calvin] Yeah, no worries! I'll definitely let you know how it goes. Cheers!
+[Dave] Enjoy the collaborations, Calvin! Stay safe!
+[Calvin] Thanks, Dave! Gonna have fun and stay safe with it. Bye!
+
+Question: Conversation between Calvin and Dave. Question: Which DJ was Dave's favorite at the music festival in April 2023?
+
+Answer:

@@ -3,6 +3,8 @@
 import os
 import shutil
 import subprocess
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
@@ -154,6 +156,175 @@ def test_build_backend_factory_huggingface() -> None:
     }
     backend = build_backend(config)
     assert isinstance(backend, HuggingFaceBackend)
+
+
+# ---------------------------------------------------------------------------
+# Native OpenAI-SDK backend (no LangChain in the request path)
+# ---------------------------------------------------------------------------
+
+class _StubEmbedder:
+    def embed_query(self, text: str):
+        return [0.0, 0.0, 0.0, 1.0]
+
+
+class _FakeCompletions:
+    """Stands in for ``client.chat.completions`` and records every request."""
+
+    def __init__(self, content, total_tokens: int = 42, choices: bool = True) -> None:
+        self.calls: list[dict] = []
+        self._content = content
+        self._total = total_tokens
+        self._choices = choices
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if not self._choices:
+            return SimpleNamespace(choices=[], usage=None)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=self._content))],
+            usage=SimpleNamespace(total_tokens=self._total),
+        )
+
+
+def _openai_backend(completions: _FakeCompletions):
+    from asem.backends.openai_backend import OpenAIBackend
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    return OpenAIBackend(
+        client=client,
+        model="test-model",
+        temperature=0.0,
+        max_tokens=128,
+        embedder=_StubEmbedder(),
+    )
+
+
+def test_openai_backend_request_shape_and_token_accounting() -> None:
+    completions = _FakeCompletions("hello world", total_tokens=17)
+    backend = _openai_backend(completions)
+
+    assert backend.generate("prompt") == "hello world"
+    sent = completions.calls[0]
+    assert sent["model"] == "test-model"
+    assert sent["messages"] == [{"role": "user", "content": "prompt"}]
+    assert sent["temperature"] == 0.0
+    assert sent["max_tokens"] == 128
+    assert backend.token_count == 17
+
+    # Per-call overrides win over the config defaults.
+    backend.generate("p", model="other", temperature=0.7, max_tokens=8)
+    sent = completions.calls[1]
+    assert sent["model"] == "other"
+    assert sent["temperature"] == 0.7
+    assert sent["max_tokens"] == 8
+
+
+def test_openai_backend_normalizes_content_parts() -> None:
+    parts = [{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]
+    backend = _openai_backend(_FakeCompletions(parts))
+    assert backend.generate("p") == "a\nb"
+
+
+def test_openai_backend_empty_choices_raises() -> None:
+    backend = _openai_backend(_FakeCompletions("", choices=False))
+    with pytest.raises(RuntimeError):
+        backend.generate("p")
+
+
+def test_openai_backend_passes_extra_body_through() -> None:
+    from asem.backends.openai_backend import OpenAIBackend
+
+    completions = _FakeCompletions("ok")
+    client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+    backend = OpenAIBackend(
+        client=client,
+        model="m",
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        embedder=_StubEmbedder(),
+    )
+    backend.generate("p")
+    assert completions.calls[0]["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": False}
+    }
+
+
+def test_openai_backend_embed_returns_array() -> None:
+    backend = _openai_backend(_FakeCompletions("x"))
+    vector = backend.embed("hello")
+    assert isinstance(vector, np.ndarray)
+    assert vector.shape == (4,)
+
+
+def test_openai_backend_shares_the_embedder_factory() -> None:
+    """Vectors must stay identical, so banks built by either backend mix."""
+    from asem.backends import langchain_backend, openai_backend
+
+    assert openai_backend._build_embedder is langchain_backend._build_embedder
+
+
+def test_build_backend_factory_openai(monkeypatch) -> None:
+    from asem.backends import openai_backend
+
+    seen: dict = {}
+
+    def _fake_from_config(cfg):
+        seen.update(cfg)
+        return "sentinel"
+
+    monkeypatch.setattr(
+        openai_backend.OpenAIBackend, "from_config", staticmethod(_fake_from_config)
+    )
+
+    config = {"backend": "openai", "openai": {"model": "deepseek-v4-flash"}}
+    assert build_backend(config) == "sentinel"
+    assert seen["model"] == "deepseek-v4-flash"
+
+
+def test_build_thinking_body_variants() -> None:
+    from asem.backends.base import build_thinking_body
+
+    assert build_thinking_body({}) == {}
+    # Documented OpenAI-compatible toggle: {"thinking": {"type": ...}}
+    assert build_thinking_body({"thinking": {"type": "disabled"}}) == {
+        "thinking": {"type": "disabled"}
+    }
+    # Documented effort control.
+    assert build_thinking_body({"reasoning_effort": "low"}) == {"reasoning_effort": "low"}
+    # Legacy vLLM/Qwen form is still supported.
+    assert build_thinking_body({"enable_reasoning": True}) == {
+        "chat_template_kwargs": {"enable_thinking": True}
+    }
+    # An explicit extra_body override wins.
+    assert build_thinking_body(
+        {"thinking": {"type": "enabled"}, "extra_body": {"thinking": {"type": "disabled"}}}
+    ) == {"thinking": {"type": "disabled"}}
+
+
+def test_openai_backend_from_config_sends_thinking_toggle() -> None:
+    """`thinking: {type: disabled}` must reach the request body."""
+    from unittest.mock import patch
+
+    from asem.backends import openai_backend
+
+    completions = _FakeCompletions("ok")
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+
+    with patch("openai.OpenAI", return_value=fake_client), patch.object(
+        openai_backend, "_build_embedder", return_value=_StubEmbedder()
+    ):
+        backend = openai_backend.OpenAIBackend.from_config(
+            {
+                "model": "m",
+                "api_key": "test-key",
+                "thinking": {"type": "disabled"},
+                "reasoning_effort": "low",
+            }
+        )
+        backend.generate("p")
+
+    body = completions.calls[0]["extra_body"]
+    assert body["thinking"] == {"type": "disabled"}
+    assert body["reasoning_effort"] == "low"
 
 
 def test_langchain_backend_with_ollama_smoke() -> None:

@@ -28,10 +28,12 @@ from asem.llm_validator import (
     validate_batch_notes,
     validate_distil_response,
     validate_link_array,
+    validate_memory_op,
     validate_memory_ops,
     validate_note_fields,
     validate_summary,
 )
+from asem.memory_manager import MemoryManager, Op
 from asem.note import LEGACY_LINK_RELATION, LinkRecord, Note, NoteConstructor
 from asem.memory_bank import MemoryBank
 
@@ -114,6 +116,35 @@ def test_validate_memory_ops() -> None:
     result = validate_memory_ops(bad)
     assert not result.valid
     assert len(result.errors) >= 3
+
+
+def test_validate_memory_op_single_object() -> None:
+    """The S2 single-note path asks for ONE object — not an array."""
+    result = validate_memory_op({"op": "ADD", "target_id": None})
+    assert result.valid
+    assert result.parsed == {"op": "ADD", "target_id": None}
+
+    # case-insensitive op, and a lone object unwrapped from a 1-element array
+    assert validate_memory_op({"op": "noop", "target_id": None}).parsed["op"] == "NOOP"
+    assert validate_memory_op([{"op": "UPDATE", "target_id": "m1"}]).valid
+
+
+def test_validate_memory_op_rejects_bad_shapes() -> None:
+    assert not validate_memory_op("ADD").valid
+    assert not validate_memory_op({"op": "MERGE", "target_id": None}).valid
+    assert not validate_memory_op({"op": "UPDATE", "target_id": None}).valid
+    assert not validate_memory_op({"op": "DELETE", "target_id": None}).valid
+    # an array of >1 decisions is the batch validator's job
+    result = validate_memory_op([{"op": "ADD", "target_id": None}] * 2)
+    assert not result.valid
+    assert "array of 2 entries" in result.errors[0]
+
+
+def test_validate_memory_ops_still_requires_an_array() -> None:
+    """Guard the batch path: the array validator must not accept a bare dict."""
+    result = validate_memory_ops({"op": "ADD", "target_id": None})
+    assert not result.valid
+    assert "expected a JSON array" in result.errors[0]
 
 
 def test_validate_batch_notes_count_mismatch() -> None:
@@ -246,6 +277,103 @@ def test_retry_disabled_single_shot() -> None:
 
 
 # ---------------------------------------------------------------------------
+# MemoryManager.select_op — single-decision validation (regression)
+# ---------------------------------------------------------------------------
+
+def _note(note_id: str) -> Note:
+    return Note(
+        id=note_id,
+        c=f"content of {note_id}",
+        t=datetime(2023, 5, 8, 13, 56),
+        K=["k"],
+        G=["g"],
+        X=f"description of {note_id}",
+        e=None,
+        L=[],
+        z=np.zeros(4, dtype="float32"),
+        q=0.5,
+    )
+
+
+def test_select_op_valid_response_costs_one_llm_call() -> None:
+    """Regression: a well-formed decision object must not trigger a retry.
+
+    ``P_memory_manager.txt`` asks for a single JSON object, but the retry
+    path used to pair it with the array-shaped ``validate_memory_ops``.
+    Every valid response therefore failed validation, doubling the LLM
+    calls per note over the whole ingestion.
+    """
+    gen = _ScriptedGenerator(['{"op": "ADD", "target_id": null}'])
+    mm = MemoryManager(
+        backend=gen,
+        prompt_template="Decide op for {content} given {memory}",
+        max_retries=2,
+    )
+    op, target = mm.select_op("Caroline visited the beach.", [])
+    assert op is Op.ADD
+    assert target is None
+    assert len(gen.calls) == 1
+    # and the model's decision must survive, not silently degrade to a heuristic
+    assert "FORMAT CORRECTION" not in gen.calls[0]
+
+
+def test_select_op_llm_decision_survives_with_existing_notes() -> None:
+    """With notes present, the heuristic fallback would answer UPDATE M_old[0]."""
+    gen = _ScriptedGenerator(['{"op": "NOOP", "target_id": null}'])
+    mm = MemoryManager(
+        backend=gen,
+        prompt_template="Decide op for {content} given {memory}",
+        max_retries=2,
+    )
+    op, target = mm.select_op("nothing new here", [_note("m1"), _note("m2")])
+    assert op is Op.NOOP
+    assert target is None
+    assert len(gen.calls) == 1
+
+
+def test_select_op_target_id_resolves_to_the_named_note() -> None:
+    gen = _ScriptedGenerator(['{"op": "UPDATE", "target_id": "m2"}'])
+    mm = MemoryManager(
+        backend=gen,
+        prompt_template="Decide op for {content} given {memory}",
+        max_retries=2,
+    )
+    op, target = mm.select_op("more about the second note", [_note("m1"), _note("m2")])
+    assert op is Op.UPDATE
+    assert target is not None and target.id == "m2"
+
+
+def test_select_op_retries_when_schema_is_genuinely_violated() -> None:
+    gen = _ScriptedGenerator([
+        '{"op": "MERGE", "target_id": null}',      # invalid op
+        '{"op": "DELETE", "target_id": "m1"}',     # corrected
+    ])
+    mm = MemoryManager(
+        backend=gen,
+        prompt_template="Decide op for {content} given {memory}",
+        max_retries=2,
+    )
+    op, target = mm.select_op("contradicts the first note", [_note("m1")])
+    assert op is Op.DELETE
+    assert target is not None and target.id == "m1"
+    assert len(gen.calls) == 2
+    assert "FORMAT CORRECTION" in gen.calls[1]
+    assert "invalid op" in gen.calls[1]
+
+
+def test_select_op_heuristic_fallback_on_unparseable_output() -> None:
+    gen = _ScriptedGenerator(["no json here", "still no json"])
+    mm = MemoryManager(
+        backend=gen,
+        prompt_template="Decide op for {content} given {memory}",
+        max_retries=1,
+    )
+    op, target = mm.select_op("anything", [_note("m1")])
+    assert op is Op.UPDATE          # heuristic: enrich the first candidate
+    assert target is not None and target.id == "m1"
+
+
+# ---------------------------------------------------------------------------
 # LinkRecord backward compatibility + serialization
 # ---------------------------------------------------------------------------
 
@@ -345,7 +473,10 @@ def test_memory_bank_persists_relation_typed_links() -> None:
     ("P4_batch_note_extraction.txt", ["dialogue"]),
     ("P5_batch_memory_ops.txt", ["new_notes", "existing_memory"]),
     ("P6_batch_link_generation.txt", ["new_notes", "neighbors"]),
-    ("P1_batch_note_construction.txt", ["turns_text"]),
+    # `session_date` is injected by NoteConstructor.build_batch only when the
+    # template references it (see note.py), so the prompt can ground relative
+    # time expressions in an absolute date.
+    ("P1_batch_note_construction.txt", ["turns_text", "session_date"]),
     ("P3_batch_evolution.txt", ["existing_notes", "new_note"]),
     ("P_memory_manager.txt", ["content", "memory"]),
     ("P_distil.txt", ["query", "candidates"]),

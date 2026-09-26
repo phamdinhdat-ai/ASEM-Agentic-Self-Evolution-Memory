@@ -1,0 +1,13 @@
+# system=NoMemory idx=1061 conv=locomo_0005 category=single_hop (harness label=conversational)
+# question: What did Andrew express missing about exploring nature trails with his family's dog?
+# gold: The peaceful moments
+# pred (real run): Andrew expressed missing the sense of peace and connection with nature.
+# judge_correct=True judge_error=None f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=348 prompt_tokens~87
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Audrey and Andrew. Question: What did Andrew express missing about exploring nature trails with his family's dog?
+
+Answer:

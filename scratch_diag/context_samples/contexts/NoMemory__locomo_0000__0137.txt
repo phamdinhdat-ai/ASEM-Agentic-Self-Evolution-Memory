@@ -1,0 +1,13 @@
+# system=NoMemory idx=137 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What painting did Melanie show to Caroline on October 13, 2023?
+# gold: A painting inspired by sunsets with a pink sky.
+# pred (real run): Unknown – no information provided about the painting.
+# judge_correct=False judge_error=missing_info f1=0.1538 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=330 prompt_tokens~82
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Caroline and Melanie. Question: What painting did Melanie show to Caroline on October 13, 2023?
+
+Answer:

@@ -1,0 +1,57 @@
+# system=FastASEM idx=829 conv=locomo_0004 category=single_hop (harness label=conversational)
+# question: What is John's position on the team he signed with?
+# gold: shooting guard
+# pred (real run): Shooting guard
+# judge_correct=True judge_error=None f1=1.0000 em=1.0
+# diagnosis=GENERATION gold_bearing_notes=['179c642b-8f2c-4dfa-91ad-68a50f084ad5'] evidence_in_prompt=None
+# prompt_chars=2733 prompt_tokens~683
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 21 May 2023 · said by John · about: John, Minnesota Wolves
+      • John signed with a new basketball team, the Minnesota Wolves. | John plays as a shooting guard for the
+        Minnesota Wolves. | John's season opener with the Minnesota Wolves is scheduled for the week of 22 May
+        2023. | John reports that things are going well with the Minnesota Wolves and the team has been really
+        nice. | John is having fun with the Minnesota Wolves.
+      topics: signed, new team, basketball, shooting guard, position, season opener, game, schedule
+      links: [5] same-entity  (+23 more not in this list: same-entity:22, semantic:1)
+
+[2] 15 June 2023 · said by John · about: John
+      • As of 15 June 2023, John gives his all every time he is on the basketball court.
+      topics: basketball court, effort, dedication
+      links: (+24 more not in this list: same-entity:17, semantic:6, temporal:1)
+
+[3] 16 July 2023 · said by John · about: John, Nike
+      • John signed a deal with Nike for a basketball shoe and gear deal.
+      topics: Nike, shoe deal, gear deal, endorsement
+      links: [4] temporal  (+19 more not in this list: same-entity:17, semantic:1, temporal:1)
+
+[4] 16 July 2023 · said by John · about: John
+      • John is making progress with endorsements and has talked to some big names.
+      topics: endorsements, big names, progress
+      links: [3] temporal  (+25 more not in this list: same-entity:16, semantic:7, temporal:2)
+
+[5] 9 August 2023 · said by John · about: John
+      • John's basketball team encourages him when he is down.
+      topics: team, encouragement, support
+      links: [1] same-entity, [6] temporal, [7] temporal  (+22 more not in this list: same-entity:11, semantic:9, temporal:2)
+
+[6] 9 August 2023 · said by John · about: John
+      • John's basketball team supports him not just in his sport but in other aspects of life.
+      topics: team, support, life
+      links: [5] temporal, [7] temporal  (+22 more not in this list: same-entity:11, semantic:9, temporal:2)
+
+[7] 9 August 2023 · said by John · about: John
+      • John's basketball team pushes each other to improve.
+      topics: team, improve, push each other
+      links: [5] temporal, [6] temporal  (+20 more not in this list: same-entity:11, semantic:8, temporal:1)
+
+[8] 6 December 2023 · said by John · about: John, John's teammates
+      • John's teammates come from all over.
+      topics: teammates, backgrounds, diverse
+      links: (+8 more not in this list: same-entity:5, semantic:3)
+
+Question: What is John's position on the team he signed with?
+
+Answer:

@@ -1,0 +1,57 @@
+# system=FastASEM idx=202 conv=locomo_0001 category=multi_hop (harness label=single_hop)
+# question: What do Jon and Gina both have in common?
+# gold: They lost their jobs and decided to start their own businesses.
+# pred (real run): They support each other and have a strong friendship.
+# judge_correct=False judge_error=missing_info f1=0.2105 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=3058 prompt_tokens~764
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 20 January 2023 · said by Jon · about: Jon, Gina
+      • Jon and Gina plan to attend a dance class together. | Jon and Gina plan to have a dance session on 27
+        January 2023.
+      topics: dance class, plan, dance session, Friday
+      links: [2] same-entity, [4] same-entity, [6] same-entity, [7] same-entity, [8] same-entity  (+34 more not in this list: same-entity:30, semantic:2, temporal:2)
+
+[2] 1 February 2023 · said by Jon · about: Jon, Gina, dreams
+      • Jon is always there to support Gina. | Jon believes he and Gina have put their hearts into their dreams
+        and will make it. | Jon feels that Gina's support has made a huge difference and feels great.
+      topics: support, friendship, dreams, belief, hearts, gratitude, difference
+      links: [1] same-entity, [3] same-entity, [4] same-entity, [5] same-entity, [6] same-entity, [7] same-entity  (+24 more not in this list: same-entity:21, semantic:3)
+
+[3] 4 February 2023 · said by Gina · about: Gina, Jon
+      • Gina tells Jon she is there for him no matter what.
+      topics: support, friendship, loyalty
+      links: [2] same-entity, [5] semantic, [6] semantic, [7] same-entity, [8] semantic  (+23 more not in this list: same-entity:19, semantic:4)
+
+[4] 16 March 2023 · said by Jon · about: Jon, Gina
+      • Jon and Gina support each other in their entrepreneurial journeys as of 16 March 2023.
+      topics: support, entrepreneurship, mutual
+      links: [2] same-entity, [1] same-entity  (+19 more not in this list: same-entity:17, semantic:1, temporal:1)
+
+[5] 3 April 2023 · said by Jon · about: Jon, Gina
+      • Jon tells Gina he is always there for her.
+      topics: support, there for you
+      links: [2] same-entity, [3] semantic, [6] semantic, [7] same-entity  (+15 more not in this list: same-entity:11, semantic:4)
+
+[6] 11 May 2023 · said by Gina · about: Gina, Jon
+      • Gina expressed she is always here to help Jon and is proud of him. | Gina is supportive of Jon and
+        encourages him to keep going. | Gina is always proud of Jon.
+      topics: support, help, pride, encouragement, proud
+      links: [1] same-entity, [2] same-entity, [5] semantic, [3] semantic, [7] semantic, [8] same-entity  (+11 more not in this list: same-entity:9, semantic:2)
+
+[7] 19 June 2023 · said by Jon · about: Jon, Gina
+      • Jon appreciates Gina's pride and support. | Gina's support means a ton to Jon.
+      topics: pride, support, appreciation, means a ton
+      links: [5] same-entity, [1] same-entity, [2] same-entity, [6] semantic, [3] same-entity  (+11 more not in this list: same-entity:9, semantic:2)
+
+[8] 9 July 2023 · said by Jon · about: Jon, Gina
+      • Jon considers Gina a great friend.
+      topics: great friend, friendship
+      links: [6] same-entity, [1] same-entity, [3] semantic  (+7 more not in this list: same-entity:5, semantic:2)
+
+Question: What do Jon and Gina both have in common?
+
+Answer:

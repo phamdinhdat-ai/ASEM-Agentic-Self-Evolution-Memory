@@ -1,0 +1,58 @@
+# system=FastASEM idx=137 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What painting did Melanie show to Caroline on October 13, 2023?
+# gold: A painting inspired by sunsets with a pink sky.
+# pred (real run): Melanie showed a sunset painting to Caroline on October 13, 2023.
+# judge_correct=True judge_error=None f1=0.1176 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['ef05749b-9551-418f-b40b-fd9fcec9afad'] evidence_in_prompt=None
+# prompt_chars=2951 prompt_tokens~737
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 15 July 2023 · said by Melanie · about: Melanie, kids, paintings, sunset, palm tree, purple flowers
+      • Melanie and her kids painted nature-inspired paintings on the weekend of 8-9 July 2023. | Melanie and
+        her kids painted a sunset with a palm tree on the weekend of 8-9 July 2023. | Melanie and her kids found
+        a field of purple flowers on the weekend of 8-9 July 2023. | Melanie and her kids finished another
+        painting similar to their last one before 17 July 2023.
+      topics: painting, nature-inspired, art, sunset, palm tree, flowers, purple, nature
+      links: [3] semantic, [6] semantic, [7] semantic  (+11 more not in this list: same-entity:8, semantic:2, temporal:1)
+
+[2] 23 August 2023 · said by Caroline · about: Caroline
+      • Caroline made a self-portrait during the week of 14 August 2023.
+      topics: self-portrait, painting, art
+      links: [8] semantic  (+11 more not in this list: same-entity:6, semantic:3, temporal:2)
+
+[3] 25 August 2023 · said by Melanie · about: Melanie, sunflower
+      • Melanie painted a sunflower on a canvas recently before 25 August 2023.
+      topics: painting, sunflower, canvas
+      links: [1] semantic, [7] semantic  (+7 more not in this list: same-entity:5, semantic:2)
+
+[4] 13 October 2023 · said by Melanie · about: Melanie, Caroline
+      • On 13 October 2023, Melanie stated she has been reading a book Caroline recommended a while ago.
+      topics: book, reading, recommendation
+      links: [5] temporal  (+7 more not in this list: same-entity:6, semantic:1)
+
+[5] 13 October 2023 · said by Caroline · about: Caroline, Melanie
+      • On 13 October 2023, Caroline and Melanie expressed that being themselves is a great feeling and an
+        ongoing adventure of learning and growing.
+      topics: being ourselves, learning, growing
+      links: [4] temporal  (+7 more not in this list: same-entity:6, semantic:1)
+
+[6] 13 October 2023 · said by Melanie · about: Melanie
+      • On 13 October 2023, Melanie stated she has been painting to keep busy.
+      topics: painting, keeping busy
+      links: [7] temporal, [1] semantic  (+6 more not in this list: same-entity:5, semantic:1)
+
+[7] 13 October 2023 · said by Melanie · about: Melanie
+      • In the week of 2-8 October 2023, Melanie painted a painting inspired by sunsets.
+      topics: painting, sunset, art
+      links: [1] semantic, [6] temporal, [3] semantic  (+5 more not in this list: same-entity:5)
+
+[8] 13 October 2023 · said by Caroline · about: Caroline
+      • On 13 October 2023, Caroline stated she has been trying out abstract art recently.
+      topics: abstract art, trying out
+      links: [2] semantic  (+7 more not in this list: same-entity:5, semantic:2)
+
+Question: What painting did Melanie show to Caroline on October 13, 2023?
+
+Answer:

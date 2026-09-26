@@ -1,0 +1,197 @@
+# system=ASEM idx=759 conv=locomo_0004 category=multi_hop (harness label=single_hop)
+# question: What items does John collect?
+# gold: sneakers, fantasy movie DVDs, jerseys
+# pred (real run): John collects basketball jerseys.
+# judge_correct=False judge_error=missing_info f1=0.2222 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=11418 prompt_tokens~2854
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What items does John collect?
+
+## Memory notes
+[1] 2 October 2023 · said by John · about: John, Tim
+      • John agreed that books and movies help people escape and shared that he likes to collect basketball
+        jerseys.
+      turn: "[John] That's great Tim! Books and movies make us escape to different places. I like to collect jerseys.
+             (image: a photo of a bunch of basketball jerseys laying on a bed)"
+      topics: john, books, movies, jerseys, collection
+      links: [8] same-topic  (+4 more not in this list: extends:2, same-topic:1, semantic:1)
+
+[2] 21 November 2023 · said by Tim · about: Tim, John
+      • Tim called books his companions on his growth journey and shared a photo of a bunch of books on a wooden
+        floor; he also recently read a book about how small changes can make big differences, which changed the
+        way he does things, and asked John if he has read any good books lately.
+      • He is impressed and mentions he is starting some big new things too.
+      turn: "[Tim] Yeah, John! Let's keep growing and improving. We got this! These are my companions on my growth
+             journey. (image: a photo of a bunch of books on a wooden floor)"
+      topics: tim, books, growth journey, photo, small changes, big differences, impact, new things
+      links: [7] extends, [8] extends, [6] extends  (+4 more not in this list: extends:3, same-topic:1)
+
+[3] 11 November 2023 · said by Tim · about: Tim, John
+      • Tim greeted John back, asked what has been happening, and mentioned he has been reading as usual,
+        sharing a photo of a book featuring a storm of swords.
+      turn: "[Tim] Hey John! Great chatting with you as always. What's been happening lately? I've been reading as
+             usual. (image: a photo of a book with a picture of a storm of swords)"
+      topics: tim, reading, book, storm of swords
+      links: (+4 more not in this list: same-topic:4)
+
+[4] 2 August 2023 · said by John · about: John, Anthony, Harry Potter
+      • John recalls that he and Anthony attended a charity event and entered an intense Harry Potter trivia
+        contest, where a super-nerd won a prize.
+      turn: "[John] Oh yeah, I remember you telling me about Harry Potter! I've got a funny story. Anthony and I went
+             to this charity thing and ended up in this intense Harry Potter trivia contest. We did …"
+      topics: john, anthony, charity event, harry potter trivia, prize
+      links: [8] same-topic  (+3 more not in this list: same-topic:3)
+
+[5] 21 August 2023 · said by Tim · about: Tim, John, Harry Potter
+      • Tim complimented John's tree photo and shared a photo of his own Harry Potter-themed Christmas tree,
+        which John praised for getting the vibes just right.
+      turn: "[Tim] Yep, it really does. That tree pic looks awesome! It must add so much holiday cheer to your house.
+             This was ours. (image: a photo of a christmas tree with a harry potter theme)"
+      topics: tim, john, christmas tree, harry potter theme, themed tree, holiday cheer, vibes
+      links: (+5 more not in this list: extends:2, same-topic:2, semantic:1)
+
+[6] 26 December 2023 · said by Tim · about: Tim, John
+      • Tim says he is impressed and mentions he is starting some big new things too.
+      turn: "[Tim] Wow John! Impressive stuff! I'm starting some big new things too! (image: a photo of a book with a
+             golden cover on a table)"
+      topics: tim, new things, book, golden cover
+      links: [2] extends  (+3 more not in this list: extends:1, same-topic:1, semantic:1)
+
+[7] 15 June 2023 · said by Tim · about: Tim, John
+      • Tim shared his bookshelf and book collection with John, who called him a bookworm and suggested
+        attending a book conference together; John also shared a photo of his own bookshelf and a photo of an
+        autographed basketball from his teammates.
+      • Tim later expressed gladness at their friendship and their shared enjoyment of fantasy books and movies,
+        mentioning he had just reorganized his bookshelf and sharing a photo of …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Tim] Yeah, John! Count on me for support. Can't wait to see what's up! This is my book collection so
+             far. (image: a photo of a book shelf with books and a picture on it)"
+      topics: tim, john, book collection, bookshelf, dvd bookcase, fantasy books, movies, book conference
+      links: [8] same-topic, [2] extends  (+15 more not in this list: same-topic:8, extends:6, semantic:1)
+
+[8] 2 August 2023 · said by John · about: John, Tim
+      • John and Tim discussed favorite books, including Harry Potter, Game of Thrones, The Alchemist, and The
+        Hobbit, which John called one of his favorites and an amazing journey; John loved The Alchemist for its
+        message about following one's dreams and highly recommended it, praised Tim's bookshelf as awesome, and
+        confirmed he has also read another popular fantasy series, calling it one of his favorites with a cool
+        story.
+      • [+6 more fact(s) in this note, not shown]
+      turn: "[John] Awesome! Must be so rewarding to delve into your books and chat about them. Do you have any
+             favorite books you love writing about?"
+      topics: john, tim, favorite books, harry potter, game of thrones, the alchemist, the hobbit, fantasy movies
+      links: [7] same-topic, [4] same-topic, [1] same-topic, [2] extends  (+34 more not in this list: same-topic:19, extends:12, semantic:2, temporal:1)
+

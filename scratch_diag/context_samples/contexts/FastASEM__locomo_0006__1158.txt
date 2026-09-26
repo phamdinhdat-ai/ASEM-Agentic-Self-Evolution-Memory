@@ -1,0 +1,54 @@
+# system=FastASEM idx=1158 conv=locomo_0006 category=temporal (harness label=temporal)
+# question: Which recreational activity was James pursuing on March 16, 2022?
+# gold: bowling
+# pred (real run): James was not pursuing any recreational activity on March 16, 2022.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['68e643d8-fb9e-49b0-9205-c46e38798e5d', '9b3416ee-b1f6-48ff-8d92-0a3a20580e60'] evidence_in_prompt=None
+# prompt_chars=2307 prompt_tokens~576
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 27 March 2022 · said by James · about: James
+      • James practices the instrument daily as of 27 March 2022.
+      topics: daily practice, instrument
+      links: [2] temporal  (+20 more not in this list: same-entity:16, semantic:2, temporal:2)
+
+[2] 27 March 2022 · said by James · about: James
+      • James is learning a musical instrument as of 27 March 2022.
+      topics: learning instrument, music
+      links: [1] temporal  (+20 more not in this list: same-entity:17, temporal:2, semantic:1)
+
+[3] 23 May 2022 · said by James · about: James
+      • In April 2022, James reached a personal milestone.
+      topics: personal milestone, accomplishment
+      links: [4] temporal, [5] semantic, [6] semantic, [8] semantic  (+12 more not in this list: same-entity:6, semantic:5, temporal:1)
+
+[4] 23 May 2022 · said by James · about: James, big project
+      • In April 2022, James finished a big project he had been working on for months.
+      topics: project, completion, milestone
+      links: [3] temporal  (+12 more not in this list: same-entity:8, temporal:3, semantic:1)
+
+[5] 9 July 2022 · said by James · about: James
+      • On 8 July 2022, James was doing rope jumping.
+      topics: rope jumping, extreme sports
+      links: [6] temporal, [3] semantic  (+9 more not in this list: same-entity:8, temporal:1)
+
+[6] 9 July 2022 · said by James · about: James
+      • On 6 July 2022, James was surfing.
+      topics: surfing, extreme sports
+      links: [5] temporal, [3] semantic, [7] temporal, [8] same-entity  (+7 more not in this list: same-entity:6, semantic:1)
+
+[7] 9 July 2022 · said by James · about: James
+      • James has recently become interested in extreme sports.
+      topics: extreme sports, interest
+      links: [6] temporal  (+10 more not in this list: same-entity:8, semantic:1, temporal:1)
+
+[8] 4 September 2022 · said by James · about: James
+      • On 2 September 2022, James signed up for a cooking class.
+      topics: cooking class, sign up
+      links: [6] same-entity, [3] semantic  (+9 more not in this list: same-entity:5, temporal:4)
+
+Question: Which recreational activity was James pursuing on March 16, 2022?
+
+Answer:

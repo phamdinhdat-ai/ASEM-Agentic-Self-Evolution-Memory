@@ -1,0 +1,56 @@
+# system=FastASEM idx=369 conv=locomo_0002 category=single_hop (harness label=conversational)
+# question: What is John's main focus in local politics?
+# gold: Improving education and infrastructure
+# pred (real run): Community improvement and serving the community.
+# judge_correct=False judge_error=missing_info f1=0.2222 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['01f5325a-ddec-4f65-9749-374df33b8dc1', '0fe339dd-7c7a-4a2f-89ad-306539850159', '5011559f-46fc-4af5-a238-1b59026e7948', '5d4fba53-a1c1-4c3d-8593-484cdf6ac34d', '69251a25-491f-4ba4-8e5b-816731d9d1b7', '9d264103-284f-44a8-bc06-355b05b5000b', 'aae9e17f-69e9-44ad-aa12-16786682de00', 'b8bcbf2d-e5b3-48d0-80dc-c5eeebcd1bdc', 'bdfa9fc9-7287-415b-b352-31e02c98ffcb', 'be0049d7-7e36-4c91-80ef-6d7b86bf5cf2', 'c18b3ebd-9a0c-46f8-b5a7-4c8c70b03f34', 'd8737dcb-9a49-4ced-b6ad-b67d1334ba53'] evidence_in_prompt=None
+# prompt_chars=2771 prompt_tokens~692
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 17 December 2022 · said by John · about: John
+      • John is passionate about improving education in his community.
+      topics: education, community improvement
+      links: [4] temporal, [2] temporal, [3] same-entity, [6] same-entity  (+25 more not in this list: same-entity:15, semantic:10)
+
+[2] 17 December 2022 · said by John · about: John
+      • John is really hoping to get into local politics.
+      topics: local politics, goal
+      links: [1] same-entity, [4] same-entity, [3] temporal, [5] semantic, [6] semantic, [7] semantic  (+23 more not in this list: same-entity:18, semantic:5)
+
+[3] 17 December 2022 · said by John · about: John
+      • John plans to chat with local leaders and organizations to get support and gather ideas for his next
+        move in politics.
+      topics: local leaders, organizations, support, ideas
+      links: [1] same-entity, [2] temporal, [4] temporal, [5] semantic, [8] same-entity  (+21 more not in this list: same-entity:17, semantic:4)
+
+[4] 17 December 2022 · said by John · about: John
+      • John is passionate about improving infrastructure in his community.
+      topics: infrastructure, community improvement
+      links: [2] same-entity, [3] same-entity, [1] temporal, [5] semantic, [6] semantic, [7] semantic  (+27 more not in this list: same-entity:18, semantic:7, temporal:2)
+
+[5] 9 January 2023 · said by John · about: John
+      • John has been looking into local politics, talking to community leaders, and getting to know the needs
+        and hopes of his neighborhood.
+      topics: local politics, community leaders, neighborhood needs
+      links: [2] semantic, [3] semantic, [4] semantic, [6] temporal  (+19 more not in this list: same-entity:15, semantic:4)
+
+[6] 9 January 2023 · said by John · about: John
+      • John is feeling optimistic about his local politics efforts.
+      topics: optimistic, local politics
+      links: [1] same-entity, [2] semantic, [5] temporal, [4] semantic, [7] semantic  (+15 more not in this list: same-entity:14, semantic:1)
+
+[7] 5 February 2023 · said by John · about: John
+      • John feels a strong urge to serve his country and community.
+      topics: serve country, serve community
+      links: [4] semantic, [6] semantic, [2] semantic  (+15 more not in this list: same-entity:13, semantic:2)
+
+[8] 5 February 2023 · said by John · about: John
+      • John ran for office as his chance to make an impact.
+      topics: running for office, impact
+      links: [3] same-entity, [2] semantic  (+15 more not in this list: same-entity:11, semantic:4)
+
+Question: What is John's main focus in local politics?
+
+Answer:

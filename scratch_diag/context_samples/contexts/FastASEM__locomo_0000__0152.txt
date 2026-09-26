@@ -1,0 +1,55 @@
+# system=FastASEM idx=152 conv=locomo_0000 category=adversarial (harness label=adversarial)
+# question: What did Caroline realize after her charity race?
+# gold: self-care is important
+# pred (real run): Caroline did not realize anything after her charity race.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['d15c9a8c-1fa1-4a74-81ef-e1b83f4a9168'] evidence_in_prompt=None
+# prompt_chars=2426 prompt_tokens~606
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline
+      • Caroline plans to continue her education.
+      topics: education, plan
+      links: [3] same-entity, [4] same-entity  (+21 more not in this list: same-entity:20, semantic:1)
+
+[2] 9 June 2023 · said by Caroline · about: Caroline
+      • Caroline's friends, family, and mentors motivate her and give her strength.
+      topics: friends, family, mentors, motivation, support
+      links: [3] temporal, [5] semantic  (+25 more not in this list: semantic:14, same-entity:10, temporal:1)
+
+[3] 9 June 2023 · said by Caroline · about: Caroline
+      • Caroline intends to keep using her voice to make a change and lift others up.
+      topics: voice, change, advocacy, lift others
+      links: [1] same-entity, [2] temporal, [6] same-entity  (+17 more not in this list: same-entity:15, semantic:1, temporal:1)
+
+[4] 14 August 2023 · said by Caroline · about: Caroline
+      • Caroline attended an advocacy event.
+      topics: advocacy event, support
+      links: [1] same-entity, [6] same-entity  (+11 more not in this list: same-entity:7, semantic:4)
+
+[5] 23 August 2023 · said by Caroline · about: Caroline
+      • Caroline values having supportive people around her.
+      topics: support, people
+      links: [6] temporal, [2] semantic  (+14 more not in this list: same-entity:7, semantic:7)
+
+[6] 23 August 2023 · said by Caroline · about: Caroline
+      • Caroline wants to live authentically and help others do the same.
+      topics: authenticity, helping others
+      links: [4] same-entity, [3] same-entity, [5] temporal  (+8 more not in this list: same-entity:5, semantic:3)
+
+[7] 25 August 2023 · said by Caroline · about: Caroline
+      • Caroline tried to apologize to the people she had a bad spot with during her hike in the week before 25
+        August 2023.
+      topics: apology, hiking
+      links: [8] temporal  (+9 more not in this list: same-entity:7, semantic:2)
+
+[8] 25 August 2023 · said by Caroline · about: Caroline
+      • Caroline went hiking in the week before 25 August 2023 and got into a bad spot with some people.
+      topics: hiking, conflict
+      links: [7] temporal  (+9 more not in this list: same-entity:8, temporal:1)
+
+Question: What did Caroline realize after her charity race?
+
+Answer:

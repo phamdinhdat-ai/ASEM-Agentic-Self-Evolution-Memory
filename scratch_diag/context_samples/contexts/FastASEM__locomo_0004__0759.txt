@@ -1,0 +1,55 @@
+# system=FastASEM idx=759 conv=locomo_0004 category=multi_hop (harness label=single_hop)
+# question: What items does John collect?
+# gold: sneakers, fantasy movie DVDs, jerseys
+# pred (real run): John collects sneakers and jerseys.
+# judge_correct=True judge_error=None f1=0.4000 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=2307 prompt_tokens~576
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 21 May 2023 · said by John · about: John
+      • John loves talking to people about his sneaker collection.
+      topics: sneaker collection, hobby, talking
+      links: [2] semantic, [7] same-entity  (+21 more not in this list: same-entity:21)
+
+[2] 2 October 2023 · said by John · about: John
+      • John likes to collect jerseys.
+      topics: jerseys, collecting, hobby
+      links: [1] semantic  (+10 more not in this list: same-entity:10)
+
+[3] 2 October 2023 · said by John · about: John
+      • John had his loved ones celebrate with him at his wedding.
+      topics: loved ones, celebration, wedding
+      links: [4] temporal, [5] temporal, [7] semantic, [6] semantic  (+13 more not in this list: same-entity:9, temporal:3, semantic:1)
+
+[4] 2 October 2023 · said by John · about: John
+      • John's wedding was a smaller, more intimate gathering.
+      topics: intimate gathering, small wedding
+      links: [3] temporal, [5] temporal  (+15 more not in this list: same-entity:10, temporal:5)
+
+[5] 2 October 2023 · said by John · about: John
+      • Some of John's hiking club friends attended his wedding even though John had just joined the hiking
+        club.
+      topics: hiking club, friends, wedding
+      links: [4] temporal, [3] temporal  (+11 more not in this list: same-entity:10, temporal:1)
+
+[6] 21 October 2023 · said by John · about: John
+      • Being with John's family brings him happiness and helps him remember what's important.
+      topics: family, happiness, important
+      links: [7] temporal, [3] semantic  (+9 more not in this list: same-entity:8, temporal:1)
+
+[7] 21 October 2023 · said by John · about: John
+      • John's family is always there for him.
+      topics: family, support
+      links: [1] same-entity, [6] temporal, [3] semantic  (+8 more not in this list: same-entity:6, semantic:1, temporal:1)
+
+[8] 8 December 2023 · said by John · about: John, book
+      • John is currently reading a book that John really enjoys and highly recommends.
+      topics: reading, enjoy, recommend
+      links: (+9 more not in this list: same-entity:5, semantic:3, temporal:1)
+
+Question: What items does John collect?
+
+Answer:

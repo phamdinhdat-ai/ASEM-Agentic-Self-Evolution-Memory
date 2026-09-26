@@ -1,0 +1,41 @@
+{
+  "tag": "ds_fixed",
+  "model": "qwen_qwen3_4b_instruct_2507",
+  "config": "configs/models/qwen3_4b_api.yaml",
+  "systems": [
+    "ASEM",
+    "FastASEM"
+  ],
+  "categories": [
+    "adversarial",
+    "temporal",
+    "open_domain",
+    "multi_hop",
+    "single_hop"
+  ],
+  "wrong_per_cell": 2,
+  "right_per_cell": 1,
+  "must_have": [
+    49,
+    104,
+    112,
+    118,
+    137,
+    157,
+    159,
+    324,
+    505
+  ],
+  "seed": 0,
+  "n_cases": 48,
+  "cases_per_system": {
+    "ASEM": 24,
+    "FastASEM": 24
+  },
+  "cases_per_bucket": {
+    "GENERATION": 19,
+    "INGESTION": 15,
+    "RETRIEVAL": 14
+  },
+  "note": "Contexts were replayed with a probe backend (no LLM). The recorded prompt is the first-pass prompt, i.e. the one that produced preds/*.jsonl."
+}

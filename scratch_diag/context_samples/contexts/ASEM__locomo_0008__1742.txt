@@ -1,0 +1,194 @@
+# system=ASEM idx=1742 conv=locomo_0008 category=adversarial (harness label=adversarial)
+# question: What type of car did Sam get after his old Prius broke down?
+# gold: new Prius
+# pred (real run): Sam did not get a new car after his old Prius broke down; Evan's new Prius also broke down.
+# judge_correct=False judge_error=contradiction f1=0.1905 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['44c5a7e6-6a6e-4fd3-b03a-18ee8c6ba05e'] evidence_in_prompt=None
+# prompt_chars=11446 prompt_tokens~2861
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+What type of car did Sam get after his old Prius broke down?
+
+## Memory notes
+[1] 5 December 2023 · said by Evan · about: Evan, Sam, Prius
+      • Evan's newly bought Prius broke down, which is stressful since he relies on it for his active lifestyle
+        and road trips, though he tries to see the car trouble as a chance to explore other ways of staying
+        active and traveling.
+      turn: "[Evan] Hey Sam, good to hear from you. I've hit a bit of a snag - my new Prius, the one I just bought,
+             broke down. It's a bit of a stressor since I rely on it for my active lifestyle and road trips …"
+      topics: evan, prius, car breakdown, road trips, active lifestyle, staying active, traveling, new opportunities
+      links: [2] extends, [3] extends, [4] extends, [7] causal  (+2 more not in this list: same-topic:2)
+
+[2] 31 December 2023 · said by Evan · about: Evan, Sam, Prius
+      • Evan drove the Prius to the mountains on the weekend of 23-24 December 2023 and got into a minor scrape
+        on the way back.
+      turn: "[Evan] Hey Sam! That’s fantastic—nothing like a good hike to feel alive. We took the Prius for a long
+             drive to the mountains last weekend. It was perfect until we got into a little scrape on the way …"
+      topics: evan, prius, drive, mountains, scrape
+      links: [3] extends, [4] extends, [6] semantic, [1] extends, [8] temporal  (+19 more not in this list: semantic:10, same-topic:8, temporal:1)
+
+[3] 18 May 2023 · said by Sam · about: Sam, Evan
+      • Sam asked what happened to Evan's old car and where he went on the trip, sharing a photo of feet on a
+        car dashboard at sunset; Evan explained the old Prius broke down and was repaired and sold, the trip was
+        to the Rockies, and his newly bought Prius also broke down, which is stressful given his active
+        lifestyle and road trips.
+      turn: "[Sam] Wow, not bad, what happened to the old one? Where'd you go, by the way? (image: a photo of a
+             person's feet on a car dashboard as the sun sets)"
+      topics: old prius, new prius, broke down, rockies, mountain lake, car dashboard, sunset, road trips
+      links: [2] extends, [4] extends, [6] semantic, [1] extends  (+3 more not in this list: extends:1, same-topic:1, semantic:1)
+
+[4] 18 May 2023 · said by Evan · about: Evan, Rockies
+      • Evan explained his old Prius broke down and he decided to repair and sell it, and that the family trip
+        was to the Rockies, sharing a photo of a mountain lake; his newly bought Prius has also broken down,
+        which is stressful since he relies on it for his active lifestyle and road trips.
+      turn: "[Evan] My old prius broke down, decided to get it repaired and sell it. Glad you asked, we went to
+             Rockies, check it out. (image: a photo of a lake with rocks and mountains in the background)"
+      topics: old prius, new prius, broke down, rockies, lake, mountains, road trips, active lifestyle
+      links: [3] extends, [2] extends, [6] semantic, [1] extends  (+2 more not in this list: same-topic:2)
+
+[5] 21 November 2023 · said by Evan · about: Evan, Sam
+      • Evan said he stays in shape by going to the gym and taking his car out for a spin, and asked Sam about
+        his fitness goals; Sam later thanked Evan for the exercise tips.
+      turn: "[Evan] That was wild! I stay in shape by hitting the gym and taking my car out for a spin. Gotta keep it
+             up! How are you doing on your fitness goals, Sam?"
+      topics: evan, gym, car, fitness goals, sam, exercise tips
+      links: [7] same-topic  (+6 more not in this list: extends:4, same-topic:2)
+
+[6] 18 May 2023 · said by Sam · about: Sam, Sam's dad
+      • Sam said they hiked a good distance, which was quite a feat for him at age ten, and called it a great
+        memory.
+      turn: "[Sam] We hiked a good distance - quite a feat for me back then. It's definitely a great memory."
+      topics: hike distance, childhood, memory, feat
+      links: [2] semantic, [4] semantic, [3] semantic, [8] same-topic  (+5 more not in this list: same-topic:3, semantic:2)
+
+[7] 5 December 2023 · said by Evan · about: Evan
+      • Evan tries to see the car trouble as a chance to explore other ways of staying active and traveling.
+      turn: "[Evan] True, I'm trying to see it as a chance to explore other ways of staying active and traveling.
+             Maybe it's an opportunity to try something different."
+      topics: evan, staying active, traveling, new opportunities
+      links: [1] causal, [5] same-topic  (+2 more not in this list: same-topic:2)
+
+[8] 17 October 2023 · said by Evan · about: Evan, Sam
+      • Evan agreed hiking is a great way to bond with nature and push themselves, said it would be a cool
+        memory, and mentioned he was at the gym on 16 October 2023 gaining strength; Sam is pumped for the hike,
+        says connecting with nature is what he needs, thanked Evan for his support and always being there, and
+        agreed that a trip there sounds like the perfect way to de-stress.
+      • Sam is getting into a healthier lifestyle and …
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Evan] Definitely, Sam! Hiking is an awesome way to bond with nature and push ourselves. It's gonna be a
+             cool memory for us both. It's great to see progress, was just at the gym yesterday. Gaining …"
+      topics: evan, hiking, nature, gym, strength, memory, sam, support
+      links: [6] same-topic, [2] temporal  (+26 more not in this list: extends:16, same-topic:9, causal:1)
+

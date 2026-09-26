@@ -1,0 +1,13 @@
+# system=NoMemory idx=329 conv=locomo_0002 category=multi_hop (harness label=single_hop)
+# question: What European countries has Maria been to?
+# gold: Spain, England
+# pred (real run): Maria has been to France and Spain.
+# judge_correct=True judge_error=None f1=0.2222 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=303 prompt_tokens~75
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between John and Maria. Question: What European countries has Maria been to?
+
+Answer:

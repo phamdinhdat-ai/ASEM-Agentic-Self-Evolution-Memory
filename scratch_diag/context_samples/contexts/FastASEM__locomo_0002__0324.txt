@@ -1,0 +1,57 @@
+# system=FastASEM idx=324 conv=locomo_0002 category=temporal (harness label=temporal)
+# question: When did John take a road trip to the Pacific Northwest?
+# gold: 2022
+# pred (real run): In 2022.
+# judge_correct=True judge_error=None f1=0.6667 em=0.0
+# diagnosis=GENERATION gold_bearing_notes=['002bffc1-5835-4b24-b636-26aca9a34200', '066b332f-3424-4296-9fee-2db456b5faf5', '0b9085f3-1c43-47c5-a27f-ed2fc15e966d', '0f188d85-0240-40d9-b3f0-fa8f0c77f78e', '18e24982-648a-4c30-bfd1-e829eba51cf6', '3d6ec6ca-0d01-475c-b235-548489729fb5', '493f6888-57ae-4d98-a811-0d0888056b60', '55315249-a9b8-4400-af54-612c8f9d3bf3', '5c76c781-c053-423d-a8bd-cc31b5089251', '5d4fba53-a1c1-4c3d-8593-484cdf6ac34d', '63d8c2d2-0d6b-4e12-a92b-95c9aed2ff2d', '69251a25-491f-4ba4-8e5b-816731d9d1b7', '6b1757f1-2ae7-4def-8c73-a3cae11fa06a', '72d4b9d0-d1a0-4c49-9c1f-df696b9401b8', '770c378b-3ed8-4782-90c5-aa418e102da2', '7751ea03-a1dd-4c0a-876c-74e0c037ea88', '78e5699c-2fe8-4063-af8f-7ff02afdbdcf', '79ab6842-11e1-4665-b120-7acc9931feb9', '7b5b8953-ab7d-409e-8f87-1f7c14d0bed1', '8eb82a02-8f73-4afc-827d-e9a8878460a2', '97ccad30-0eb7-4c88-a13f-8f7e9209cb42', '9e187898-cbb6-40c7-913e-9fd476b1302b', '9ee843bd-f201-4081-9d0c-cb8fcd46cb66', 'b29e0ae0-64c3-444f-b69d-a6c28fb87d54', 'b2bbdece-e583-4763-b89e-a0dee2f2b83f', 'b4e3f713-8e70-4600-831a-7470dbc39f87', 'b77ed20c-ed50-4221-9dfb-d0b59118d450', 'ba5803c0-4335-484e-882a-e33279b3a1ce', 'be0049d7-7e36-4c91-80ef-6d7b86bf5cf2', 'c18b3ebd-9a0c-46f8-b5a7-4c8c70b03f34', 'c54287da-3129-4e44-a110-0d7d3d818aad', 'c9c0cef9-1c9f-445e-ace0-2d3eba45fc00', 'dfc5b419-169a-44a9-994f-6d8f17fd1ef1', 'e314bc58-8072-4d7e-88c0-71699326d00f', 'e541df34-55ac-4d76-b673-6d2e31bb7143', 'e591f1fd-2ffb-4498-b1c2-a3c99c301a7a', 'f8768bba-880c-4af6-9cf9-7d379452a841', 'f9784e8b-f073-48f9-bc1e-7c103277808e'] evidence_in_prompt=None
+# prompt_chars=2582 prompt_tokens~645
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 17 December 2022 · said by John · about: John
+      • John got back from a family road trip on 16 December 2022.
+      topics: family road trip, returned
+      links: [2] semantic, [6] semantic  (+24 more not in this list: same-entity:19, semantic:5)
+
+[2] 10 April 2023 · said by John · about: John, Maria, Pacific Northwest
+      • John went on a road trip with Maria in 2022. | On the 2022 road trip, John and Maria explored the coast
+        in the Pacific Northwest and visited national parks.
+      topics: road trip, travel, coast, national parks, nature, Pacific Northwest
+      links: [1] semantic  (+17 more not in this list: same-entity:13, semantic:4)
+
+[3] 18 April 2023 · said by John · about: John, East Coast
+      • John is planning a trip to the East Coast.
+      topics: trip, East Coast, planning
+      links: (+8 more not in this list: same-entity:8)
+
+[4] 25 May 2023 · said by John · about: John
+      • John went on a hiking trip with his workmates.
+      topics: hiking trip, workmates
+      links: [5] temporal, [6] semantic, [8] semantic  (+9 more not in this list: same-entity:7, semantic:1, temporal:1)
+
+[5] 25 May 2023 · said by John · about: John
+      • John has a picture of his workmates from a hiking trip.
+      topics: workmates, hiking trip, picture
+      links: [4] temporal  (+10 more not in this list: same-entity:7, semantic:2, temporal:1)
+
+[6] 12 June 2023 · said by John · about: John, workmates
+      • John went on a mountaineering trip during the week of 5-9 June 2023 with some workmates.
+      topics: mountaineering, workmates, trip
+      links: [7] temporal, [4] semantic, [1] semantic, [8] semantic  (+6 more not in this list: same-entity:5, semantic:1)
+
+[7] 12 June 2023 · said by John · about: John
+      • John reached the summit on his mountaineering trip in the week of 5-9 June 2023 and found the view
+        stunning.
+      topics: summit, mountaineering, view
+      links: [6] temporal  (+8 more not in this list: same-entity:7, semantic:1)
+
+[8] 11 August 2023 · said by John · about: John, Max
+      • John and Max went on a camping trip in the summer of 2022. | During the camping trip in summer 2022,
+        John and Max hiked, swam, and made great memories.
+      topics: camping, trip, summer, hiking, swimming
+      links: [6] semantic, [4] semantic  (+4 more not in this list: same-entity:4)
+
+Question: When did John take a road trip to the Pacific Northwest?
+
+Answer:

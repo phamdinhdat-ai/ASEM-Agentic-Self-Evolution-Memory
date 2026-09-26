@@ -1,0 +1,13 @@
+# system=NoMemory idx=104 conv=locomo_0000 category=single_hop (harness label=conversational)
+# question: What book did Caroline recommend to Melanie?
+# gold: "Becoming Nicole"
+# pred (real run): Unknown.
+# judge_correct=False judge_error=missing_info f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=311 prompt_tokens~77
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Caroline and Melanie. Question: What book did Caroline recommend to Melanie?
+
+Answer:

@@ -1,0 +1,54 @@
+# system=FastASEM idx=1160 conv=locomo_0006 category=multi_hop (harness label=single_hop)
+# question: Do both James and John have pets?
+# gold: No
+# pred (real run): Yes, both James and John have pets.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=INGESTION gold_bearing_notes=[] evidence_in_prompt=None
+# prompt_chars=2225 prompt_tokens~556
+====================================================================================================
+Use the retrieved memory notes below to answer the question. Reply with only the answer — a few words or one sentence, no explanation.
+
+Memory:
+[1] 20 March 2022 · said by James · about: James, John
+      • James offered to help John find the perfect pet.
+      topics: pet, help, offer
+      links: [3] temporal, [2] temporal, [5] semantic  (+29 more not in this list: same-entity:25, semantic:4)
+
+[2] 20 March 2022 · said by John · about: John
+      • John wants a pet but does not have one yet.
+      topics: pet, want
+      links: [3] temporal, [1] temporal, [5] semantic  (+20 more not in this list: same-entity:19, semantic:1)
+
+[3] 20 March 2022 · said by John · about: John, James
+      • John said he will keep James's offer to help find a pet in mind.
+      topics: pet, offer, keep in mind
+      links: [1] temporal, [2] temporal, [5] semantic  (+29 more not in this list: same-entity:25, semantic:4)
+
+[4] 4 May 2022 · said by James · about: James
+      • James has two other pets that are shepherds and are very loyal.
+      topics: shepherds, dogs, loyalty, pets
+      links: [6] semantic, [7] semantic, [8] semantic  (+15 more not in this list: same-entity:10, semantic:5)
+
+[5] 22 July 2022 · said by John · about: John, pets
+      • John does not have any pets but plans to get one someday.
+      topics: pets, future plan
+      links: [2] semantic, [3] semantic, [1] semantic  (+9 more not in this list: same-entity:7, semantic:2)
+
+[6] 22 July 2022 · said by James · about: James, dogs
+      • James has dogs.
+      topics: dogs, pets
+      links: [7] temporal, [4] semantic, [8] semantic  (+11 more not in this list: same-entity:6, semantic:5)
+
+[7] 22 July 2022 · said by James · about: James, sister, dogs
+      • James has a sister. | James has a close bond with his sister and their furry friends.
+      topics: sister, family, close bond, dogs
+      links: [6] same-entity, [4] semantic  (+8 more not in this list: same-entity:5, semantic:3)
+
+[8] 7 November 2022 · said by James · about: James
+      • James has three dogs at home.
+      topics: dogs, pets
+      links: [6] semantic, [4] semantic  (+6 more not in this list: same-entity:5, temporal:1)
+
+Question: Do both James and John have pets?
+
+Answer:

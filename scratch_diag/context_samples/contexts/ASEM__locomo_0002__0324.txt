@@ -1,0 +1,191 @@
+# system=ASEM idx=324 conv=locomo_0002 category=temporal (harness label=temporal)
+# question: When did John take a road trip to the Pacific Northwest?
+# gold: 2022
+# pred (real run): John took the road trip to the Pacific Northwest on 2023-04-10.
+# judge_correct=True judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=RETRIEVAL gold_bearing_notes=['13d97779-6509-493f-ab28-d050dcb2aa06', '205027a1-5449-4164-a49c-6f9077f49dcd', '32b0d96a-6812-41a5-9c46-21dceef22022', '36359bc5-03d3-442f-befb-ee61660ef950', '377a1e35-2d84-401e-8105-7e0fa0a6d978', '3892d9fc-7f31-4e34-bc0c-7b4676f93619', '456b74b5-520d-4c9a-8bbc-dd3518d491f5', '499e74ac-7cdf-4cbc-9a52-4d89dd0fb705', '4bbc92e3-d64a-4183-87d2-900122947477', '4cbb972d-33e1-488c-b364-f8cf52413f2b', '4e2595ec-6a9e-40d9-ad18-5dbf3b3d9605', '4ec2d7c8-091d-45bd-b076-24924fd6471a', '7cdbaf0c-5980-4641-8351-eba46a20bc11', '80098ce6-2413-484e-9ef1-ce163366fd11', '87fc3fb8-676d-4bfe-9e8e-c5e5067ecc99', '91344b79-fef2-4341-b772-f06e6d426018', '94eb4bb1-4dd1-4630-b44c-ccc9e1748328', '97d82778-efc1-48f6-9e25-a8eaf2067100', '99e9afb4-3cdf-435a-b41c-118c1e697065', '9f4c1a0e-839a-455a-b49b-514a5a78df7a', 'a935dde6-e085-4c75-8028-ea4ba9ee0e6c', 'ac6e22e3-ac87-4ff8-90ff-01b9ee64da5f', 'ad650275-df22-4f8c-a03d-0f518f44b941', 'b0dea315-368c-4bfd-b405-23828cc3dc5d', 'b34856c2-497a-44d2-8cdc-0d44f505d3da', 'b59265f7-9714-4cb6-bbe3-5ed57f0f2007', 'b7d1df81-e975-4031-a7c3-5ec4047ea543', 'b9d66dc6-7a42-4772-9e45-c3983cc6f9a0', 'ca72cb56-f0c3-459b-9811-296818bb3f76', 'cde65250-1523-4858-96f3-b38ae12719d8', 'd36513c0-e526-4509-be1a-1cefaec48771', 'dcefb395-b3a8-40e5-89cd-9f77789f6c4c', 'def5118f-d4c4-4e2d-aa4c-84a5917904d4', 'e69c8b03-8b3f-4d37-8f7d-bf204d0c7f18', 'ed87ae0a-a252-434b-a63d-42f9722ac133', 'eff6232e-d763-4814-ba31-9981ee37dca0', 'fe52f4e3-23fa-4ad0-8543-b71617840fc3'] evidence_in_prompt=None
+# prompt_chars=10993 prompt_tokens~2748
+====================================================================================================
+You are a memory retrieval agent. You receive a question and a set of memory notes retrieved from a
+long-term memory graph. Select the notes you used and answer the question.
+
+## How to read the memory
+Each note is one evidence block:
+
+[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
+    • A fact sentence, written by the memory system from what was said.
+    • A second fact sentence about the same note.
+    • [+2 more fact(s) in this note, not shown]
+    turn: "the original words of the turn, clipped"
+    topics: producer, advice, unique sound, music direction
+    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+
+- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
+  number; never invent a number that is not printed.
+- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
+- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
+  metadata — useful as a hint about what the note is about, not as an answer.
+- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
+  link when the neighbour holds the other half of a fact (a date, the other person involved).
+- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
+  about how corroborated or contested a fact is, and never invent their content.
+- One note may hold several facts and may mention more than one person. Keep only the facts that
+  bear on the question.
+
+## Task
+Output a single JSON object with two fields:
+- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+  Use an empty list when no note bears on the question.
+- **answer**: the answer itself — a few words to one short sentence.
+
+## Decision procedure (think through these BEFORE outputting the JSON)
+Step 1: Read the question. What fact does it ask for, and about which person?
+Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
+        out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
+        other half of the fact sits in a neighbouring note.
+Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
+        into an absolute date using the note's own date.
+Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
+        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
+        the correct person — a name mismatch is never a reason to refuse.
+Step 6: Say "I don't know" only when NO note bears on the question at all.
+
+## Output Format
+Your response must be ONLY the following JSON object (no markdown fences, no commentary):
+{"selected_ids": [1, 4], "answer": "concise answer"}
+
+## Examples
+
+Example 1 (select notes by their number):
+Question: "Where does Alex work?"
+Memory:
+[1] 8 May 2023 · said by Alex · about: Alex, Google
+    • Alex works as a data scientist at Google in Mountain View.
+    turn: "[Alex] I'm a data scientist at Google now."
+[2] 8 May 2023 · said by Alex · about: Alex, Buddy
+    • Alex has a golden retriever named Buddy.
+Reasoning: Only note [1] is about work — note [2] is about a dog.
+{"selected_ids": [1], "answer": "At Google in Mountain View."}
+
+Example 2 (nothing bears on the question):
+Question: "What is Alex's phone number?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex is a data scientist.
+Reasoning: No note contains a phone number.
+{"selected_ids": [], "answer": "I don't know"}
+
+Example 3 (time question — resolve against the note's own date):
+Question: "When did Caroline go to the support group?"
+Memory:
+[1] 8 May 2023 · said by Caroline
+    • On 7 May 2023, Caroline went to the LGBTQ support group.
+Reasoning: The fact carries the exact date.
+{"selected_ids": [1], "answer": "7 May 2023"}
+
+Example 4 (person swap — give the fact, name the correct person, never refuse):
+Question: "What was Melanie's grandmother's gift?"  (the gift is not Melanie's)
+Memory:
+[1] 8 May 2023 · said by Caroline · about: Caroline, Sweden
+    • Caroline showed a necklace with a cross and a heart that her grandmother in Sweden gave her.
+    links: [2] same-topic
+[2] 8 May 2023 · said by Melanie · about: Melanie
+    • Melanie complimented the necklace.
+Reasoning: "said by" shows the necklace is Caroline's; note [2] only comments on it.
+{"selected_ids": [1], "answer": "That necklace was Caroline's, from her grandmother in Sweden — not Melanie's."}
+
+Example 5 (partial evidence — answer what the notes cover):
+Question: "What events has Alex participated in?"
+Memory:
+[1] 8 May 2023 · said by Alex
+    • Alex spoke at a school event.
+[2] 8 May 2023 · said by Alex
+    • Alex has a pet cat.
+Reasoning: Note [1] lists one event; answer with it and do not refuse.
+{"selected_ids": [1], "answer": "Alex spoke at a school event."}
+
+## Common Mistakes (NEVER do these)
+WRONG: {"selected_ids": ["7b09e5df-5cd4-441c-b912-8f181b4868fe"], "answer": "..."}
+→ Select by the printed number: {"selected_ids": [1], "answer": "..."}. Ids are not part of this prompt.
+WRONG: selecting a note whose facts you did not use in the answer.
+WRONG: answering "last week" when the note gives 8 May 2023 → give the absolute date.
+WRONG: answering about a note that is not printed (a link target that is not in the list).
+WRONG: refusing only because the question names a person who is not the note's "said by".
+
+## Constraints
+- Output ONLY the JSON object. Do NOT include commentary, markdown fences, or extra text.
+- selected_ids must contain numbers printed as "[n]" in this prompt (or be empty).
+- Keep the answer short — a few words or one sentence.
+
+## Query
+When did John take a road trip to the Pacific Northwest?
+
+## Memory notes
+[1] 10 April 2023 · said by John · about: John, Pacific Northwest
+      • John says the road trip explored the coast of the Pacific Northwest and visited national parks,
+        describing the natural beauty as breathtaking.
+      turn: "[John] Thanks! We explored the coast up in the Pacific Northwest and hit some cool national parks. The
+             beauty of nature was absolutely breathtaking!"
+      topics: john, pacific northwest, coast, national parks, nature
+      links: [2] causal, [6] extends, [3] same-topic  (+2 more not in this list: same-topic:2)
+
+[2] 10 April 2023 · said by Maria · about: Maria, John
+      • Maria compliments John's photo and asks where he went on the road trip, which he says explored the coast
+        of the Pacific Northwest and visited national parks with breathtaking natural beauty.
+      turn: "[Maria] Wow, great pic! Where did you go on that road trip?"
+      topics: maria, photo, road trip, question, pacific northwest, coast, national parks, nature
+      links: [1] causal, [4] same-topic, [3] same-topic, [8] same-topic  (+9 more not in this list: same-topic:9)
+
+[3] 12 June 2023 · said by Maria · about: Maria, John, Oregon
+      • Maria asked whether John reached the summit and recalled a family road trip to Oregon from her youth;
+        John confirmed he reached the top with a stunning view and asked Maria about the prettiest spot on her
+        family trip, and Maria said reaching the top gave her a breathtaking view and a sense of peace and
+        connection.
+      turn: "[Maria] Glad you're finding comfort, John. That mountaineering trip sounds amazing. Did you reach the
+             summit? When I was younger, my family and I went on a road trip to Oregon. (image: a photo of a …"
+      topics: maria, john, summit, oregon, family road trip, view, prettiest spot, peace
+      links: [7] same-topic, [2] same-topic, [1] same-topic, [8] extends  (+5 more not in this list: same-topic:4, extends:1)
+
+[4] 18 April 2023 · said by John · about: John, East Coast, Maria
+      • John said he is planning a trip to the East Coast and asked Maria what cool things have been going on
+        with her.
+      turn: "[John] I'm planning a trip to the East Coast. How about you? Anything cool going on recently?"
+      topics: john, east coast, trip, planning
+      links: [2] same-topic  (+3 more not in this list: semantic:3)
+
+[5] 5 July 2023 · said by John · about: John, Maria
+      • John shared a photo of a sunset over the ocean with a sailboat taken on his walk in late June 2023,
+        saying it reminds him to take a break and appreciate nature; he sees such sunsets at least once a week
+        as a way to disconnect, think, and find peace, and said the trip felt like restarting his mind and
+        spirit.
+      turn: "[John] Yeah, Maria. Little things like this can make a big impact in how we think. Oh, and here's a pic
+             I got from my walk last week. It always reminds me to take a break, breathe, and appreciate …"
+      topics: sunset, ocean, sailboat, walk, nature, weekly, disconnect, peace
+      links: [6] extends  (+7 more not in this list: same-topic:6, extends:1)
+
+[6] 11 August 2023 · said by John · about: Maria, John
+      • John said the trip felt like restarting his mind and spirit and shared a photo of a person sitting on a
+        bench looking at the sunset.
+      turn: "[John] Yeah, it was like restarting my mind and spirit. It's amazing how peaceful and pretty it can be.
+             It made me remember the little things in life and savor the peaceful moments. (image: a photo …"
+      topics: john, mind, spirit, peaceful, sunset
+      links: [1] extends, [5] extends  (+22 more not in this list: same-topic:11, extends:7, semantic:3, causal:1)
+
+[7] 12 June 2023 · said by John · about: John, Maria, Max
+      • John thanked Maria, said he finds comfort in good memories of Max, and shared that he went on a
+        mountaineering trip with workmates the week of 5 June 2023.
+      turn: "[John] Hey Maria, thanks for your kind words. It's still tough, but I'm finding some comfort in the good
+             memories. Wow, your camping trip sounds awesome! I went on a mountaineering trip last week …"
+      topics: john, mountaineering, workmates, grief, memories
+      links: [3] same-topic  (+9 more not in this list: same-topic:7, semantic:2)
+
+[8] 12 June 2023 · said by John · about: John, Maria
+      • John confirmed he reached the top with a stunning view and asked Maria about the prettiest spot on her
+        family trip; Maria described reaching the top as giving her a breathtaking view and a sense of peace and
+        connection.
+      turn: "[John] Thanks, Maria! Yeah, we made it to the top and the view was stunning. It was tough but awesome.
+             Your family trip must have been great too, right? What was the prettiest spot?"
+      topics: john, maria, summit, view, family trip, prettiest spot, peace, connection
+      links: [2] same-topic, [3] extends  (+6 more not in this list: same-topic:5, extends:1)
+

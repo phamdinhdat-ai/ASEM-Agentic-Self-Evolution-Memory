@@ -1,0 +1,13 @@
+# system=NoMemory idx=1591 conv=locomo_0008 category=open_domain (harness label=commonsense)
+# question: Which country was Evan visiting in May 2023?
+# gold: Canada
+# pred (real run): Unknown — no information provided about Evan's travel in May 2023.
+# judge_correct=False judge_error=contradiction f1=0.0000 em=0.0
+# diagnosis=NO_RETRIEVAL gold_bearing_notes=[] evidence_in_prompt=False
+# prompt_chars=303 prompt_tokens~75
+====================================================================================================
+Answer the following question as concisely as possible. Give only the answer (a few words or one sentence). If you are not sure, provide your best guess rather than asking for more information.
+
+Question: Conversation between Evan and Sam. Question: Which country was Evan visiting in May 2023?
+
+Answer:
