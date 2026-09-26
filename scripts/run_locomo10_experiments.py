@@ -83,10 +83,10 @@ setup_logging(level=os.environ.get("LOG_LEVEL", "INFO"))
 # ---------------------------------------------------------------------------
 
 CATEGORY_NAMES = {
-    1: "single_hop",
+    1: "multi_hop",
     2: "temporal",
-    3: "commonsense",
-    4: "conversational",
+    3: "open_domain",
+    4: "single_hop",
     5: "adversarial",
 }
 
