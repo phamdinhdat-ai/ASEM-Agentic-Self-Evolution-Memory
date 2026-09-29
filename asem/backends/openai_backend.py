@@ -159,6 +159,7 @@ class OpenAIBackend(InferenceBackend):
                 f"Empty response from model {self._model!r} "
                 "(no choices — check max_tokens and the endpoint)"
             )
+        self.last_finish_reason = getattr(choices[0], "finish_reason", None)
         return content_to_text(choices[0].message.content)
 
     # ------------------------------------------------------------------

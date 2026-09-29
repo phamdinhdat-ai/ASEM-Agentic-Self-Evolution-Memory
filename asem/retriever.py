@@ -96,8 +96,10 @@ _RELATION_BOOST: Dict[str, float] = {
     "contradicts": 1.35,
     "causal": 1.25,
     "temporal": 1.20,
+    "superseded_by": 1.35,   # THG versioning
     "extends": 1.10,
     "same-topic": 1.00,
+    "same-entity": 0.95,     # THG entity co-occurrence
     "semantic": 1.00,
     "linked": 1.00,
 }
@@ -129,6 +131,11 @@ class HybridRetriever:
     entity_weight: float = 0.6
     temporal_weight: float = 0.5
     rrf_k: int = 60
+    # Entity-channel hygiene: a token appearing in more than this fraction of
+    # notes is non-discriminating (e.g. the conversation's own speaker names) and
+    # is dropped, so the rare entity can steer the channel instead of the common
+    # one. 1.0 disables the drop.
+    entity_df_max_ratio: float = 0.5
 
     # A1+A4 — link traversal and adaptive lambda knobs
     enable_link_traversal: bool = True
@@ -180,15 +187,45 @@ class HybridRetriever:
                 bm25_ranks[n.id] = r
                 all_pool_map[n.id] = n
 
-        # Channel 3: Entity match
+        # Channel 3: Entity match (with hygiene: question/function words are
+        # dropped, and so are dominant entities such as the conversation's own
+        # speaker names -- they appear in most notes and otherwise drown the
+        # discriminating entity, e.g. "pottery" in "Melanie pottery").
         entity_ranks: Dict[str, int] = {}
-        if self.use_entity_filter and hasattr(M, "search_by_entities"):
-            query_entities = re.findall(r"\b[A-Z][a-z0-9_-]+\b", query)
-            if query_entities:
-                entity_hits = M.search_by_entities(query_entities, k=self.k1)
-                for r, n in enumerate(entity_hits):
-                    entity_ranks[n.id] = r
-                    all_pool_map[n.id] = n
+        if self.use_entity_filter and hasattr(M, "list_notes"):
+            raw_entities = re.findall(r"\b[A-Z][a-z0-9_-]+\b", query)
+            cand = [e for e in dict.fromkeys(raw_entities) if e not in _MASK_KEEP]
+            if cand:
+                notes_all = M.list_notes()
+                n_total = max(1, len(notes_all))
+                cand_lower = {e: e.lower() for e in cand}
+                df: Dict[str, int] = {e: 0 for e in cand}
+                matched: List[Tuple[int, Note]] = []
+                for note in notes_all:
+                    note_ents = {x.lower() for x in (note.entities or [])}
+                    ov = 0
+                    for e, el in cand_lower.items():
+                        if el in note_ents:
+                            df[e] += 1
+                            ov += 1
+                    if ov > 0:
+                        matched.append((ov, note))
+                kept = [e for e in cand if df[e] / n_total <= self.entity_df_max_ratio]
+                if kept:
+                    kept_lower = {e.lower() for e in kept}
+                    reranked = sorted(
+                        ((len(kept_lower & {x.lower() for x in (n.entities or [])}), n)
+                         for _, n in matched),
+                        key=lambda x: x[0], reverse=True,
+                    )
+                    for r, (ov, n) in enumerate(reranked[: self.k1]):
+                        if ov <= 0:
+                            break
+                        entity_ranks[n.id] = r
+                        all_pool_map[n.id] = n
+                self.stats["entity_query_raw"] = raw_entities
+                self.stats["entity_query_used"] = kept
+                self.stats["entity_query_dropped"] = [e for e in cand if e not in kept]
 
         # Channel 4: the topic-only (person-masked) view of the same question.
         # This is what reaches the fact-bearing note when the question attributes

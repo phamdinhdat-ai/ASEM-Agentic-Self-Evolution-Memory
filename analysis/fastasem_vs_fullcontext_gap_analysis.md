@@ -207,6 +207,74 @@ the date-prefixed QA context** — those three are what produce the temporal win
 
 ---
 
+## 6b. Fairness: levelling the temporal-information field
+
+The Temporal result above is **confounded as originally configured**. FastASEM is the only
+method that receives a usable clock; the other three are denied it, so part of its
+Temporal lead reflects "I had the timestamp", not "my memory is better".
+
+| Method | Session datetime available? | Exploited? |
+|---|---|---|
+| FastASEM | ✅ per-session `date` field | parse → resolve relative→absolute → stamp notes → temporal boost → date-prefixed context |
+| FullContext | ❌ flat turn strings, **no dates, no session separators** | — (echoes raw "yesterday") |
+| SimRetrieval | ⚠️ label contained the date, but notes/turns were raw | no |
+| ASEMv2 | ❌ flat turns only | no (wall-clock `utcnow`) |
+
+**Is this cheating?** Not exactly — the session timestamps are public dataset metadata and
+real assistants have message timestamps. Moreover the LoCoMo **gold answers are themselves
+absolute-dated** ("7 May 2023"), so the benchmark's scoring assumes a timestamp-aware
+system; withholding the clock from baselines makes them fail for a reason unrelated to
+retrieval quality. **But** it is a genuine *confound* for a scientific claim: a reader
+cannot tell whether FastASEM wins Temporal because of its architecture or because it is
+the only system shown the clock. FullContext is also an *artificially weak* instantiation
+of "full context" — 419 undated, sessionless turns that even a human could not date.
+
+### The fix: `--with-dates` (implemented)
+
+`scripts/run_fair_play.py --with-dates` levels the input field by giving FullContext,
+SimRetrieval and ASEMv2 the **same `[<session date>]` context FastASEM already uses**:
+
+- **FullContext / ASEMv2** — every turn is prefixed with its session date via
+  `_date_leveled_turns(sessions)`, e.g.
+  `[1:56 pm on 8 May, 2023] [Caroline] I went to a LGBTQ support group yesterday…`
+- **SimRetrieval** — the ingest label becomes the session date, so each stored note is
+  prefixed `[<session date>]` (its `NoteConstructor` keeps the prefix verbatim in `c`).
+- **All three** — a date-aware QA prompt (`_FULL_CONTEXT_PROMPT_DATED` /
+  `_RETRIEVAL_PROMPT_DATED` in `eval/systems.py`) instructs the model to resolve relative
+  expressions against the bracketed date and emit the exact absolute date.
+- Outputs are tagged `_dates` (`fairplay_*_conv26_dates.jsonl`,
+  `fairplay_locomo10_conv26_dates.json`) so the published no-date results are untouched.
+
+### Controlled experiment (the ablation that makes the claim defensible)
+
+Run every method **with and without** dates and report the *gain from the clock* per method:
+
+| Method | Temporal EM (no dates) | Temporal EM (with dates) | Δ from clock |
+|---|---|---|---|
+| FastASEM | 43.2 (uses dates by design) | 43.2 | n/a (always on) |
+| FullContext | 2.7 | *to measure* | *to measure* |
+| SimRetrieval | 21.6 | *to measure* | *to measure* |
+| ASEMv2 | 2.7 | *to measure* | *to measure* |
+
+The defensible thesis claim becomes: **given the same session timestamps, FastASEM
+converts the clock into temporal answers far more effectively than handing the same clock
+to a raw transcript or a similarity-only baseline.** That isolates the *memory
+architecture* from the *metadata*, and removes the "unfair advantage" objection.
+
+**Caveats to state honestly:** once FullContext has dates it may close much of the Temporal
+gap (its transcript then contains everything), so the headline shifts from "beats
+FullContext on Temporal" to "**(a) parity at a fraction of the context, and (b) the
+largest metadata→answer conversion gain**". Reproduce with:
+
+```bash
+conda activate memory-r1
+python scripts/run_fair_play.py                 # baseline (no dates) — already have
+python scripts/run_fair_play.py --with-dates    # leveled run
+python scratch_diag/compare_dates_ablation.py   # writes scratch_diag/dates_ablation_report.md
+```
+
+---
+
 ## 7. Upgrade plan to beat FullContext overall (ranked by ROI)
 
 | # | Fix | Where | Failure mode fixed | Expected effect |

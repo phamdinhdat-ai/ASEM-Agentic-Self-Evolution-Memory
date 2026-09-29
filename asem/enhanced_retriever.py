@@ -65,6 +65,8 @@ class EnhancedHybridRetriever(HybridRetriever):
         "contradicts": 1.2,
         "extends": 1.1,
         "causal": 1.1,
+        "superseded_by": 1.3,   # THG versioning: a newer fact replaces an older one
+        "same-entity": 0.9,     # THG entity co-occurrence: corroboration, not a typed relation
         "same-topic": 0.8,
         "temporal": 0.7,
         "semantic": 0.6,

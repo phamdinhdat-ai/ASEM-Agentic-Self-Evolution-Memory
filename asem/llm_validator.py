@@ -284,6 +284,45 @@ def validate_batch_notes(data: Any, expected_count: int = -1,
     return ValidationResult.ok(data)
 
 
+def validate_fact_array(data: Any, min_facts: int = 1) -> ValidationResult:
+    """Validate ASEM-THG's single-pass extraction output (array of fact objects).
+
+    Every entry must be an object carrying a non-empty ``fact`` string. The
+    remaining fields (subject/predicate/object/entities/keywords/tags/speaker)
+    are optional: the ingestor defaults them, and rejecting a response over a
+    missing ``entities`` key would burn retries on a purely cosmetic slip.
+
+    ``min_facts`` exists mainly to reject an empty array — the caller treats
+    that as "no facts found" and falls back to per-turn notes, which loses the
+    triplets the hyper-graph needs.
+    """
+    if not isinstance(data, list):
+        return ValidationResult.fail(
+            [f"expected a JSON array of fact objects, got {type(data).__name__}"], data)
+    if len(data) < max(1, min_facts):
+        return ValidationResult.fail(
+            [f"expected at least {max(1, min_facts)} fact object(s), "
+             f"got {len(data)}"], data)
+
+    errors: List[str] = []
+    for i, item in enumerate(data):
+        if not isinstance(item, dict):
+            errors.append(f"entry {i} is not an object")
+            continue
+        fact = item.get("fact", item.get("content", item.get("description", "")))
+        if not isinstance(fact, str) or not fact.strip():
+            errors.append(f"entry {i} is missing a non-empty 'fact' string")
+        for key in ("entities", "keywords", "tags"):
+            value = item.get(key)
+            if value is not None and not isinstance(value, list):
+                errors.append(f"entry {i} '{key}' must be an array, got "
+                              f"{type(value).__name__}")
+
+    if errors:
+        return ValidationResult.fail(errors, data)
+    return ValidationResult.ok(data)
+
+
 def validate_distil_response(data: Any) -> ValidationResult:
     """Validate the answer-agent output: selected_ids (list) + answer (str)."""
     if not isinstance(data, dict):

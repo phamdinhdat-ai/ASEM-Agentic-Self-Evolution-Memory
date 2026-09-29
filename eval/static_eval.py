@@ -201,6 +201,17 @@ class SystemState:
             str(self.records[i].get("conversation_id") or "unknown") for i in self.order
         ]
 
+    def adversarial_flags(self) -> List[bool]:
+        """Per-item category-5 flag, aligned with ``metric_arrays``.
+
+        Category 5 (adversarial) is scored with the official LoCoMo protocol:
+        a refusal ("not mentioned", "no information available", …) is CORRECT.
+        """
+        return [
+            str(self.records[i].get("category_name", "")).lower() == "adversarial"
+            for i in self.order
+        ]
+
 
 def _aggregate_state(
     state: SystemState,
@@ -211,6 +222,7 @@ def _aggregate_state(
     """Compute overall + per-category + per-conversation metrics from state."""
     preds, refs, cats = state.metric_arrays()
     loose = [float(state.records[i].get("em_loose") or 0.0) for i in state.order]
+    adv = state.adversarial_flags()
 
     need_bert = metric_needs_bertscore(metric_names)
     need_judge = metric_needs_judge(metric_names)
@@ -234,12 +246,14 @@ def _aggregate_state(
         "overall": compute_metrics(
             preds, refs, metric_names,
             em_loose_flags=loose, bertscore_scores=bert, judge_flags=judge,
+            adversarial_flags=adv,
         ),
     }
     if per_category:
         entry["per_category"] = per_category_metrics(
             preds, refs, cats, metric_names,
             em_loose_flags=loose, bertscore_scores=bert, judge_flags=judge,
+            adversarial_flags=adv,
         )
     if per_conversation:
         # Same slicing as per_category, keyed by conversation id instead — this
@@ -247,6 +261,7 @@ def _aggregate_state(
         entry["per_conversation"] = per_group_metrics(
             preds, refs, state.conversation_labels(), metric_names,
             em_loose_flags=loose, bertscore_scores=bert, judge_flags=judge,
+            adversarial_flags=adv,
         )
     return entry
 

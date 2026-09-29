@@ -1,0 +1,260 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "gpt56_luna",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/gpt56_luna.yaml",
+  "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+  "model": "vgpt/gpt-5.6-luna",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "ASEM-THG"
+  ],
+  "created_at": "2026-09-29T13:14:55",
+  "updated_at": "2026-09-30T00:31:57",
+  "elapsed_sec": 26833.4,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1029,
+          "link_edges": 21216,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0000\\asem_thg.sqlite",
+          "bytes": 20705280,
+          "elapsed_sec": 2115.04
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0001",
+      "sessions": 19,
+      "turns": 369,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 925,
+          "link_edges": 18906,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0001\\asem_thg.sqlite",
+          "bytes": 18608128,
+          "elapsed_sec": 1996.56
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0002",
+      "sessions": 32,
+      "turns": 663,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1561,
+          "link_edges": 29506,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks/locomo10\\gpt56_luna\\ASEM-THG\\locomo_0002\\asem_thg.sqlite",
+          "bytes": 31281152,
+          "elapsed_sec": 0.0,
+          "resumed": true,
+          "sessions_ingested_this_run": [
+            "s22",
+            "s23",
+            "s24",
+            "s25",
+            "s26",
+            "s27",
+            "s28",
+            "s29",
+            "s30",
+            "s31",
+            "s32"
+          ]
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0003",
+      "sessions": 29,
+      "turns": 629,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1380,
+          "link_edges": 28210,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0003\\asem_thg.sqlite",
+          "bytes": 27811840,
+          "elapsed_sec": 2921.9
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0004",
+      "sessions": 29,
+      "turns": 680,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1513,
+          "link_edges": 28192,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0004\\asem_thg.sqlite",
+          "bytes": 30240768,
+          "elapsed_sec": 2921.97
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0005",
+      "sessions": 28,
+      "turns": 675,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1493,
+          "link_edges": 31362,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+          "bytes": 30191616,
+          "elapsed_sec": 3143.8
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0006",
+      "sessions": 31,
+      "turns": 689,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1509,
+          "link_edges": 27990,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+          "bytes": 30208000,
+          "elapsed_sec": 3010.36
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0007",
+      "sessions": 30,
+      "turns": 681,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1416,
+          "link_edges": 27430,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+          "bytes": 28430336,
+          "elapsed_sec": 3062.08
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0008",
+      "sessions": 25,
+      "turns": 509,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1117,
+          "link_edges": 21754,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0008\\asem_thg.sqlite",
+          "bytes": 22466560,
+          "elapsed_sec": 2301.21
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0009",
+      "sessions": 30,
+      "turns": 568,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/gpt56_luna.yaml",
+          "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+          "model": "vgpt/gpt-5.6-luna",
+          "thinking": null,
+          "notes": 1403,
+          "link_edges": 27780,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0009\\asem_thg.sqlite",
+          "bytes": 28233728,
+          "elapsed_sec": 2875.32
+        }
+      }
+    }
+  ],
+  "totals": {
+    "conversations": 10,
+    "banks_ok": 10,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "ASEM-THG": 13346
+    }
+  },
+  "run": {
+    "built": 9,
+    "skipped": 0,
+    "errors": 1,
+    "notes": 11785,
+    "discarded_partial": 0,
+    "interrupted": false
+  },
+  "config_history": [
+    {
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "ingest_config": "configs/models/gpt56_luna.yaml",
+      "model": "vgpt/gpt-5.6-luna",
+      "thinking": null,
+      "first_used": "2026-09-29T13:14:55"
+    }
+  ]
+}

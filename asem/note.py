@@ -113,45 +113,119 @@ class LinkRecord:
         return cls(target_id=str(data), relation=LEGACY_LINK_RELATION)
 
 
-def _try_extract_json(raw: str, expect_array: bool = True) -> Any:
-    """Robust JSON extraction from LLM output.
+# A malformed response is repaired by regex; never spend more than this on it.
+_MAX_REPAIR_CHARS = 200_000
 
-    Handles markdown fences, leading/trailing text, and single-quoted JSON.
-    """
-    cleaned = raw.strip()
 
-    # 1. Strip markdown fences
+def _strip_fences(text: str) -> str:
+    """Remove a wrapped markdown fence (```json ... ```)."""
     for open_pat, close_pat in [(r"```json\s*", r"\s*```"), (r"```\s*", r"\s*```")]:
-        cleaned = re.sub(rf"^{open_pat}", "", cleaned)
-        cleaned = re.sub(rf"{close_pat}$", "", cleaned)
+        text = re.sub(rf"^{open_pat}", "", text)
+        text = re.sub(rf"{close_pat}$", "", text)
+    return text
 
-    # 2. Find outermost bracket pair
+
+def _window_brackets(text: str, expect_array: bool) -> str:
+    """Narrow to the outermost bracket pair, keeping leading prose out."""
     open_br = "[" if expect_array else "{"
     close_br = "]" if expect_array else "}"
-    start = cleaned.find(open_br)
-    end = cleaned.rfind(close_br)
+    start = text.find(open_br)
+    end = text.rfind(close_br)
     if start >= 0 and end > start:
-        cleaned = cleaned[start:end + 1]
+        return text[start:end + 1]
+    return text
 
-    # 3. Try direct JSON parse
+
+def _from_open_bracket(text: str, expect_array: bool) -> str:
+    """Drop leading prose without truncating the tail (unlike `_window_brackets`).
+
+    Used for the truncation salvage, where everything after the opening bracket
+    still matters even though the array was never closed.
+    """
+    open_br = "[" if expect_array else "{"
+    start = text.find(open_br)
+    return text[start:] if start >= 0 else text
+
+
+def _parse_candidate(text: str) -> Any:
+    """Parse one candidate string, repairing the usual LLM syntax slips."""
+    if not text or len(text) > _MAX_REPAIR_CHARS:
+        return None
+
     try:
-        return json.loads(cleaned)
+        return json.loads(text)
     except json.JSONDecodeError:
         pass
 
-    # 4. Try ast.literal_eval
-    try:
-        return ast.literal_eval(cleaned)
-    except (ValueError, SyntaxError):
-        pass
-
-    # 5. Try replacing single quotes with double quotes
-    if cleaned.count("'") > cleaned.count('"'):
+    # Trailing commas before a closer are the single most common slip
+    # ("..., }" / "[1, 2, ]") and `json.loads` rejects them.
+    repaired = re.sub(r",\s*([\]}])", r"\1", text)
+    if repaired != text:
         try:
-            return json.loads(cleaned.replace("'", '"'))
+            return json.loads(repaired)
         except json.JSONDecodeError:
             pass
 
+    try:
+        return ast.literal_eval(text)
+    except (ValueError, SyntaxError):
+        pass
+
+    if text.count("'") > text.count('"'):
+        try:
+            return json.loads(text.replace("'", '"'))
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
+def _salvage_truncated_array(text: str) -> Optional[list]:
+    """Recover every COMPLETE object from an array the model never finished.
+
+    A small backend running out of completion budget mid-array used to yield
+    `None`, which made the ingestor throw away all the facts it *did* produce
+    and fall back to one note per dialogue line (no entities, no triplet, no
+    graph edges). Walk backwards to the last closing brace and close the array
+    there instead.
+    """
+    start = text.find("[")
+    if start < 0:
+        return None
+    body = text[start:]
+    if len(body) > _MAX_REPAIR_CHARS:
+        return None
+    for cut in range(len(body) - 1, 0, -1):
+        if body[cut] != "}":
+            continue
+        try:
+            parsed = json.loads(body[:cut + 1] + "]")
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, list) and parsed:
+            return parsed
+    return None
+
+
+def _try_extract_json(raw: str, expect_array: bool = True) -> Any:
+    """Robust JSON extraction from LLM output.
+
+    Handles markdown fences, leading/trailing text, single-quoted JSON, trailing
+    commas, and — for arrays — a completion the backend cut off mid-object.
+    """
+    cleaned = _strip_fences((raw or "").strip())
+    windowed = _window_brackets(cleaned, expect_array)
+
+    # Try the bracket-windowed form first, then the untouched text: on a
+    # truncated array `rfind("]")` can hit an *inner* array (e.g. the closing
+    # bracket of `"entities": [...]`) and chop off the last complete object.
+    for candidate in (windowed, cleaned):
+        parsed = _parse_candidate(candidate)
+        if parsed is not None:
+            return parsed
+
+    if expect_array:
+        return _salvage_truncated_array(_from_open_bracket(cleaned, expect_array=True))
     return None
 
 

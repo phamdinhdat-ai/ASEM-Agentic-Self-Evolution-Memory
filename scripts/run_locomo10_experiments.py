@@ -95,6 +95,10 @@ ALL_SYSTEMS = [
     "AtomicLinking", "RLManagerOnly", "ValueRetrievalOnly", "ASEM",
 ]
 
+# Category-5 gold answer: the official LoCoMo protocol scores a refusal as
+# correct.  Both "not mentioned" and "no information available" are accepted.
+ADVERSARIAL_GOLD = "Not mentioned"
+
 
 # ---------------------------------------------------------------------------
 # Data conversion: locomo10.json → eval format
@@ -218,11 +222,29 @@ def convert_locomo10_to_eval(
             question = str(qa.get("question", "")).strip()
             category = qa.get("category", 1)
 
-            # Determine gold answer
+            # Determine gold answer.
+            #
+            # Category 5 (adversarial) is a *misattribution trap*: the question
+            # credits a real fact to the WRONG speaker (or asserts something the
+            # conversation never states). The official LoCoMo protocol presents
+            # it as a forced choice between the plausible-sounding distractor and
+            # "Not mentioned in the conversation", and scores a refusal as
+            # CORRECT. See snap-research/locomo task_eval/evaluation.py:
+            #     elif line['category'] in [5]:
+            #         all_ems.append(1 if ('no information available' in output.lower()
+            #                                 or 'not mentioned' in output.lower()) else 0)
+            # So the gold is the refusal, not `adversarial_answer` (the trap).
+            # The rare item that ships a real `answer` (a yes/no denial, e.g.
+            # "Did Caroline make the bowl?" -> "No") is kept as-is.
             if category == 5:
-                gold_answer = str(qa.get("adversarial_answer", "")).strip()
+                if qa.get("answer"):
+                    gold_answer = str(qa.get("answer")).strip()
+                else:
+                    gold_answer = ADVERSARIAL_GOLD
+                trap_answer = str(qa.get("adversarial_answer", "")).strip()
             else:
                 gold_answer = str(qa.get("answer", "")).strip()
+                trap_answer = ""
 
             if not question or not gold_answer:
                 skipped += 1
@@ -249,6 +271,10 @@ def convert_locomo10_to_eval(
                 "query": enriched_query,
                 "raw_question": question,  # original question without enrichment
                 "answer": gold_answer,
+                # For category 5 only: the plausible-sounding distractor the
+                # question is built around. Lets the prompt present the real
+                # two-way choice instead of a free-form guess.
+                "trap_answer": trap_answer,
                 "history": history,
                 "category": category,
                 "category_name": CATEGORY_NAMES.get(category, f"cat{category}"),

@@ -27,7 +27,7 @@ so a one-directional edge is invisible whenever the seed is the older endpoint.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -162,6 +162,34 @@ class TemporalHyperGraph:
         peers = [self._fact_nodes[i] for i in self._touched if i in self._fact_nodes]
         self._touched = set()
         return peers
+
+    def hydrate(self, notes: Iterable[Note]) -> int:
+        """Load already-persisted notes into the graph WITHOUT creating links.
+
+        The hyper-graph lives only in memory, but the notes it links live in
+        SQLite. A resumed ingest (one that continues an interrupted conversation
+        instead of rebuilding it from scratch) opens a bank that already holds
+        thousands of notes, and every new note would otherwise be linked only to
+        other new notes — silently producing a disconnected graph.
+
+        Hydrating first restores the ``same-entity`` and ``semantic`` channels
+        across the resume boundary, because both are computed by scanning
+        ``_fact_nodes`` / ``_entity_index``.
+
+        Known limitation: the ``(subject, predicate) -> note_id`` index used for
+        ``superseded_by`` versioning is NOT rebuilt, because the triplet is not
+        persisted on the note. Notes hydrated here can therefore be superseded
+        only by a later hydrated note, never by a newly ingested one. Pass
+        ``subj_pred`` to supply the triplets when the caller has them.
+        """
+        count = 0
+        for note in notes:
+            self._fact_nodes[note.id] = note
+            self._entity_index[note.id] = self._entity_keys(note)
+            if self._graph is not None:
+                self._graph.add_node(note.id, type="fact", date=note.session_date or "")
+            count += 1
+        return count
 
     def get_note(self, note_id: str) -> Optional[Note]:
         return self._fact_nodes.get(note_id)

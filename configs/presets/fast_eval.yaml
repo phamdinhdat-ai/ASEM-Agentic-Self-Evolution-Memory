@@ -7,7 +7,7 @@ inference:
   backend: "langchain"
   langchain:
     provider: "openai"
-    model: "gpt-5.4"
+    model: "deepseek-v4-flash"
     temperature: 0.1
     max_tokens: 4096
     embedder_provider: "huggingface"

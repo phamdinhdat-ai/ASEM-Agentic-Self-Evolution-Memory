@@ -1,0 +1,104 @@
+{
+  "ASEM-THG": {
+    "locomo_0000": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0000\\asem_thg.sqlite",
+      "notes": 1029,
+      "link_edges": 21216,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 20705280,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0001": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0001\\asem_thg.sqlite",
+      "notes": 925,
+      "link_edges": 18906,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 18608128,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0002": {
+      "path": "static/memory_banks/locomo10\\gpt56_luna\\ASEM-THG\\locomo_0002\\asem_thg.sqlite",
+      "notes": 1561,
+      "link_edges": 29506,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 31281152,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0003": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0003\\asem_thg.sqlite",
+      "notes": 1380,
+      "link_edges": 28210,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 27811840,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0004": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0004\\asem_thg.sqlite",
+      "notes": 1513,
+      "link_edges": 28192,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 30240768,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0005": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+      "notes": 1493,
+      "link_edges": 31362,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 30191616,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0006": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+      "notes": 1509,
+      "link_edges": 27990,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 30208000,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0007": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+      "notes": 1416,
+      "link_edges": 27430,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 28430336,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0008": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0008\\asem_thg.sqlite",
+      "notes": 1117,
+      "link_edges": 21754,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 22466560,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    },
+    "locomo_0009": {
+      "path": "static/memory_banks\\locomo10\\gpt56_luna\\ASEM-THG\\locomo_0009\\asem_thg.sqlite",
+      "notes": 1403,
+      "link_edges": 27780,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 28233728,
+      "config_sha256": "26754d251355b149ff3db790b5c037f4ea63fc894d08b7e71ebf2853251ac856",
+      "thinking": null
+    }
+  }
+}

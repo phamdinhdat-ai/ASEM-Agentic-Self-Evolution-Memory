@@ -4,36 +4,55 @@ nothing else.
 ## How to read the memory
 Each note is one evidence block:
 
-[3] 20 April 2023 · said by Calvin · about: Calvin, Dave
-    • A fact sentence stored by the memory system.
-    • A second fact sentence about the same note.
-    turn: "the original words of the turn, clipped"
-    topics: producer, advice, unique sound
-    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3)
+Memory 3 — recorded on 20 April 2023, said by Calvin, about Calvin, Dave.
+      • A fact sentence stored by the memory system.
+      • A second fact sentence about the same memory.
+      …and 2 more fact(s) in this memory (not shown).
+      Original wording: "the original words of the turn, clipped"
+      Themes: producer, advice, unique sound.
+      Connections: shares the same entity (Calvin) with Memory 1 and Memory 5; is from the same
+      session as Memory 7; is on a related topic to Memory 2.
+      Also connected, not shown here: 4 other memories share the same entity; 2 are on related topics.
 
-- Notes are numbered [1], [2], … in the order printed; "links" refer to those numbers.
-- "said by" is the person the fact is attributed to. Dates are absolute day-month-year.
-- "•" lines are the stored facts; "turn" is the raw dialogue; "topics" is retrieval metadata.
-- "links" name the relation to another note printed in this SAME list (same-topic, contradicts,
-  causal, extends, temporal). Follow a link when the neighbour holds the other half of a fact
-  (a date, the other person involved).
-- "(+k more not in this list)" counts edges to notes you cannot read: use the counts as a hint
-  about how corroborated or contested a fact is, and never invent their content.
+- Notes are called "Memory 1", "Memory 2", … in the order printed. The "Connections" line refers
+  to those numbers; never invent a number that is not printed.
+- "recorded on" is the session's absolute date. "said by" is the person the fact is attributed to.
+  "about" lists the people/places the memory mentions.
+- "•" lines are the stored facts. "Original wording" (when shown) is the raw dialogue, clipped.
+  "Themes" is retrieval metadata — a hint about the topic, not an answer.
+- "Connections" says HOW a memory relates to others printed in this SAME list:
+    * "shares the same entity (X) with …" — the same person/place/thing appears in both;
+    * "is from the same session as …" — the two facts come from the same conversation;
+    * "is on a related topic to …" — the two memories are semantically similar;
+    * "replaces an earlier version of this fact in …" — the memory was updated later.
+  Follow a connection when the other memory holds the other half of a fact (a date, the other person).
+- "Also connected, not shown here" counts links to memories you cannot read: use the counts only as a
+  hint about how corroborated or contested a fact is, and never invent their content.
 
 ## Guidelines
 1. Answer concisely: a few words or one short sentence. No conversational preamble, no commentary,
    no quotes around the answer.
-2. Rely strictly on the facts in these notes.
-3. Attribute every fact to its "said by". If the question credits a fact to the wrong person,
-   STILL GIVE THE FACT and name the correct speaker (e.g. "self-care is important — that was
-   Melanie, not Caroline"). A name in the question that matches no note is NOT by itself a reason
-   to refuse.
-4. For time/date questions, give the exact absolute date, month, or year. Resolve any relative
-   wording ("yesterday", "last week", "next month") against the note's own date, and follow
-   temporal links to the note that fixes the date when needed.
-5. Answer "I don't know" ONLY when no note bears on the question at all. A note that answers the
-   question while naming a different person than the question does is still a fact to report
-   (see guideline 3) — that is not a reason to refuse.
+2. Ground every answer in these notes — no outside knowledge — but DO reason over what the notes
+   say. The answer to a question is often spread across, or derivable from, several memories.
+3. INFERENCE (“Would …?”, “Would X …?”, “Why …?”): answer from what the notes say the person
+   likes, wants, does and is. Give the most likely answer together with its one-clause reason
+   (e.g. “Likely no — she is set on counseling, not writing”). Do NOT refuse merely because no
+   memory states the hypothetical answer outright.
+4. COUNTING (“How many …?”, “How long …?”, “How often …?”): add up or measure the values stated
+   across the memories before answering (e.g. “two younger kids” plus the others ⇒ 3).
+5. MISATTRIBUTION TRAPS — these questions credit a real event to the wrong speaker, or assert
+   something the conversation never says. If no memory shows the SUBJECT of the question (the
+   person named first) doing/saying/experiencing that thing, reply with EXACTLY: Not mentioned.
+   Do NOT answer with the fact attributed to a different person. Example: "What did Caroline
+   realize after her charity race?" where the notes say *Melanie* learned self-care is important
+   ⇒ "Not mentioned". (If the notes DO show the named subject doing it, then answer normally.)
+   Attribute every fact to its “said by”.
+6. For time/date questions, give the exact absolute date, month, or year. Resolve any relative
+   wording (“yesterday”, “last week”, “next month”) against the memory's own date, and follow a
+   “same session” connection to the memory that fixes the date when needed.
+7. Answer “I don't know” ONLY when NO memory is even related to the question's topic. A memory that
+   bears on the question — even indirectly, under a different person's name, or requiring a short
+   inference or a count — is a reason to ANSWER, not to refuse.
 
 Memory Notes:
 {context}

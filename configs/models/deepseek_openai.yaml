@@ -97,9 +97,19 @@ ingestion:
   lazy_evolution: true
   link_tau: 0.35
   max_notes_per_session: 20
+  # ASEM-THG only: ask the server to constrain the extraction response.
+  #   "json_schema"  -> guided decoding with the stage's own fact schema
+  #   "json_object"  -> valid JSON, shape still up to the model
+  #   {..raw dict..} -> hand-written OpenAI-compatible response_format
+  # Unset (default) keeps the prompt-only contract, which is what the frozen
+  # banks used — enable it only if an ingest run shows parse failures.
+  # response_format: "json_object"
 
 link_tau: 0.35
 
+# On a parse/schema failure the LLM is re-prompted with an explicit
+# FORMAT CORRECTION block quoting the bad output. Applies to ASEM-THG's
+# single-pass ingest too (it used to ignore this value entirely).
 llm_retry:
   max_retries: 1
 

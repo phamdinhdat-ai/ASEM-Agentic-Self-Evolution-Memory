@@ -66,6 +66,11 @@ class InferenceBackend(ABC):
         self._token_count: int = 0
         self._embed_cache: Dict[str, np.ndarray] = {}
         self._embed_cache_order: List[str] = []
+        # Reason the provider stopped the LAST completion ("stop", "length",
+        # "content_filter", ...). "length" means the answer was cut off by the
+        # completion/context budget, which is the difference between "the model
+        # wrote bad JSON" and "the model never finished writing it".
+        self.last_finish_reason: Optional[str] = None
 
     @property
     def token_count(self) -> int:

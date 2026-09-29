@@ -10,12 +10,12 @@ from dataclasses import dataclass
 from datetime import datetime
 import os
 import re
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
 from asem.answer_agent import AnswerAgent
-from asem.backends import InferenceBackend, build_backend
+from asem.backends import build_backend
 from asem.link_evolver import LinkEvolver
 from asem.logging_utils import get_logger
 from asem.memory_bank import MemoryBank
@@ -45,7 +45,7 @@ class ASEMSystem:
     # Track whether this conversation has been pre-ingested
     _pre_ingested: bool = False
 
-    def ingest(self, content: str, session_date: Optional[str] = None, session_id: Optional[str] = None) -> None:
+    def ingest(self, content: str) -> None:
         """Write a single turn into the memory bank without answering.
 
         Used for session-aware pre-ingestion: all conversation turns for a
@@ -53,45 +53,27 @@ class ASEMSystem:
         """
         self._logger.debug("ASEMSystem.ingest | content={!r}", content[:120])
         try:
-            self.pipeline.write_path(content, timestamp=None, session_date=session_date, session_id=session_id)
+            self.pipeline.write_path(content, datetime.utcnow())
         except Exception as exc:
             self._logger.opt(exception=exc).error(
                 "ASEMSystem.ingest | write_path failed | content={!r}", content[:80])
             raise
 
-    def ingest_session(
-        self,
-        turns: List[str],
-        session_label: str,
-        session_date: Optional[str] = None,
-        session_id: Optional[str] = None,
-    ) -> List[Note]:
+    def ingest_session(self, turns: List[str], session_label: str) -> List[Note]:
         """Ingest all turns from one session as a batch through S1→S2→S3.
 
         Args:
             turns: List of dialogue turn texts (e.g., '[Caroline] Hey! ...')
             session_label: Session identifier with date (e.g.,
                 'session_1 — 1:56 pm on 8 May, 2023')
-            session_date: Optional date string
-            session_id: Optional session id string
 
         Returns:
             List of notes created or updated during ingestion.
         """
-        from asem.temporal import parse_session_datetime
-        dt_obj, date_str = parse_session_datetime(session_date or session_label)
-        actual_date = session_date or date_str
-        actual_id = session_id or session_label
-        self._logger.info("ASEMSystem.ingest_session | session={!r} | date={!r} | turns={} | bank_size={}",
-                         session_label, actual_date, len(turns), self.bank_size)
+        self._logger.info("ASEMSystem.ingest_session | session={!r} | turns={} | bank_size={}",
+                         session_label, len(turns), self.bank_size)
         try:
-            notes = self.pipeline.write_batch(
-                turns,
-                label=session_label,
-                timestamp=dt_obj,
-                session_date=actual_date,
-                session_id=actual_id,
-            )
+            notes = self.pipeline.write_batch(turns, session_label, datetime.utcnow())
         except Exception as exc:
             self._logger.opt(exception=exc).error(
                 "ASEMSystem.ingest_session | write_batch failed | session={!r}", session_label)
@@ -100,8 +82,7 @@ class ASEMSystem:
         return notes
 
     def ingest_conversation(
-        self,
-        session_batches: Any,
+        self, session_batches: List[Tuple[str, List[str]]]
     ) -> List[Note]:
         """Ingest a conversation session-by-session, each session fully batched.
 
@@ -109,39 +90,23 @@ class ASEMSystem:
         Cross-chunk link evolution runs once at the end.
 
         Args:
-            session_batches: List of (session_label, turns), List of session dicts, or List of turn strings.
+            session_batches: List of (session_label, turns) for all sessions.
 
         Returns:
             List of all notes created or updated.
         """
-        if not session_batches:
-            return []
-        first_item = session_batches[0]
-        all_notes: List[Note] = []
+        total_turns = sum(len(t) for _, t in session_batches)
+        self._logger.info("ASEMSystem.ingest_conversation | sessions={} | total_turns={} | bank_size={}",
+                         len(session_batches), total_turns, self.bank_size)
 
-        if isinstance(first_item, dict):
-            self._logger.info("ASEMSystem.ingest_conversation | sessions(dict)={} | bank_size={}",
-                             len(session_batches), self.bank_size)
-            for i, s in enumerate(session_batches):
-                turns = s.get("turns", [])
-                s_date = s.get("date") or s.get("session_date")
-                s_id = s.get("session_id", f"session_{i+1}")
-                label = f"{s_id} — {s_date}" if s_date else s_id
-                notes = self.ingest_session(turns, session_label=label, session_date=s_date, session_id=s_id)
-                all_notes.extend(notes)
-        elif isinstance(first_item, (tuple, list)):
-            self._logger.info("ASEMSystem.ingest_conversation | session_batches(tuple)={} | bank_size={}",
-                             len(session_batches), self.bank_size)
-            for i, (label, turns) in enumerate(session_batches):
-                notes = self.ingest_session(turns, session_label=label)
-                all_notes.extend(notes)
-        elif isinstance(first_item, str):
-            self._logger.info("ASEMSystem.ingest_conversation | turns(str)={} | bank_size={}",
-                             len(session_batches), self.bank_size)
-            notes = self.ingest_session(session_batches, session_label="dialogue")
+        all_notes: List[Note] = []
+        for i, (label, turns) in enumerate(session_batches):
+            self._logger.info("ingest_conversation | session {}/{}: {!r} ({} turns)",
+                            i + 1, len(session_batches), label, len(turns))
+            notes = self.pipeline.write_batch(turns, label, datetime.utcnow())
             all_notes.extend(notes)
-        else:
-            raise TypeError(f"Unsupported session_batches type: {type(first_item)}")
+            self._logger.info("ingest_conversation | session {}/{} done | bank_size={}",
+                            i + 1, len(session_batches), self.bank_size)
 
         self._pre_ingested = True
         return all_notes
@@ -184,7 +149,7 @@ class ASEMSystem:
                     raise
 
         try:
-            used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+            used_notes, answer = self.pipeline.read_path(query)
         except Exception as exc:
             self._logger.opt(exception=exc).error(
                 "ASEMSystem.answer | read_path failed for query={!r}", query[:120])
@@ -220,63 +185,17 @@ class ASEMSystemV2:
     # ---- private --------------------------------------------------------
     _ingested: bool = False
 
-    def ingest_conversation(
-        self,
-        dialogue_turns: Any,
-        session_date: Optional[str] = None,
-        session_id: Optional[str] = None,
-    ) -> int:
-        """Pre-ingest conversation turns or sessions ONCE before any QA queries.
-
-        Accepts:
-            - List[Dict[str, Any]]: [{"session_id": ..., "date": ..., "turns": [...]}, ...]
-            - List[Tuple[str, List[str]]]: [(session_label, turns), ...]
-            - List[str]: dialogue turns (with optional session_date/session_id args)
+    def ingest_conversation(self, dialogue_turns: List[str]) -> int:
+        """Pre-ingest all dialogue turns ONCE before any QA queries.
 
         Returns the number of notes created.
         """
-        if not dialogue_turns:
-            return 0
-        from asem.temporal import parse_session_datetime
-
-        first_item = dialogue_turns[0]
-        total_notes = 0
-
-        if isinstance(first_item, dict):
-            for i, s in enumerate(dialogue_turns):
-                turns = s.get("turns", [])
-                s_date = s.get("date") or s.get("session_date")
-                s_id = s.get("session_id", f"session_{i+1}")
-                notes = self.batch_ingestor.ingest_conversation(
-                    dialogue_turns=turns,
-                    memory_bank=self.pipeline.memory_bank,
-                    session_date=s_date,
-                    session_id=s_id,
-                )
-                total_notes += len(notes)
-        elif isinstance(first_item, (tuple, list)):
-            for label, turns in dialogue_turns:
-                dt_obj, date_str = parse_session_datetime(label)
-                notes = self.batch_ingestor.ingest_conversation(
-                    dialogue_turns=turns,
-                    memory_bank=self.pipeline.memory_bank,
-                    session_date=date_str,
-                    session_id=label,
-                )
-                total_notes += len(notes)
-        elif isinstance(first_item, str):
-            notes = self.batch_ingestor.ingest_conversation(
-                dialogue_turns=dialogue_turns,
-                memory_bank=self.pipeline.memory_bank,
-                session_date=session_date,
-                session_id=session_id,
-            )
-            total_notes += len(notes)
-        else:
-            raise TypeError(f"Unsupported dialogue_turns type: {type(first_item)}")
-
+        from asem.batch_ingestion import BatchIngestor
+        notes = self.batch_ingestor.ingest_conversation(
+            dialogue_turns, self.pipeline.memory_bank,
+        )
         self._ingested = True
-        return total_notes
+        return len(notes)
 
     def answer(self, query: str, history: List[str] = None) -> str:
         """Retrieve + answer from the pre-built knowledge graph.
@@ -288,13 +207,8 @@ class ASEMSystemV2:
         # If not yet ingested and history is provided, auto-ingest
         if not self._ingested and history:
             self.ingest_conversation(history)
-        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        used_notes, answer = self.pipeline.read_path(query)
         return answer
-
-    def reset(self) -> None:
-        """Clear the pipeline's memory bank between conversations."""
-        self._ingested = False
-        self.pipeline.memory_bank.clear()
 
 
 @dataclass
@@ -332,7 +246,7 @@ class FastASEMSystem:
         return total_notes
 
     def answer(self, query: str, history: List[str] = None) -> str:
-        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        used_notes, answer = self.pipeline.read_path(query)
         return answer
 
     def reset(self) -> None:
@@ -394,22 +308,6 @@ _RETRIEVAL_PROMPT_DATED = (
 # Helpers
 # ---------------------------------------------------------------------------
 
-# The dataset wraps every question as "Conversation between X and Y. Question: …".
-# That wrapper is redundant for the ASEM family — the bank is per-conversation,
-# so the speaker names are already in the notes — and it measurably hurts
-# retrieval: it dominates the query embedding and floods the entity/BM25
-# channels with the two character names.
-_QUERY_PREFIX_RE = re.compile(
-    r"^\s*Conversation between\s+[^.]+\.\s*(?:Question:\s*)?", re.IGNORECASE
-)
-
-
-def strip_query_prefix(query: str) -> str:
-    """Drop the dataset's 'Conversation between X and Y. Question:' wrapper."""
-    stripped = _QUERY_PREFIX_RE.sub("", query or "").strip()
-    return stripped or (query or "")
-
-
 def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
@@ -440,6 +338,20 @@ def _ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
 
+# The dataset wraps every query as "Conversation between X and Y. Question: ...".
+# Those two character names dominate the query embedding and flood the
+# entity/BM25 channels, so ASEM-THG strips the wrapper before retrieval.
+_QUERY_PREFIX_RE = re.compile(
+    r"^\s*Conversation between\s+[^.]+\.\s*(?:Question:\s*)?", re.IGNORECASE
+)
+
+
+def strip_query_prefix(query: str) -> str:
+    """Drop the dataset's 'Conversation between X and Y. Question:' wrapper."""
+    stripped = _QUERY_PREFIX_RE.sub("", query or "").strip()
+    return stripped or (query or "")
+
+
 def _make_bank(db_dir: str, name: str) -> MemoryBank:
     """Create a fresh MemoryBank for a single system.
 
@@ -468,65 +380,11 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
 # Builders
 # ---------------------------------------------------------------------------
 
-def _rv(rt_cfg: Any, key: str, default: Any) -> Any:
-    """Read a retriever knob from a YAML dict OR a typed config object.
-
-    `build_asem_system` receives the parsed YAML (`dict`), while
-    `build_fast_asem_system` receives `ASEMConfig.retriever` (a dataclass), so the
-    same parser has to serve both shapes.
-    """
-    if rt_cfg is None:
-        return default
-    if isinstance(rt_cfg, dict):
-        value = rt_cfg.get(key, default)
-    else:
-        value = getattr(rt_cfg, key, default)
-    return default if value is None else value
-
-
-def _retriever_kwargs(rt_cfg: Any) -> Dict[str, Any]:
-    """Map a config `retriever:` block onto `HybridRetriever` fields.
-
-    ONE parser for both builders, so a config knob cannot be honoured by one system
-    and silently dropped by the other (ASEM v1 used to construct the retriever with
-    positional defaults only — `max_hops: 2` in every model config was decorative).
-    Unknown keys are ignored so a config can carry experiment notes.
-    """
-    mode = str(_rv(rt_cfg, "mode", "rrf")).lower()
-    kwargs: Dict[str, Any] = {
-        "use_rrf": mode != "classic",
-        "use_bm25": bool(_rv(rt_cfg, "use_bm25", True)),
-        "use_entity_filter": bool(_rv(rt_cfg, "use_entity_filter", True)),
-        "use_temporal_boost": bool(_rv(rt_cfg, "use_temporal_boost", True)),
-        "max_link_hops": int(_rv(rt_cfg, "max_hops", 1) or 1),
-        "hop_decay": float(_rv(rt_cfg, "hop_decay", 0.7)),
-        "use_masked_query": bool(_rv(rt_cfg, "use_masked_query", True)),
-        "use_dedupe": bool(_rv(rt_cfg, "use_dedupe", True)),
-    }
-    for key in ("dense_weight", "bm25_weight", "entity_weight", "temporal_weight",
-                "rrf_k", "masked_weight", "dedupe_tau"):
-        value = _rv(rt_cfg, key, None)
-        if value is not None:
-            kwargs[key] = type(getattr(HybridRetriever, key))(value)
-    return kwargs
-
-
-def build_asem_system(
-    config_path: str,
-    db_dir: str,
-    backend: Optional[InferenceBackend] = None,
-) -> ASEMSystem:
-    """Build the full ASEM pipeline wrapped as an eval system.
-
-    Args:
-        backend: Optional pre-built inference backend. When ``None`` (default)
-            a backend is constructed from the config. Supplying a shared
-            backend lets phased runners load the model once and reuse it
-            across many systems/conversations.
-    """
+def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
+    """Build the full ASEM pipeline wrapped as an eval system."""
     cfg = _load_config(config_path)
 
-    backend = backend if backend is not None else build_backend(cfg["inference"])
+    backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
@@ -537,8 +395,6 @@ def build_asem_system(
     summary_prompt = _load_text("data/prompts/P_summary.txt")
     batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
     batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
-    qa_prompt_path = os.path.join("data", "prompts", "P_temporal_qa.txt")
-    qa_prompt = _load_text(qa_prompt_path) if os.path.exists(qa_prompt_path) else _RETRIEVAL_PROMPT
 
     retry_cfg = cfg.get("llm_retry", {}) or {}
     max_retries = int(retry_cfg.get("max_retries", 0))
@@ -565,29 +421,12 @@ def build_asem_system(
         backend=backend,
         k1=hp["k1"], k2=hp["k2"],
         delta=hp["delta"], lambda_weight=hp["lambda"],
-        **_retriever_kwargs(cfg.get("retriever", {}) or {}),
     )
-    ans_cfg = cfg.get("answer", {}) or {}
-    # ASEM v1 follows the config like every other system: `answer.direct_mode`
-    # selects the single-call graph-QA path (`P_temporal_qa`, `direct_answer`) and
-    # falls back to the distil path (`P_distil`, JSON `selected_ids`) otherwise.
-    # The builder used to ignore the key, so a config asking for direct mode still
-    # ran distillation — i.e. the two systems were not on the same answering
-    # protocol while the results table implied they were.
-    direct_mode = bool(ans_cfg.get("direct_mode", False))
-    qa_prompt = _load_text("data/prompts/P_temporal_qa.txt") if os.path.exists(
-        os.path.join("data", "prompts", "P_temporal_qa.txt")) else _RETRIEVAL_PROMPT
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
-        baseline_prompt_template=qa_prompt if direct_mode else _RETRIEVAL_PROMPT,
-        direct_mode=direct_mode,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
-        max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
-        context_window=int(ans_cfg.get("context_window") or 0) or None,
-        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
-        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
-        fact_char_limit=int(ans_cfg.get("fact_char_limit", 420)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -613,24 +452,16 @@ def build_asem_system(
         answer_agent=answer_agent,
         utility_updater=utility_updater,
         write_gate=write_gate,
-        recovery_enabled=bool(ans_cfg.get("recovery_enabled", True)),
-        recovery_k2=int(ans_cfg.get("recovery_k2", 12)),
-        recovery_delta=float(ans_cfg.get("recovery_delta", 0.15)),
     )
 
     return ASEMSystem(pipeline=pipeline)
 
 
-def build_asem_v2_system(
-    config_path: str,
-    db_dir: str,
-    backend: Optional[InferenceBackend] = None,
-) -> ASEMSystemV2:
+def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
     """Build the two-phase ASEM v2 pipeline with batch ingestion + enhanced retrieval."""
     cfg = _load_config(config_path)
-    backend = backend if backend is not None else build_backend(cfg["inference"])
+    backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
-    ans_cfg = cfg.get("answer", {}) or {}
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
     link_prompt = _load_text("data/prompts/P2_link_generation.txt")
@@ -681,10 +512,6 @@ def build_asem_v2_system(
         prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
-        max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
-        context_window=int(ans_cfg.get("context_window") or 0) or None,
-        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
-        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -725,21 +552,14 @@ def build_asem_v2_system(
     return ASEMSystemV2(pipeline=pipeline, batch_ingestor=batch_ingestor)
 
 
-
-
 @dataclass
 class ASEMTHGSystem:
-    """Temporal Hyper-Graph System (ASEM-THG): 1-pass session ingest + THG + Enhanced Retriever."""
+    """Temporal Hyper-Graph System (ASEM-THG): 1-pass session ingest + THG + enhanced retrieval."""
 
     pipeline: ASEMPipeline
     single_pass_ingestor: object
 
     _ingested: bool = False
-
-    @property
-    def hyper_graph(self):
-        """The deterministic TemporalHyperGraph owned by the ingestor."""
-        return getattr(self.single_pass_ingestor, "hyper_graph", None)
 
     def ingest_conversation(
         self,
@@ -758,7 +578,7 @@ class ASEMTHGSystem:
             for i, s in enumerate(dialogue_turns):
                 turns = s.get("turns", [])
                 s_date = s.get("date") or s.get("session_date")
-                s_id = s.get("session_id", f"session_{i+1}")
+                s_id = s.get("session_id", f"session_{i + 1}")
                 notes = self.single_pass_ingestor.ingest_session(
                     dialogue_turns=turns,
                     memory_bank=self.pipeline.memory_bank,
@@ -768,7 +588,7 @@ class ASEMTHGSystem:
                 total_notes += len(notes)
         elif isinstance(first_item, (tuple, list)):
             for label, turns in dialogue_turns:
-                dt_obj, date_str = parse_session_datetime(label)
+                _dt_obj, date_str = parse_session_datetime(label)
                 notes = self.single_pass_ingestor.ingest_session(
                     dialogue_turns=turns,
                     memory_bank=self.pipeline.memory_bank,
@@ -793,27 +613,27 @@ class ASEMTHGSystem:
     def answer(self, query: str, history: List[str] = None) -> str:
         if not self._ingested and history:
             self.ingest_conversation(history)
-        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        _used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
         return answer
 
     def reset(self) -> None:
         self._ingested = False
         self.pipeline.memory_bank.clear()
-        graph = self.hyper_graph
-        if graph is not None:
-            graph.clear()
 
 
 def build_asem_thg_system(
     config_path: str,
     db_dir: str,
-    backend: Optional[InferenceBackend] = None,
+    backend: Any = None,
 ) -> ASEMTHGSystem:
-    """Build ASEM-THG system with SinglePassSessionIngestor & EnhancedHybridRetriever."""
+    """Build ASEM-THG: SinglePassSessionIngestor + TemporalHyperGraph + enhanced retrieval."""
     cfg = _load_config(config_path)
     backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
     ans_cfg = cfg.get("answer", {}) or {}
+    wg_cfg = cfg.get("write_gate", {}) or {}
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
     link_prompt = _load_text("data/prompts/P2_link_generation.txt")
@@ -821,22 +641,22 @@ def build_asem_thg_system(
     mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
     distil_prompt = _load_text("data/prompts/P_distil.txt")
     summary_prompt = _load_text("data/prompts/P_summary.txt")
+    qa_prompt_path = os.path.join("data", "prompts", "P_temporal_qa.txt")
+    qa_prompt = _load_text(qa_prompt_path) if os.path.exists(qa_prompt_path) else _RETRIEVAL_PROMPT
 
-    retry_cfg = cfg.get("llm_retry", {}) or {}
-    max_retries = int(retry_cfg.get("max_retries", 0))
-
-    from asem.single_pass_ingest import SinglePassSessionIngestor
     from asem.enhanced_retriever import EnhancedHybridRetriever
-    from asem.hyper_graph import TemporalHyperGraph
+    from asem.single_pass_ingest import SinglePassSessionIngestor
 
     note_constructor = NoteConstructor(
-        backend=backend, prompt_template=note_prompt, q0=hp["q0"], max_retries=max_retries,
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries,
     )
     memory_manager = MemoryManager(
         backend=backend, prompt_template=mem_manager_prompt, max_retries=max_retries,
     )
     link_evolver = LinkEvolver(
-        backend=backend, link_prompt_template=link_prompt, evolve_prompt_template=evolve_prompt, k=hp["k"],
+        backend=backend, link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt, k=hp["k"], max_retries=max_retries,
     )
     retriever = EnhancedHybridRetriever(
         backend=backend,
@@ -847,14 +667,11 @@ def build_asem_thg_system(
         enable_global_semantics=True,
         enable_intent_q=True,
     )
-    # THG emits two relation labels the retriever's default weight map does not
-    # know; without an entry a traversed edge falls back to the "unknown" tier.
-    retriever.relation_weights.setdefault("same-entity", 0.85)
-    retriever.relation_weights.setdefault("superseded_by", 0.50)
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
-        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        baseline_prompt_template=qa_prompt,
+        direct_mode=bool(ans_cfg.get("direct_mode", True)),
         max_retries=max_retries,
         max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
         context_window=int(ans_cfg.get("context_window") or 0) or None,
@@ -862,18 +679,12 @@ def build_asem_thg_system(
         content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
     )
     utility_updater = UtilityUpdater(
-        backend=backend, alpha=hp["alpha"], q0=hp["q0"], summary_prompt_template=summary_prompt, note_constructor=note_constructor,
-    )
-    hg_cfg = cfg.get("hyper_graph", {}) or {}
-    hyper_graph = TemporalHyperGraph(
-        semantic_tau=float(hg_cfg.get("semantic_tau", 0.70)),
-        max_entity_links=int(hg_cfg.get("max_entity_links", 5)),
-        max_semantic_links=int(hg_cfg.get("max_semantic_links", 5)),
+        backend=backend, alpha=hp["alpha"], q0=hp["q0"],
+        summary_prompt_template=summary_prompt, note_constructor=note_constructor,
     )
     single_pass_ingestor = SinglePassSessionIngestor(
-        backend=backend, hyper_graph=hyper_graph, q0=hp["q0"], max_retries=max_retries,
+        backend=backend, q0=hp["q0"], max_retries=max_retries,
     )
-    wg_cfg = cfg.get("write_gate", {}) or {}
     write_gate = WriteGate(
         enabled=bool(wg_cfg.get("enabled", True)),
         tau_high=float(wg_cfg.get("tau_high", 0.45)),
@@ -902,30 +713,22 @@ def build_baselines(
     db_dir: str,
     max_history_turns: int = 150,
     with_dates: bool = False,
-    backend: Optional[InferenceBackend] = None,
-    only: Optional[Iterable[str]] = None,
+    backend: Any = None,
 ) -> Dict[str, object]:
     """Build all six baseline systems, each with its own isolated MemoryBank.
 
     Args:
-        max_history_turns: Turn-count pre-filter for the FullContext baseline
-            (0 = off). It is only a cheap cap: how much context actually
-            reaches the model is decided by the answer token budget below.
+        max_history_turns: Truncation limit for FullContext baseline.
+            0 = no truncation. Default 150 for LoCoMo.
         with_dates: When True, use the date-leveled QA prompts (expects the
             context/history to carry ``[<session date>]`` prefixes) so the
             baselines can resolve relative time like FastASEM.
         backend: Optional pre-built inference backend (shared model instance).
-        only: Optional subset of baseline names to return. When provided the
-            non-requested systems are dropped from the returned dict.
-
-    Every baseline is given the config's ``answer.max_tokens`` /
-    ``answer.context_window``, so all systems trim their context against the same
-    budget the ASEM answer agent uses.
     """
     cfg = _load_config(config_path)
-    ans_cfg = cfg.get("answer", {}) or {}
     backend = backend if backend is not None else build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
+    ans_cfg = cfg.get("answer", {}) or {}
     answer_max_tokens, context_window = answer_budget_from_config(config_path)
 
     retrieval_prompt = _RETRIEVAL_PROMPT_DATED if with_dates else _RETRIEVAL_PROMPT
@@ -986,7 +789,7 @@ def build_baselines(
         note_constructor=note_constructor,
     )
 
-    systems: Dict[str, object] = {
+    return {
         "NoMemory": NoMemory(
             backend=backend,
             prompt_template=_NO_MEMORY_PROMPT,
@@ -1039,28 +842,17 @@ def build_baselines(
         ),
     }
 
-    if only is not None:
-        wanted = set(only)
-        systems = {name: sys for name, sys in systems.items() if name in wanted}
-
-    return systems
-
 
 def build_fast_asem_system(
     config_path_or_preset: str = "configs/presets/sota_benchmark.yaml",
     db_dir: str = "data/benchmarks/eval_banks",
-    backend: Optional[InferenceBackend] = None,
 ) -> FastASEMSystem:
-    """Build the Fast-ASEM (ASEM-v3) pipeline.
-
-    Args:
-        backend: Optional pre-built inference backend (shared model instance).
-    """
+    """Build the Fast-ASEM (ASEM-v3) pipeline."""
     from asem.config import ASEMConfig
     from asem.fast_ingest import FastSessionIngestor
 
     asem_cfg = ASEMConfig.load(config_path_or_preset)
-    backend = backend if backend is not None else build_backend(asem_cfg.inference)
+    backend = build_backend(asem_cfg.inference)
     hp = asem_cfg.hyperparameters
     rt_cfg = asem_cfg.retriever
     ans_cfg = asem_cfg.answer
@@ -1100,18 +892,24 @@ def build_fast_asem_system(
         backend=backend,
         k1=hp.k1, k2=hp.k2,
         delta=hp.delta, lambda_weight=hp.lambda_weight,
-        **_retriever_kwargs(rt_cfg),
+        use_rrf=True,
+        use_bm25=rt_cfg.use_bm25,
+        use_entity_filter=rt_cfg.use_entity_filter,
+        use_temporal_boost=rt_cfg.use_temporal_boost,
+        dense_weight=rt_cfg.dense_weight,
+        bm25_weight=rt_cfg.bm25_weight,
+        entity_weight=rt_cfg.entity_weight,
+        temporal_weight=rt_cfg.temporal_weight,
+        rrf_k=rt_cfg.rrf_k,
+        max_link_hops=rt_cfg.max_hops,
+        enable_link_traversal=True,
     )
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
-        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        baseline_prompt_template=qa_prompt,
         direct_mode=ans_cfg.direct_mode,
         max_retries=max_retries,
-        max_tokens=int(ans_cfg.max_tokens or 0) or None,
-        context_window=int(ans_cfg.context_window or 0) or None,
-        max_context_notes=int(ans_cfg.max_context_notes or 0) or None,
-        content_char_limit=int(ans_cfg.content_char_limit),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -1163,7 +961,7 @@ def get_systems(
 
 
 # ---------------------------------------------------------------------------
-# Phase-benchmark helpers
+# System registry (phase-separated ingest / retrieve benchmark)
 # ---------------------------------------------------------------------------
 
 #: Systems backed by a persistent MemoryBank, mapped to the SQLite filename
@@ -1192,28 +990,28 @@ ALL_SYSTEMS: List[str] = [
 
 def build_system(
     name: str,
-    config_path: str,
-    db_dir: str,
-    backend: Optional[InferenceBackend] = None,
+    config_path: str = "configs/default.yaml",
+    db_dir: str = "data/benchmarks/eval_banks",
+    backend: Any = None,
 ) -> object:
-    """Build a single eval system by name, sharing ``backend`` when supplied.
+    """Build a single eval system by name.
 
-    ``db_dir`` may point at an existing bank directory: the builders open the
-    SQLite file in place (they never delete the main database), so the same
-    call works for both the ingest and the retrieval phase.
+    ``backend`` is accepted for API compatibility with ``phase_runner``; it is
+    only forwarded to the ASEM-THG builder (the other builders construct their
+    own backend internally). ``db_dir`` may point at an existing bank directory:
+    builders open the SQLite file in place, so the same call works for both the
+    ingest and the retrieval phase.
     """
     if name in ("ASEM-THG", "ASEM_THG"):
         return build_asem_thg_system(config_path, db_dir, backend=backend)
     if name == "ASEM":
-        return build_asem_system(config_path, db_dir, backend=backend)
+        return build_asem_system(config_path, db_dir)
     if name == "ASEMv2":
-        return build_asem_v2_system(config_path, db_dir, backend=backend)
+        return build_asem_v2_system(config_path, db_dir)
     if name == "FastASEM":
-        return build_fast_asem_system(config_path, db_dir, backend=backend)
+        return build_fast_asem_system(config_path, db_dir)
 
-    baselines = build_baselines(config_path, db_dir, backend=backend, only=[name])
+    baselines = build_baselines(config_path, db_dir, backend=backend)
     if name in baselines:
         return baselines[name]
-    raise ValueError(
-        f"Unknown system: {name!r}. Known: {ALL_SYSTEMS}"
-    )
+    raise ValueError(f"Unknown system: {name!r}. Known: {ALL_SYSTEMS}")

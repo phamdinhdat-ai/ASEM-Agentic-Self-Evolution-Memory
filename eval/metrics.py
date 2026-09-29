@@ -157,6 +157,114 @@ def em_loose(pred: Any, ref: Any) -> float:
     return 0.0
 
 
+# ------------------------------------------------------------------
+# Category-5 (adversarial) scoring
+# ------------------------------------------------------------------
+# LoCoMo category 5 is an attribution trap: the question asks about a fact the
+# SUBJECT never stated (it usually belongs to the other speaker). The official
+# evaluator scores a REFUSAL as correct:
+#
+#   snap-research/locomo  task_eval/evaluation.py
+#     if "no information available" in output.lower() \
+#        or "not mentioned" in output.lower(): all_ems.append(1)
+#     else: all_ems.append(0)
+#
+# We mirror that protocol, plus the paraphrases a helpful model actually
+# produces, so the metric rewards the right behaviour rather than one string.
+# A handful of cat-5 items are denial traps that ship a real gold ("No"); those
+# fall through to ordinary exact match, which is why `is_refusal` must NOT
+# treat a bare "No" as a refusal.
+
+#: Refusal markers, checked case-insensitively against the normalised answer.
+_REFUSAL_MARKERS = (
+    "not mentioned",
+    "no mention",
+    "no information",
+    "no record",
+    "no memory",
+    "no evidence",
+    "no data",
+    "no details",
+    "no such",
+    "never mentioned",
+    "not stated",
+    "not specified",
+    "not indicated",
+    "not described",
+    "not noted",
+    "not documented",
+    "not recorded",
+    "not discussed",
+    "not provided",
+    "not available",
+    "not present",
+    "not in the conversation",
+    "not in the notes",
+    "not in the memories",
+    "nothing in the",
+    "cannot be determined",
+    "cannot determine",
+    "unable to determine",
+    "cannot be answered",
+    "does not mention",
+    "doesnt mention",
+    "do not mention",
+    "dont mention",
+    "i dont know",
+    "i do not know",
+    "im not sure",
+    "i am not sure",
+    "unclear from",
+)
+
+
+def is_refusal(pred: Any) -> bool:
+    """True when ``pred`` declines to answer ("not mentioned", "no information").
+
+    Used for category-5 (adversarial) scoring, where a refusal is CORRECT.
+    Matching is substring-based on the normalised text, so a full-sentence
+    refusal ("There is no information about that in the conversation.") counts.
+    """
+    if pred is None:
+        return False
+    text = normalize_text(pred)
+    if not text:
+        return False
+    return any(marker in text for marker in _REFUSAL_MARKERS)
+
+
+def adversarial_em(pred: Any, ref: Any) -> float:
+    """Category-5 EM: a refusal is CORRECT (official LoCoMo protocol).
+
+    A refusal scores 1.0. Anything else falls back to ordinary exact match,
+    which covers the rare denial-trap item that ships a real gold answer.
+    """
+    if is_refusal(pred):
+        return 1.0
+    return exact_match(pred, ref)
+
+
+def adversarial_em_loose(pred: Any, ref: Any) -> float:
+    """Category-5 loose EM: refusal or substring match."""
+    if is_refusal(pred):
+        return 1.0
+    return em_loose(pred, ref)
+
+
+def adversarial_token_f1(pred: Any, ref: Any) -> float:
+    """Category-5 token F1: refusal scores 1.0, else normal F1."""
+    if is_refusal(pred):
+        return 1.0
+    return token_f1(pred, ref)
+
+
+def adversarial_rouge_l(pred: Any, ref: Any) -> float:
+    """Category-5 ROUGE-L: refusal scores 1.0, else normal ROUGE-L."""
+    if is_refusal(pred):
+        return 1.0
+    return rouge_l(pred, ref)
+
+
 def token_f1(pred: Any, ref: Any) -> float:
     """SQuAD-style token-level F1 over the multiset token overlap.
 
@@ -264,6 +372,7 @@ def compute_metrics(
     em_loose_flags: Optional[Sequence[float]] = None,
     bertscore_scores: Optional[Sequence[float]] = None,
     judge_flags: Optional[Sequence[Optional[bool]]] = None,
+    adversarial_flags: Optional[Sequence[bool]] = None,
 ) -> Dict[str, float]:
     """Aggregate corpus metrics for one system.
 
@@ -278,6 +387,10 @@ def compute_metrics(
             here in one batch.
         judge_flags: Per-item judge verdicts; ``None`` marks a judge failure and
             is excluded from the accuracy denominator.
+        adversarial_flags: Per-item category-5 flag (aligned with ``preds``).
+            When ``True`` for an item, EM/EM-loose/F1/ROUGE-L credit a refusal
+            ("not mentioned", "no information available", …) as correct per the
+            official LoCoMo protocol.
 
     Returns:
         ``{canonical_metric: score}`` plus ``n`` and, when the judge ran,
@@ -289,28 +402,48 @@ def compute_metrics(
     if len(preds) != len(refs):
         raise ValueError(f"preds/refs length mismatch: {len(preds)} != {len(refs)}")
 
+    adv = list(adversarial_flags) if adversarial_flags is not None else None
+    if adv is not None and len(adv) != len(preds):
+        raise ValueError(f"adversarial_flags length mismatch: {len(adv)} != {len(preds)}")
+
     results: Dict[str, float] = {"n": float(len(preds))}
     if not preds:
         for name in wanted:
             results[name] = 0.0
         return results
 
+    def _score(pred: Any, ref: Any, i: int, base_fn, adv_fn) -> float:
+        if adv is not None and adv[i]:
+            return adv_fn(pred, ref)
+        return base_fn(pred, ref)
+
     if "em" in wanted:
-        results["em"] = _mean([exact_match(p, r) for p, r in zip(preds, refs)])
+        results["em"] = _mean([
+            _score(p, r, i, exact_match, adversarial_em)
+            for i, (p, r) in enumerate(zip(preds, refs))
+        ])
 
     if "em_loose" in wanted:
-        scores = (
-            list(em_loose_flags)
-            if em_loose_flags is not None
-            else [em_loose(p, r) for p, r in zip(preds, refs)]
-        )
+        if em_loose_flags is not None:
+            scores = list(em_loose_flags)
+        else:
+            scores = [
+                _score(p, r, i, em_loose, adversarial_em_loose)
+                for i, (p, r) in enumerate(zip(preds, refs))
+            ]
         results["em_loose"] = _mean(scores)
 
     if "f1" in wanted:
-        results["f1"] = _mean([token_f1(p, r) for p, r in zip(preds, refs)])
+        results["f1"] = _mean([
+            _score(p, r, i, token_f1, adversarial_token_f1)
+            for i, (p, r) in enumerate(zip(preds, refs))
+        ])
 
     if "rougeL" in wanted:
-        results["rougeL"] = _mean([rouge_l(p, r) for p, r in zip(preds, refs)])
+        results["rougeL"] = _mean([
+            _score(p, r, i, rouge_l, adversarial_rouge_l)
+            for i, (p, r) in enumerate(zip(preds, refs))
+        ])
 
     if "bertscore_f1" in wanted:
         if bertscore_scores is not None and len(bertscore_scores) == len(preds):
@@ -342,6 +475,7 @@ def per_group_metrics(
     em_loose_flags: Optional[Sequence[float]] = None,
     bertscore_scores: Optional[Sequence[float]] = None,
     judge_flags: Optional[Sequence[Optional[bool]]] = None,
+    adversarial_flags: Optional[Sequence[bool]] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Group by an arbitrary label and compute :func:`compute_metrics` per group.
 
@@ -356,7 +490,10 @@ def per_group_metrics(
     """
     buckets: Dict[str, Dict[str, List[Any]]] = {}
     for i, key in enumerate(keys):
-        bucket = buckets.setdefault(str(key) or "unknown", {"preds": [], "refs": [], "loose": [], "bert": [], "judge": []})
+        bucket = buckets.setdefault(
+            str(key) or "unknown",
+            {"preds": [], "refs": [], "loose": [], "bert": [], "judge": [], "adv": []},
+        )
         bucket["preds"].append(preds[i])
         bucket["refs"].append(refs[i])
         if em_loose_flags is not None:
@@ -365,6 +502,8 @@ def per_group_metrics(
             bucket["bert"].append(bertscore_scores[i])
         if judge_flags is not None:
             bucket["judge"].append(judge_flags[i])
+        if adversarial_flags is not None:
+            bucket["adv"].append(bool(adversarial_flags[i]))
 
     out: Dict[str, Dict[str, float]] = {}
     for key, bucket in sorted(buckets.items()):
@@ -375,6 +514,7 @@ def per_group_metrics(
             em_loose_flags=bucket["loose"] or None,
             bertscore_scores=bucket["bert"] or None,
             judge_flags=bucket["judge"] or None,
+            adversarial_flags=bucket["adv"] or None,
         )
     return out
 
@@ -387,6 +527,7 @@ def per_category_metrics(
     em_loose_flags: Optional[Sequence[float]] = None,
     bertscore_scores: Optional[Sequence[float]] = None,
     judge_flags: Optional[Sequence[Optional[bool]]] = None,
+    adversarial_flags: Optional[Sequence[bool]] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Group by category label and compute :func:`compute_metrics` per group."""
     return per_group_metrics(
@@ -397,6 +538,7 @@ def per_category_metrics(
         em_loose_flags=em_loose_flags,
         bertscore_scores=bertscore_scores,
         judge_flags=judge_flags,
+        adversarial_flags=adversarial_flags,
     )
 
 

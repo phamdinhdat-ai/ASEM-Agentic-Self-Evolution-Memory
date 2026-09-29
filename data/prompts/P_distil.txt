@@ -4,44 +4,60 @@ long-term memory graph. Select the notes you used and answer the question.
 ## How to read the memory
 Each note is one evidence block:
 
-[3] 20 April 2023 · said by Calvin · about: Calvin, Sweden
-    • A fact sentence, written by the memory system from what was said.
-    • A second fact sentence about the same note.
-    • [+2 more fact(s) in this note, not shown]
-    turn: "the original words of the turn, clipped"
-    topics: producer, advice, unique sound, music direction
-    links: [5] same-topic, [7] extends  (+4 more not in this list: same-topic:3, semantic:1)
+Memory 3 — recorded on 20 April 2023, said by Calvin, about Calvin, Sweden.
+      • A fact sentence, written by the memory system from what was said.
+      • A second fact sentence about the same memory.
+      …and 2 more fact(s) in this memory (not shown).
+      Original wording: "the original words of the turn, clipped"
+      Themes: producer, advice, unique sound, music direction.
+      Connections: shares the same entity (Calvin) with Memory 1 and Memory 5; is from the same
+      session as Memory 7; is on a related topic to Memory 2.
+      Also connected, not shown here: 4 other memories share the same entity; 2 are on related topics.
 
-- The number in brackets ([3]) is the note's identifier in this task. Refer to notes ONLY by that
-  number; never invent a number that is not printed.
-- "said by" is the person the note is attributed to. Dates are absolute day-month-year.
-- "•" lines are the stored facts. "turn" is the raw dialogue (clipped). "topics" is retrieval
-  metadata — useful as a hint about what the note is about, not as an answer.
-- "links" point to notes printed in this SAME list, by number, with the type of relation. Follow a
-  link when the neighbour holds the other half of a fact (a date, the other person involved).
-- "(+k more not in this list)" counts edges to notes you cannot read: use the counts only as a hint
-  about how corroborated or contested a fact is, and never invent their content.
+- Notes are called "Memory 1", "Memory 2", … in the order printed. Refer to notes ONLY by that
+  number (as an integer in `selected_ids`); never invent a number that is not printed.
+- "recorded on" is the session's absolute date. "said by" is the person the fact is attributed to.
+  "about" lists the people/places the memory mentions.
+- "•" lines are the stored facts. "Original wording" (when shown) is the raw dialogue, clipped.
+  "Themes" is retrieval metadata — useful as a hint about what the note is about, not as an answer.
+- "Connections" says HOW a memory relates to others printed in this SAME list:
+    * "shares the same entity (X) with …" — the same person/place/thing appears in both;
+    * "is from the same session as …" — the two facts come from the same conversation;
+    * "is on a related topic to …" — the two memories are semantically similar;
+    * "replaces an earlier version of this fact in …" — the memory was updated later.
+  Follow a connection when the other memory holds the other half of a fact (a date, the other person).
+- "Also connected, not shown here" counts links to memories you cannot read: use the counts only as a
+  hint about how corroborated or contested a fact is, and never invent their content.
 - One note may hold several facts and may mention more than one person. Keep only the facts that
   bear on the question.
 
 ## Task
 Output a single JSON object with two fields:
-- **selected_ids**: the bracketed numbers of the notes whose facts you actually used, e.g. [1, 4].
+- **selected_ids**: the numbers of the "Memory N" blocks whose facts you actually used, e.g. [1, 4].
   Use an empty list when no note bears on the question.
 - **answer**: the answer itself — a few words to one short sentence.
 
 ## Decision procedure (think through these BEFORE outputting the JSON)
 Step 1: Read the question. What fact does it ask for, and about which person?
-Step 2: Skim the header line of every note ("date · said by · about"). Most notes are ruled in or
-        out at this point, without reading their body.
-Step 3: Read the fact bullets of the surviving notes. Follow `links` when a date, a name, or the
-        other half of the fact sits in a neighbouring note.
+Step 2: Skim the header line of every Memory block ("recorded on DATE, said by …, about …"). Most
+        notes are ruled in or out at this point, without reading their body.
+Step 3: Read the fact bullets of the surviving notes. Follow a "Connection" when a date, a name, or
+        the other half of the fact sits in a connected memory.
 Step 4: Write the answer from those facts only, resolving relative time ("last week", "yesterday")
         into an absolute date using the note's own date.
-Step 5: Attribute each fact to the note's "said by". If the question credits a fact to the wrong
-        person (a name that appears nowhere, or a different speaker), STILL GIVE THE FACT and name
-        the correct person — a name mismatch is never a reason to refuse.
-Step 6: Say "I don't know" only when NO note bears on the question at all.
+Step 4b: For a hypothetical ("Would …?", "Would X …?") or "Why …?" question, infer the most likely
+        answer from what the notes say the person likes, wants, does and is, and give its one-clause
+        reason. For a counting question ("How many/How long …?"), add up or measure the values
+        stated across the notes. Never refuse merely because no single note states the answer.
+Step 5: MISATTRIBUTION TRAPS. Many questions credit a real event to the wrong speaker, or assert
+        something the conversation never says. If no memory shows the SUBJECT of the question (the
+        person named first) doing/saying/experiencing that thing, set answer to EXACTLY
+        "Not mentioned" and select only the notes that prove the subject is different. Do NOT
+        answer with a fact that belongs to a different person. (If the notes DO show the named
+        subject doing it, answer normally.) Attribute every fact to its "said by".
+Step 6: Say "I don't know" only when NO memory is even related to the question's topic. A memory
+        that bears on the question — even indirectly, under a different person's name, or requiring
+        a short inference or a count — is a reason to ANSWER, not to refuse.
 
 ## Output Format
 Your response must be ONLY the following JSON object (no markdown fences, no commentary):

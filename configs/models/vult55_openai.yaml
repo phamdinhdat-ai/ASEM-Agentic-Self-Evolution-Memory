@@ -1,0 +1,51 @@
+# vult-gpt-5.6-sol — OpenAI-compatible API backend
+# ---------------------------------------------------------------------------
+# Uses OPENAI_BASE_URL and OPENAI_API_KEY from .env.
+#
+# NOTE: .env pins LLM_MODEL="hotrovlg/vult-gpt-5.5", but that model now returns
+# HTTP 401 "The upstream AI gateway rejected authentication" while the account
+# itself is healthy (models.list() returns 472 entries). The model-specific
+# grant was revoked upstream. We therefore pin the nearest same-vendor
+# replacement here. Only base_url / api_key fall back to .env -- the model
+# string is always read from this file, so .env's LLM_MODEL is intentionally
+# NOT used. Update this line when the endpoint's model lineup changes.
+# ---------------------------------------------------------------------------
+preset: "custom"
+
+inference:
+  backend: "openai"
+  openai:
+    model: "hotrovlg/vult-gpt-5.6-sol"
+    temperature: 0.3
+    max_tokens: 4096
+    timeout: 300
+    thinking:
+      type: "disabled"
+    embedder_provider: "huggingface"
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+hyperparameters:
+  k1: 20
+  k2: 5
+  k: 5
+  delta: 0.30
+  lambda: 0.40
+  alpha: 0.10
+  q0: 0.50
+
+write_gate:
+  enabled: true
+  tau_high: 0.45
+  tau_redund: 0.92
+
+link_tau: 0.35
+
+llm_retry:
+  max_retries: 2
+
+answer:
+  max_tokens: 512
+  context_window: 8192
+  max_context_notes: 10
+  content_char_limit: 200
+  direct_mode: true

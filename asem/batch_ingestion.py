@@ -15,7 +15,6 @@ This reduces ingestion from O(turns) to O(1) LLM calls per session.
 
 from __future__ import annotations
 
-import ast
 import json
 import re
 import uuid
@@ -34,7 +33,7 @@ from .llm_validator import (
 from .logging_utils import get_logger
 from .memory_bank import MemoryBank
 from .memory_manager import Op
-from .note import LinkRecord, Note
+from .note import LinkRecord, Note, _try_extract_json
 from .temporal import extract_session_header, parse_session_datetime
 
 _log = get_logger("batch_ingest")
@@ -43,8 +42,11 @@ _log = get_logger("batch_ingest")
 def _extract_json(raw: str, expect_array: bool = True) -> Any:
     """Robust JSON extraction from LLM output.
 
-    Handles common LLM artifacts: markdown fences, leading/trailing text,
-    nested JSON in objects, and malformed quotes.
+    Thin alias for :func:`asem.note._try_extract_json`, which is the single
+    implementation of fence stripping, bracket windowing, trailing-comma
+    repair and truncated-array salvage. FastASEM and ASEM-THG call the same
+    code, so all three ingest paths now recover identically from a malformed
+    response instead of one of them silently degrading to a per-turn fallback.
 
     Args:
         raw: Raw LLM output string.
@@ -53,56 +55,7 @@ def _extract_json(raw: str, expect_array: bool = True) -> Any:
     Returns:
         Parsed Python object, or None if parsing fails.
     """
-    cleaned = raw.strip()
-
-    # 1. Strip markdown fences
-    fence_patterns = [
-        (r"```json\s*", r"\s*```"),
-        (r"```\s*", r"\s*```"),
-    ]
-    for open_pat, close_pat in fence_patterns:
-        cleaned = re.sub(rf"^{open_pat}", "", cleaned)
-        cleaned = re.sub(rf"{close_pat}$", "", cleaned)
-
-    # 2. Find the outermost bracket pair
-    open_br = "[" if expect_array else "{"
-    close_br = "]" if expect_array else "}"
-
-    start = cleaned.find(open_br)
-    end = cleaned.rfind(close_br)
-    if start >= 0 and end > start:
-        cleaned = cleaned[start:end + 1]
-
-    # 3. Try direct JSON parse
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        pass
-
-    # 4. Try ast.literal_eval (handles single-quoted JSON-like structures)
-    try:
-        return ast.literal_eval(cleaned)
-    except (ValueError, SyntaxError):
-        pass
-
-    # 5. Try naive fix: replace single quotes with double quotes
-    if expect_array and cleaned.count("'") > cleaned.count('"'):
-        try:
-            fixed = cleaned.replace("'", '"')
-            return json.loads(fixed)
-        except json.JSONDecodeError:
-            pass
-
-    # 6. Salvage a truncated array
-    if expect_array:
-        for cut in range(len(cleaned) - 1, -1, -1):
-            if cleaned[cut] == "}":
-                try:
-                    return json.loads(cleaned[:cut + 1] + "]")
-                except json.JSONDecodeError:
-                    continue
-
-    return None
+    return _try_extract_json(raw, expect_array=expect_array)
 
 
 class BatchIngestor:

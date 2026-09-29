@@ -1,0 +1,472 @@
+[
+  {
+    "idx": 152,
+    "q": "What did Caroline realize after her charity race?",
+    "distractor": "self-care is important",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 153,
+    "q": "What are Melanie's plans for the summer with respect to adoption?",
+    "distractor": "researching adoption agencies",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "No adoption plans for the summer — she was considering adopting a child herself, mentioned on 13 October 2023."
+  },
+  {
+    "idx": 154,
+    "q": "What type of individuals does the adoption agency Melanie is considering support?",
+    "distractor": "LGBTQ+ individuals",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 155,
+    "q": "Why did Melanie choose the adoption agency?",
+    "distractor": "because of their inclusivity and support for LGBTQ+ individuals",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the notes say Caroline chose her agency because it helps LGBTQ+ folks, but nothing states why Melanie chose one."
+  },
+  {
+    "idx": 156,
+    "q": "What is Melanie excited about in her adoption process?",
+    "distractor": "creating a family for kids who need one",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — no memory mentions Melanie being excited about an adoption process; she only said she might consider adopting."
+  },
+  {
+    "idx": 157,
+    "q": "What does Melanie's necklace symbolize?",
+    "distractor": "love, faith, and strength",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 158,
+    "q": "What country is Melanie's grandma from?",
+    "distractor": "Sweden",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 159,
+    "q": "What was grandma's gift to Melanie?",
+    "distractor": "necklace",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 160,
+    "q": "What was grandpa's gift to Caroline?",
+    "distractor": "necklace",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 161,
+    "q": "What is Caroline's hand-painted bowl a reminder of?",
+    "distractor": "art and self-expression",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "A friend's gift for her 18th birthday ten years ago"
+  },
+  {
+    "idx": 162,
+    "q": "What did Caroline and her family do while camping?",
+    "distractor": "explored nature, roasted marshmallows, and went on a hike",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 163,
+    "q": "What kind of counseling and mental health services is Melanie interested in pursuing?",
+    "distractor": "working with trans people, helping them accept themselves and supporting their mental health",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the memories say Melanie is realizing self-care is important, but they don't say she is pursuing counseling or mental health services; that interest is Caroline's."
+  },
+  {
+    "idx": 164,
+    "q": "What kind of counseling workshop did Melanie attend recently?",
+    "distractor": "LGBTQ+ counseling workshop",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the LGBTQ+ counseling workshop was attended by Caroline, not Melanie."
+  },
+  {
+    "idx": 165,
+    "q": "What motivated Melanie to pursue counseling?",
+    "distractor": "her own journey and the support she received, and how counseling improved her life",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Her family — they are her biggest motivation and support."
+  },
+  {
+    "idx": 166,
+    "q": "What kind of place does Melanie want to create for people?",
+    "distractor": "a safe and inviting place for people to grow",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "A loving and accepting environment for kids."
+  },
+  {
+    "idx": 167,
+    "q": "Did Caroline make the black and white bowl in the photo?",
+    "distractor": "Yes",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "No — Melanie made the black and white flower design bowl in her pottery class."
+  },
+  {
+    "idx": 168,
+    "q": "What are the new shoes that Caroline got used for?",
+    "distractor": "Running",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Running — Melanie recently got new purple running shoes, not Caroline."
+  },
+  {
+    "idx": 169,
+    "q": "What is Caroline's reason for getting into running?",
+    "distractor": "To de-stress and clear her mind",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the notes say Melanie runs to de-stress, not Caroline."
+  },
+  {
+    "idx": 170,
+    "q": "What does Caroline say running has been great for?",
+    "distractor": "Her mental health",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "De-stressing and clearing her mind — but that was Melanie, not Caroline."
+  },
+  {
+    "idx": 171,
+    "q": "What did Melanie see at the council meeting for adoption?",
+    "distractor": "many people wanting to create loving homes for children in need",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — no memory says Melanie attended the adoption council meeting; that was Caroline (Memory 1)."
+  },
+  {
+    "idx": 172,
+    "q": "What inspired Melanie's painting for the art show?",
+    "distractor": "visiting an LGBTQ center and wanting to capture unity and strength",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Autumn — she was feeling inspired by autumn and planning a few paintings."
+  },
+  {
+    "idx": 173,
+    "q": "What inspired Caroline's sculpture for the art show?",
+    "distractor": "visiting an LGBTQ center and wanting to capture unity and strength",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 174,
+    "q": "How often does Caroline go to the beach with her kids?",
+    "distractor": "once or twice a year",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 175,
+    "q": "What did Caroline and her family see during their camping trip last year?",
+    "distractor": "Perseid meteor shower",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 176,
+    "q": "How did Caroline feel while watching the meteor shower?",
+    "distractor": "in awe of the universe",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the meteor shower memory is Melanie's, not Caroline's."
+  },
+  {
+    "idx": 177,
+    "q": "Why did Caroline choose to use colors and patterns in her pottery project?",
+    "distractor": "She wanted to catch the eye and make people smile.",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — Caroline has never done pottery (Memory 4) and has not yet done pottery (Memory 7)."
+  },
+  {
+    "idx": 178,
+    "q": "Is Oscar Melanie's pet?",
+    "distractor": "Yes",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "No — her pets are Luna the dog and Oliver the cat."
+  },
+  {
+    "idx": 179,
+    "q": "Where did Oscar hide his bone once?",
+    "distractor": "In Melanie's slipper",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "In Melanie's slipper — that was Oliver, not Oscar."
+  },
+  {
+    "idx": 180,
+    "q": "What activity did Melanie used to do with her dad?",
+    "distractor": "Horseback riding",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 181,
+    "q": "What did Melanie make for a local church?",
+    "distractor": "a stained glass window",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 182,
+    "q": "What did Melanie find in her neighborhood during her walk?",
+    "distractor": "a rainbow sidewalk",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 183,
+    "q": "Which song motivates Melanie to be courageous?",
+    "distractor": "Brave by Sara Bareilles",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 184,
+    "q": "What type of instrument does Caroline play?",
+    "distractor": "clarinet and violin",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Acoustic guitar"
+  },
+  {
+    "idx": 185,
+    "q": "Which classical musicians does Caroline enjoy listening to?",
+    "distractor": "Bach and Mozart",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the classical musicians (Bach and Mozart) are mentioned by Melanie, not Caroline."
+  },
+  {
+    "idx": 186,
+    "q": "Who is Caroline a fan of in terms of modern music?",
+    "distractor": "Ed Sheeran",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 187,
+    "q": "What precautionary sign did Caroline see at the café?",
+    "distractor": "A sign stating that someone is not being able to leave",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the café sign was mentioned by Melanie, not Caroline, and its content isn't stated."
+  },
+  {
+    "idx": 188,
+    "q": "What setback did Caroline face recently?",
+    "distractor": "She got hurt and had to take a break from pottery.",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Her transition was not easy."
+  },
+  {
+    "idx": 189,
+    "q": "What does Caroline do to keep herself busy during her pottery break?",
+    "distractor": "Read a book and paint.",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Caroline has never tried pottery; she keeps busy painting (just finished a sunset painting) and making stained glass."
+  },
+  {
+    "idx": 190,
+    "q": "What was the poetry reading that Melanie attended about?",
+    "distractor": "It was a transgender poetry reading where transgender people shared their stories.",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — Melanie has never been to a poetry reading."
+  },
+  {
+    "idx": 191,
+    "q": "What happened to Caroline's son on their road trip?",
+    "distractor": "He got into an accident",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 192,
+    "q": "How did Caroline's son handle the accident?",
+    "distractor": "He was scared but reassured by his family",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know."
+  },
+  {
+    "idx": 193,
+    "q": "How did Caroline feel about her family after the accident?",
+    "distractor": "They are important and mean the world to her",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": false,
+    "pred": "Family is everything — she believes loved ones are important."
+  },
+  {
+    "idx": 194,
+    "q": "How did Caroline's children handle the accident?",
+    "distractor": "They were scared but resilient",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 195,
+    "q": "How did Caroline feel after the accident?",
+    "distractor": "Grateful and thankful for her family",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 196,
+    "q": "What was Caroline's reaction to her children enjoying the Grand Canyon?",
+    "distractor": "She was happy and thankful",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the Grand Canyon memory is about Melanie's family, not Caroline's children."
+  },
+  {
+    "idx": 197,
+    "q": "What did Caroline do after the road trip to relax?",
+    "distractor": "Went on a nature walk or hike",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know"
+  },
+  {
+    "idx": 198,
+    "q": "What does Caroline love most about camping with her family?",
+    "distractor": "Being present and bonding with her family",
+    "in_bank": false,
+    "n_hits": 0,
+    "hit_speakers": [],
+    "refused": true,
+    "pred": "I don't know — the camping memories are about Melanie, not Caroline."
+  }
+]

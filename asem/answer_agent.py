@@ -160,6 +160,39 @@ def _wrap(text: str, width: int = _WRAP_WIDTH, indent: str = _INDENT) -> str:
     return ("\n" + indent).join(lines)
 
 
+_NL_RELATION_PHRASE = {
+    "same-entity": "shares the same entity",
+    "temporal": "is from the same session as",
+    "semantic": "is on a related topic to",
+    "superseded_by": "replaces an earlier version of this fact in",
+    "contradicts": "contradicts",
+    "extends": "extends",
+    "causal": "is causally linked to",
+    "same-topic": "is on the same topic as",
+    "linked": "is linked to",
+}
+_NL_RELATION_BULK = {
+    "same-entity": "sharing the same entity",
+    "temporal": "from the same session",
+    "semantic": "on related topics",
+    "superseded_by": "earlier versions of this fact",
+    "contradicts": "contradicting",
+    "extends": "that extend this one",
+    "causal": "causally linked",
+    "same-topic": "on the same topic",
+    "linked": "linked",
+}
+
+
+def _join_ranks(ranks: List[int]) -> str:
+    labels = [f"Memory {r}" for r in ranks]
+    if len(labels) == 1:
+        return labels[0]
+    if len(labels) == 2:
+        return f"{labels[0]} and {labels[1]}"
+    return ", ".join(labels[:-1]) + f", and {labels[-1]}"
+
+
 def _render_notes_block(
     notes: List[Note],
     *,
@@ -167,20 +200,22 @@ def _render_notes_block(
     fact_chars: int = _FACT_CHAR_LIMIT,
     max_bullets: int = _MAX_FACT_BULLETS,
 ) -> str:
-    """Render the retrieved notes as numbered, readable evidence blocks.
+    """Render the retrieved notes as numbered, NATURAL-LANGUAGE evidence blocks.
 
     Every note becomes:
 
-        [n] DATE · said by SPEAKER · about: ent1, ent2
-            • first fact sentence (wrapped)
-            • second fact sentence
-            • [+k more facts]
-            turn: "raw turn, clipped"
-            links: [3] same-topic, [6] extends (+4 more not in this list)
+        Memory 1 — recorded on 8 May 2023, said by Caroline, about Caroline.
+              • On 7 May 2023, Caroline attended an LGBTQ support group.
+              Themes: LGBTQ, support group, attendance.
+              Connections: shares the same entity (Caroline) with Memory 2 and
+              Memory 3; is on a related topic to Memory 4.
+              Also connected, not shown here: 28 sharing the same entity, 15 on
+              related topics.
 
-    Relation targets are printed as the RANK of the other note in this same
-    block, so the model never has to join ids. Edges whose target is not in the
-    block collapse to a count, because their content cannot be read.
+    Relationships are phrased in plain English ("shares the same entity",
+    "is from the same session as", "replaces an earlier version") instead of
+    raw labels, so the model can reason about *why* two memories connect.
+    Relation targets are printed as the rank of the other note in this block.
     """
     if not notes:
         return "(no memory notes retrieved)"
@@ -189,12 +224,13 @@ def _render_notes_block(
     blocks: List[str] = []
 
     for rank, note in enumerate(notes, start=1):
-        header = f"[{rank}] {_human_date(note)}"
-        if note.speaker:
-            header += f" · said by {note.speaker}"
         entities = [e for e in (note.entities or []) if e]
+        header = f"Memory {rank} — recorded on {_human_date(note)}"
+        if note.speaker:
+            header += f", said by {note.speaker}"
         if entities:
-            header += f" · about: {', '.join(entities[:6])}"
+            header += f", about {', '.join(entities[:6])}"
+        header += "."
         lines = [header]
 
         # --- facts: the stored description, split into readable sentences -----
@@ -216,38 +252,72 @@ def _render_notes_block(
         # budget, or cut mid-way) are reported so the model knows the note continues.
         hidden = max(0, len(facts) - len(shown)) + (1 if clipped else 0)
         if hidden:
-            lines.append(f"{_INDENT}• [+{hidden} more fact(s) in this note, not shown]")
+            lines.append(f"{_INDENT}…and {hidden} more fact(s) in this memory (not shown).")
 
         # --- the raw turn, only when it adds words the facts do not have ------
         if content_chars > 0:
             raw = _clip(note.c, content_chars)
             if raw and raw.rstrip(" …") not in (note.X or ""):
-                lines.append(f"{_INDENT}turn: \"{_wrap(raw, indent=_INDENT + ' ' * 7)}\"")
+                lines.append(f"{_INDENT}Original wording: \"{_wrap(raw, indent=_INDENT + ' ' * 18)}\"")
 
-        # --- topics: keywords are retrieval metadata, capped hard -------------
+        # --- themes: keywords are retrieval metadata, capped hard -------------
         topics = [k for k in (note.K or []) if k][:_MAX_TOPICS]
         if topics:
-            lines.append(f"{_INDENT}topics: {', '.join(topics)}")
+            lines.append(f"{_INDENT}Themes: {', '.join(topics)}.")
 
-        # --- links: ranks inside this block, counts outside -------------------
-        edges, other = [], {}
+        # --- connections: phrased as plain-English relationships --------------
+        in_block: dict = {}
+        out_block: dict = {}
         for link in note.L:
             rel = link.relation or "linked"
             target = index_by_id.get(link.target_id)
-            if target is not None and len(edges) < _MAX_RELATIONS_PER_NOTE:
-                edges.append(f"[{target}] {rel}")
+            if target is not None:
+                bucket = in_block.setdefault(rel, [])
+                if len(bucket) < _MAX_RELATIONS_PER_NOTE:
+                    bucket.append(target)
             else:
-                other[rel] = other.get(rel, 0) + 1
-        if edges or other:
-            link_line = f"{_INDENT}links: "
-            if edges:
-                link_line += ", ".join(edges)
-            digest = _relation_digest(other)
-            if digest:
-                prefix = "  (" if edges else "("
-                link_line += (f"{prefix}+{sum(other.values())} more not in this list: "
-                              f"{digest})")
-            lines.append(link_line)
+                out_block[rel] = out_block.get(rel, 0) + 1
+
+        _REL_PRIORITY = ("superseded_by", "temporal", "same-entity", "semantic",
+                         "same-topic", "extends", "contradicts", "causal")
+        ordered = sorted(
+            in_block.items(),
+            key=lambda kv: _REL_PRIORITY.index(kv[0]) if kv[0] in _REL_PRIORITY else len(_REL_PRIORITY),
+        )
+        sentences: List[str] = []
+        covered: List[set] = []
+        for rel, targets in ordered:
+            tset = set(targets)
+            # Skip a relation whose targets are already all covered by a stronger
+            # one (same-entity and semantic almost always overlap), so the model
+            # is not told the same connection twice.
+            if any(tset <= seen for seen in covered):
+                continue
+            covered.append(tset)
+            ranks = _join_ranks(sorted(tset))
+            if rel == "same-entity":
+                ent = f" ({entities[0]})" if entities else ""
+                sentences.append(f"shares the same entity{ent} with {ranks}")
+            else:
+                phrase = _NL_RELATION_PHRASE.get(rel, f"is linked by '{rel}' to")
+                sentences.append(f"{phrase} {ranks}")
+        if sentences:
+            lines.append(f"{_INDENT}Connections: " + "; ".join(sentences) + ".")
+
+        bulk = []
+        for rel, cnt in sorted(out_block.items(), key=lambda kv: (-kv[1], kv[0]))[:_MAX_RELATION_TYPES]:
+            if rel == "same-entity":
+                bulk.append(f"{cnt} other {'memory shares' if cnt == 1 else 'memories share'} the same entity")
+            elif rel == "semantic":
+                bulk.append(f"{cnt} {'is on a related topic' if cnt == 1 else 'are on related topics'}")
+            elif rel == "temporal":
+                bulk.append(f"{cnt} {'is from the same session' if cnt == 1 else 'are from the same session'}")
+            elif rel == "superseded_by":
+                bulk.append(f"{cnt} {'is an earlier version' if cnt == 1 else 'are earlier versions'} of this fact")
+            else:
+                bulk.append(f"{cnt} {'is' if cnt == 1 else 'are'} linked by '{rel}'")
+        if bulk:
+            lines.append(f"{_INDENT}Also connected, not shown here: " + "; ".join(bulk) + ".")
 
         blocks.append("\n".join(lines))
 

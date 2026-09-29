@@ -37,9 +37,15 @@ class LangChainBackend(InferenceBackend):
         response = self._llm.invoke(prompt, **kwargs)
         # Extract token usage from LangChain response metadata when available
         if hasattr(response, "response_metadata"):
-            usage = response.response_metadata.get("token_usage", {})
+            metadata = response.response_metadata or {}
+            usage = metadata.get("token_usage", {})
             if usage:
                 self._token_count += usage.get("total_tokens", 0)
+            # vLLM / OpenAI-compatible servers report "length" when the
+            # completion hit the budget, i.e. the JSON was never finished.
+            self.last_finish_reason = (
+                metadata.get("finish_reason") or metadata.get("stop_reason")
+            )
         if hasattr(response, "content"):
             return _content_to_text(response.content)
         return str(response)
