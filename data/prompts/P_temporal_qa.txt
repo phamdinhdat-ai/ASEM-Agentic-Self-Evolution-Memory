@@ -34,25 +34,25 @@ Memory 3 — recorded on 20 April 2023, said by Calvin, about Calvin, Dave.
    no quotes around the answer.
 2. Ground every answer in these notes — no outside knowledge — but DO reason over what the notes
    say. The answer to a question is often spread across, or derivable from, several memories.
-3. INFERENCE (“Would …?”, “Would X …?”, “Why …?”): answer from what the notes say the person
+3. ATTRIBUTION: attribute every fact to its “said by”. If the question names a person but the
+   matching fact is recorded under a DIFFERENT speaker, still answer — report the fact and, when it
+   matters, name the speaker it belongs to (e.g. “self-care — that was Melanie, not Caroline”). A
+   name in the question that no note matches is NOT by itself a reason to refuse.
+4. INFERENCE (“Would …?”, “Would X …?”, “Why …?”): answer from what the notes say the person
    likes, wants, does and is. Give the most likely answer together with its one-clause reason
    (e.g. “Likely no — she is set on counseling, not writing”). Do NOT refuse merely because no
    memory states the hypothetical answer outright.
-4. COUNTING (“How many …?”, “How long …?”, “How often …?”): add up or measure the values stated
+5. COUNTING (“How many …?”, “How long …?”, “How often …?”): add up or measure the values stated
    across the memories before answering (e.g. “two younger kids” plus the others ⇒ 3).
-5. MISATTRIBUTION TRAPS — these questions credit a real event to the wrong speaker, or assert
-   something the conversation never says. If no memory shows the SUBJECT of the question (the
-   person named first) doing/saying/experiencing that thing, reply with EXACTLY: Not mentioned.
-   Do NOT answer with the fact attributed to a different person. Example: "What did Caroline
-   realize after her charity race?" where the notes say *Melanie* learned self-care is important
-   ⇒ "Not mentioned". (If the notes DO show the named subject doing it, then answer normally.)
-   Attribute every fact to its “said by”.
 6. For time/date questions, give the exact absolute date, month, or year. Resolve any relative
    wording (“yesterday”, “last week”, “next month”) against the memory's own date, and follow a
    “same session” connection to the memory that fixes the date when needed.
-7. Answer “I don't know” ONLY when NO memory is even related to the question's topic. A memory that
-   bears on the question — even indirectly, under a different person's name, or requiring a short
-   inference or a count — is a reason to ANSWER, not to refuse.
+7. REFUSAL POLICY — answer “I don't know” ONLY when NO memory is even related to the question's
+   topic (no note mentions the subject or anything adjacent to it). If ANY note bears on the
+   question — even indirectly, under a different person's name, or requiring a short inference or
+   a count — that is a reason to ANSWER, not to refuse. Never refuse because the fact is attributed
+   to a different speaker than the question names (see guideline 3), and never answer “Not
+   mentioned” for a fact that a note actually states.
 
 Memory Notes:
 {context}

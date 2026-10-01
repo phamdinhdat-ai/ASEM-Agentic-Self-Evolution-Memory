@@ -1,21 +1,24 @@
-# vgpt/gpt-5.6-luna — OpenAI-compatible API backend
+# chib/deepseek-v4.1-flash — OpenAI-compatible API backend
 # ---------------------------------------------------------------------------
 # Uses OPENAI_BASE_URL and OPENAI_API_KEY from .env.
-# Model: vgpt/gpt-5.6-luna (from .env LLM_MODEL).
+# Model: chib/deepseek-v4.1-flash (from .env LLM_MODEL).
 #
 # IMPORTANT: `embedder_name` MUST match every other config in configs/models/
 # (all-MiniLM-L6-v2). Ingestion stores embedder vectors in the bank, so the
 # ingest and retrieval phases must agree on it.
 #
-#   python scripts/build_static_banks.py --ingest-config configs/models/gpt56_luna.yaml
-#   python scripts/run_static_eval.py   --config        configs/models/gpt56_luna.yaml
+# Backbone swap only: bank_tag stays "gpt56_luna" so the FROZEN banks built
+# with vgpt/gpt-5.6-luna are reused for retrieval (no re-ingest). This is the
+# standard "swap the backbone, reuse the bank" protocol the repo already uses.
+#
+#   python scripts/run_static_eval.py --config configs/models/deepseek_v41_flash.yaml
 # ---------------------------------------------------------------------------
 preset: "custom"
 
 inference:
   backend: "openai"
   openai:
-    model: "vgpt/gpt-5.6-luna"
+    model: "chib/deepseek-v4.1-flash"
     temperature: 0.3
     max_tokens: 8192
     timeout: 120

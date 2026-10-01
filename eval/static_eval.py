@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -104,6 +105,63 @@ def _read_jsonl(path: str) -> List[Dict[str, Any]]:
             except json.JSONDecodeError:
                 # A truncated final line from a hard kill — ignore it.
                 logger.warning("Ignoring malformed line in {}", path)
+    return out
+
+
+def _judge_many(
+    judge: Any,
+    items: Sequence[Dict[str, Any]],
+    max_retries: int,
+    workers: int,
+    label: str,
+) -> List[Dict[str, Any]]:
+    """Score ``items`` with the LLM judge, concurrently.
+
+    Each judge call is independent and the underlying API client is
+    thread-safe, so a bounded thread pool turns a sequential pass of N
+    round-trips into roughly N/workers. Results are returned in input order;
+    a permanently failing item degrades to ``judge_correct=None`` instead of
+    aborting the batch.
+    """
+    def _one(item: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            verdict = _retry(
+                lambda item=item: judge.judge(
+                    question=item.get("question", ""),
+                    expected_answer=item.get("ref", ""),
+                    ai_response=item.get("pred", ""),
+                    conversation_id=item.get("conversation_id", ""),
+                    question_type=item.get("category_name", ""),
+                    category=int(item.get("category") or 0),
+                ),
+                attempts=max_retries,
+                label=f"judge[{label}]",
+            )
+            return {
+                "judge_correct": bool(verdict.is_correct),
+                "judge_reasoning": verdict.reasoning,
+                "judge_error": verdict.error,
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "judge_correct": None,
+                "judge_reasoning": "",
+                "judge_error": f"{type(exc).__name__}: {exc}",
+            }
+
+    n = len(items)
+    workers = max(1, int(workers))
+    if workers == 1 or n <= 1:
+        return [_one(it) for it in items]
+
+    out: List[Dict[str, Any]] = [{} for _ in range(n)]
+    done = 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for i, res in zip(range(n), pool.map(_one, items)):
+            out[i] = res
+            done += 1
+            if done % 25 == 0 or done == n:
+                logger.info("{}: judged {}/{} (workers={})", label, done, n, workers)
     return out
 
 
@@ -392,6 +450,7 @@ def run_static_eval(
     judge_config: Optional[str] = None,
     judge_backend: Any = None,
     judge_max_retries: int = 3,
+    judge_workers: int = 8,
     preds_dir: Optional[str] = None,
     scores_dir: Optional[str] = None,
     out_path: Optional[str] = None,
@@ -625,6 +684,15 @@ def run_static_eval(
                         "f1": token_f1(pred, ref),
                         "rougeL": rouge_l(pred, ref),
                     }
+                    # Retrieval telemetry (Plan Phase 0.2) — only systems that expose
+                    # it (currently ASEMTHGSystem) contribute, so other records keep
+                    # their historical shape.
+                    used_notes = getattr(system, "last_used_notes", None)
+                    if used_notes is not None:
+                        record["used_notes"] = list(used_notes)
+                    retr_stats = getattr(system, "last_retrieval_stats", None)
+                    if retr_stats:
+                        record["retrieval_stats"] = retr_stats
                     state.add(idx, record)
                     if handles.get(name):
                         _append_jsonl(handles[name], record)
@@ -661,35 +729,22 @@ def run_static_eval(
                 else:
                     bs = [None] * len(pending)
 
-                for i, b in zip(pending, bs):
+                judge_res: List[Dict[str, Any]] = [{} for _ in pending]
+                if need_judge and judge is not None:
+                    judge_res = _judge_many(
+                        judge,
+                        [state.records[i] for i in pending],
+                        judge_max_retries,
+                        judge_workers,
+                        label=f"{name}",
+                    )
+
+                for pos, i in enumerate(pending):
+                    b = bs[pos]
                     rec: Dict[str, Any] = {"idx": i, "conversation_id": conversation_id}
                     if need_bert:
                         rec["bertscore_f1"] = float(b or 0.0)
-                    if need_judge and judge is not None:
-                        item = state.records[i]
-                        try:
-                            verdict = _retry(
-                                lambda item=item: judge.judge(
-                                    question=item.get("question", ""),
-                                    expected_answer=item.get("ref", ""),
-                                    ai_response=item.get("pred", ""),
-                                    conversation_id=item.get("conversation_id", ""),
-                                    question_type=item.get("category_name", ""),
-                                    category=int(item.get("category") or 0),
-                                ),
-                                attempts=judge_max_retries,
-                                label=f"judge[{name}]",
-                            )
-                            rec["judge_correct"] = bool(verdict.is_correct)
-                            rec["judge_reasoning"] = verdict.reasoning
-                            rec["judge_error"] = verdict.error
-                        except Exception as exc:  # noqa: BLE001
-                            logger.opt(exception=exc).error(
-                                "[{}] judge failed permanently | idx={}", name, i
-                            )
-                            rec["judge_correct"] = None
-                            rec["judge_reasoning"] = ""
-                            rec["judge_error"] = f"{type(exc).__name__}: {exc}"
+                    rec.update(judge_res[pos])
                     state.scores[i] = rec
                     if score_handles.get(name):
                         _append_jsonl(score_handles[name], rec)
@@ -733,31 +788,15 @@ def run_static_eval(
                 missing = [i for i in state.order if "judge_correct" not in state.scores.get(i, {})]
                 if missing:
                     logger.info("{}: backfilling judge for {} items", name, len(missing))
-                    for i in missing:
-                        item = state.records[i]
-                        try:
-                            verdict = _retry(
-                                lambda item=item: judge.judge(
-                                    question=item.get("question", ""),
-                                    expected_answer=item.get("ref", ""),
-                                    ai_response=item.get("pred", ""),
-                                    conversation_id=item.get("conversation_id", ""),
-                                    question_type=item.get("category_name", ""),
-                                    category=int(item.get("category") or 0),
-                                ),
-                                attempts=judge_max_retries,
-                                label=f"judge[{name}]",
-                            )
-                            state.scores.setdefault(i, {"idx": i}).update(
-                                {"judge_correct": bool(verdict.is_correct),
-                                 "judge_reasoning": verdict.reasoning,
-                                 "judge_error": verdict.error}
-                            )
-                        except Exception as exc:  # noqa: BLE001
-                            state.scores.setdefault(i, {"idx": i}).update(
-                                {"judge_correct": None, "judge_reasoning": "",
-                                 "judge_error": f"{type(exc).__name__}: {exc}"}
-                            )
+                    results_j = _judge_many(
+                        judge,
+                        [state.records[i] for i in missing],
+                        judge_max_retries,
+                        judge_workers,
+                        label=f"{name}",
+                    )
+                    for i, res in zip(missing, results_j):
+                        state.scores.setdefault(i, {"idx": i}).update(res)
 
         results = _snapshot(final=True)
         results["resumed_from"] = done_before

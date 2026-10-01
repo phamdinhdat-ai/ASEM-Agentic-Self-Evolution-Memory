@@ -6,7 +6,7 @@ evaluations are independent and reproducible.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 import os
 import re
@@ -318,6 +318,47 @@ def _load_config(path: str) -> dict:
         return yaml.safe_load(handle)
 
 
+# QA baseline prompt selector. ``phase.qa_prompt`` in the config picks one of
+# these by name; an unknown value is treated as a path relative to data/prompts.
+# "calibrated" is the non-refusal-biased prompt; "trap" is the historical
+# misattribution-trap prompt kept for ablation only.
+_QA_PROMPT_FILES = {
+    "calibrated": os.path.join("data", "prompts", "P_temporal_qa.txt"),
+    "trap": os.path.join("data", "prompts", "P_temporal_qa_trap.txt"),
+    # Merged prompt: calibrated aggregation/completeness + the trap's
+    # misattribution rule. Fixes multi_hop partial answers AND adversarial
+    # "Not mentioned" hallucination in one prompt.
+    "calibrated_v2": os.path.join("data", "prompts", "P_temporal_qa_v2.txt"),
+}
+
+
+def _qa_prompt_key(cfg: Any) -> str:
+    """Extract ``phase.qa_prompt`` from a raw dict or an ``ASEMConfig``."""
+    if cfg is None:
+        return "calibrated"
+    phase = getattr(cfg, "phase", None)
+    if phase is not None:
+        return str(getattr(phase, "qa_prompt", "calibrated") or "calibrated")
+    if isinstance(cfg, dict):
+        return str((cfg.get("phase", {}) or {}).get("qa_prompt", "calibrated"))
+    return "calibrated"
+
+
+def _load_qa_prompt(cfg: Any = None) -> str:
+    """Load the QA baseline prompt selected by ``phase.qa_prompt``.
+
+    Accepts a raw config dict (``_load_config`` output) or an ``ASEMConfig``
+    instance. Falls back to the calibrated prompt when the selector is unset or
+    unresolvable, and to ``_RETRIEVAL_PROMPT`` only if the file is missing.
+    """
+    key = _qa_prompt_key(cfg)
+    path = _QA_PROMPT_FILES.get(key)
+    if path is None:
+        cand = key if os.path.isabs(key) else os.path.join("data", "prompts", key)
+        path = cand if os.path.exists(cand) else _QA_PROMPT_FILES["calibrated"]
+    return _load_text(path) if os.path.exists(path) else _RETRIEVAL_PROMPT
+
+
 def answer_budget_from_config(
     config_path: str,
 ) -> Tuple[Optional[int], Optional[int]]:
@@ -559,6 +600,10 @@ class ASEMTHGSystem:
     pipeline: ASEMPipeline
     single_pass_ingestor: object
 
+    # Telemetry populated by ``answer`` (Plan Phase 0.2). Not part of construction.
+    last_used_notes: List[Any] = field(default_factory=list)
+    last_retrieval_stats: Dict[str, Any] = field(default_factory=dict)
+
     _ingested: bool = False
 
     def ingest_conversation(
@@ -613,7 +658,10 @@ class ASEMTHGSystem:
     def answer(self, query: str, history: List[str] = None) -> str:
         if not self._ingested and history:
             self.ingest_conversation(history)
-        _used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        # Telemetry for retrieval-vs-generation attribution (Plan Phase 0.2).
+        self.last_used_notes = [getattr(n, "id", None) for n in used_notes]
+        self.last_retrieval_stats = dict(getattr(self.pipeline.retriever, "stats", {}) or {})
         return answer
 
     def reset(self) -> None:
@@ -641,8 +689,7 @@ def build_asem_thg_system(
     mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
     distil_prompt = _load_text("data/prompts/P_distil.txt")
     summary_prompt = _load_text("data/prompts/P_summary.txt")
-    qa_prompt_path = os.path.join("data", "prompts", "P_temporal_qa.txt")
-    qa_prompt = _load_text(qa_prompt_path) if os.path.exists(qa_prompt_path) else _RETRIEVAL_PROMPT
+    qa_prompt = _load_qa_prompt(cfg)
 
     from asem.enhanced_retriever import EnhancedHybridRetriever
     from asem.single_pass_ingest import SinglePassSessionIngestor
@@ -658,14 +705,32 @@ def build_asem_thg_system(
         backend=backend, link_prompt_template=link_prompt,
         evolve_prompt_template=evolve_prompt, k=hp["k"], max_retries=max_retries,
     )
+    # Retriever hyperparameters are readable from the config's ``retriever``
+    # block; the defaults reproduce the previously hard-coded THG values so an
+    # unchanged config behaves exactly as before (Phase 2d).
+    ret_cfg = cfg.get("retriever", {}) or {}
+
+    def _ret(key: str, default: Any) -> Any:
+        val = ret_cfg.get(key, default)
+        return default if val is None else val
+
     retriever = EnhancedHybridRetriever(
         backend=backend,
-        k1=hp["k1"], k2=hp["k2"],
+        k1=hp["k1"], k2=_ret("k2", hp["k2"]),
         delta=hp["delta"], lambda_weight=hp["lambda"],
-        max_hops=2, hop_decay=0.7, multi_hop_topn=5,
-        alpha=0.35, beta=0.25, gamma=0.40,
-        enable_global_semantics=True,
-        enable_intent_q=True,
+        max_hops=_ret("max_hops", 2),
+        hop_decay=float(_ret("hop_decay", 0.7)),
+        multi_hop_topn=int(_ret("multi_hop_topn", 2)),
+        multi_hop_min_sim=float(_ret("multi_hop_min_sim", 0.30)),
+        multi_hop_min_score=float(_ret("multi_hop_min_score", 0.0)),
+        alpha=float(_ret("alpha", 0.35)),
+        beta=float(_ret("beta", 0.25)),
+        gamma=float(_ret("gamma", 0.40)),
+        base_weight=float(_ret("base_weight", 0.60)),
+        community_boost=float(_ret("community_boost", 1.2)),
+        unknown_relation_weight=float(_ret("unknown_relation_weight", 1.0)),
+        enable_global_semantics=bool(_ret("enable_global_semantics", True)),
+        enable_intent_q=bool(_ret("enable_intent_q", True)),
     )
     answer_agent = AnswerAgent(
         backend=backend,
@@ -866,8 +931,7 @@ def build_fast_asem_system(
     summary_prompt = _load_text("data/prompts/P_summary.txt")
     batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
     batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
-    qa_prompt_path = os.path.join("data", "prompts", "P_temporal_qa.txt")
-    qa_prompt = _load_text(qa_prompt_path) if os.path.exists(qa_prompt_path) else _RETRIEVAL_PROMPT
+    qa_prompt = _load_qa_prompt(asem_cfg)
 
     max_retries = int(asem_cfg.llm_retry.get("max_retries", 0))
 

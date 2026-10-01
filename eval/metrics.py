@@ -99,16 +99,23 @@ def metric_needs_judge(names: Sequence[str]) -> bool:
 
 _ARTICLE_RE = None  # compiled lazily to keep module import cheap
 _PUNCT_RE = None
+_APOSTROPHE_RE = None
 
 
 def _regexes():
-    global _ARTICLE_RE, _PUNCT_RE
+    global _ARTICLE_RE, _PUNCT_RE, _APOSTROPHE_RE
     if _ARTICLE_RE is None:
         import re
 
         _ARTICLE_RE = re.compile(r"\b(a|an|the)\b")
         _PUNCT_RE = re.compile(r"[^\w\s]")
-    return _ARTICLE_RE, _PUNCT_RE
+        # Fold the apostrophe in contractions so "don't" -> "dont" rather than
+        # "don t". Without this, removing punctuation split the contraction into
+        # two words, and every refusal marker written as a contraction
+        # ("i dont know", "im not sure") could never match the normalized text.
+        # Handles ASCII ' and the Unicode right single quote '.
+        _APOSTROPHE_RE = re.compile(r"[’']")
+    return _ARTICLE_RE, _PUNCT_RE, _APOSTROPHE_RE
 
 
 def normalize_text(text: Any) -> str:
@@ -123,7 +130,9 @@ def normalize_text(text: Any) -> str:
         # LoCoMo gold answers are occasionally ints (years, counts).
         text = str(text)
     lose = text.lower().strip()
-    article_re, punct_re = _regexes()
+    article_re, punct_re, apostrophe_re = _regexes()
+    # Remove apostrophes BEFORE punctuation so contractions stay joined.
+    lose = apostrophe_re.sub("", lose)
     lose = article_re.sub(" ", lose)
     lose = punct_re.sub(" ", lose)
     return " ".join(lose.split())
@@ -198,10 +207,12 @@ _REFUSAL_MARKERS = (
     "not provided",
     "not available",
     "not present",
-    "not in the conversation",
-    "not in the notes",
-    "not in the memories",
-    "nothing in the",
+    # NOTE: markers are matched against normalize_text() output, which drops
+    # articles, so write these WITHOUT "the" ("the notes" -> "notes").
+    "not in conversation",
+    "not in notes",
+    "not in memories",
+    "nothing in",
     "cannot be determined",
     "cannot determine",
     "unable to determine",
