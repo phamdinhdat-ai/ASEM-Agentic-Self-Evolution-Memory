@@ -51,10 +51,23 @@ class EnhancedHybridRetriever(HybridRetriever):
     beta: float = 0.25    # global graph
     gamma: float = 0.40   # learned utility
 
+    # Weight on the base Phase A+B ordering (z-scored rank) in the Phase D
+    # re-rank. The remainder (1 − base_weight) is split across alpha/beta/gamma.
+    # Keeping this high ensures the graph/utility terms refine — rather than
+    # overwrite — the retrieval order, which the old flat min-max blend did.
+    base_weight: float = 0.60
+
     # ── Multi-hop ───────────────────────────────────────────────────────
     max_hops: int = 2
     hop_decay: float = 0.7
-    multi_hop_topn: int = 5
+    multi_hop_topn: int = 2
+    # Minimum cosine similarity a traversed neighbour must clear against the
+    # query before it may be appended. Prevents relevance-blind appends from
+    # evicting gold notes when the graph is dense (see Phase 2 diagnosis:
+    # multi_hop_added was 5 on 100% of queries).
+    multi_hop_min_sim: float = 0.30
+    # Optional absolute floor on the traversal score (sim·utility·decay·rel).
+    multi_hop_min_score: float = 0.0
 
     # ── Relation-type-aware traversal ───────────────────────────────────
     # Weights applied to link traversal scores per relation type.  Strong
@@ -74,6 +87,10 @@ class EnhancedHybridRetriever(HybridRetriever):
     })
     # If set, traversal only follows edges whose relation is in this set.
     filter_relation_types: Optional[Set[str]] = None
+    # Weight applied to a traversed edge whose relation is not in the table
+    # above. Kept neutral (1.0) to match ``retriever._RELATION_BOOST``; the old
+    # 0.5 penalty silently down-ranked legitimate unknown-typed links.
+    unknown_relation_weight: float = 1.0
 
     # ── Global semantics ────────────────────────────────────────────────
     community_boost: float = 1.2
@@ -117,32 +134,66 @@ class EnhancedHybridRetriever(HybridRetriever):
 
         # ── Phase D (NEW): Global graph re-ranking ──────────────────
         if self.enable_global_semantics and self._community_map:
+            n = len(base_results)
+            # Preserve the base ordering: base_results[0] is best from Phase A+B.
+            # ``base_rank`` = descending rank score in [0, 1].
+            base_rank = np.array(
+                [1.0 - (i / max(n - 1, 1)) for i in range(n)], dtype=float
+            )
+
+            local_sims = np.array(
+                [self._cosine(e_q, note.e) for note in base_results], dtype=float
+            )
+
+            # Intent-grounded utility, gated by query-to-intent similarity.
+            q_vals = np.array([note.q for note in base_results], dtype=float)
+            if self.enable_intent_q:
+                intent_sims = np.array(
+                    [self._cosine(e_q, note.z) for note in base_results], dtype=float
+                )
+                q_eff = q_vals * intent_sims
+            else:
+                q_eff = q_vals
+            # If every note has the same q (e.g. all 0.5 before Stage-5 warming),
+            # the utility term carries no signal — drop it rather than let a
+            # z-scored constant inject noise / a flat global term dominate.
+            q_has_signal = float(q_eff.std()) > 1e-6
+
+            global_scores = np.array(
+                [
+                    self._compute_global_score(
+                        note, base_results[0] if base_results else None
+                    )
+                    for note in base_results
+                ],
+                dtype=float,
+            )
+
+            local_z = self._zscore(local_sims)
+            global_z = self._zscore(global_scores)
+            rank_z = self._zscore(base_rank)
+            q_z = self._zscore(q_eff) if q_has_signal else np.zeros(n)
+
+            # Renormalize hybrid weights so the base ordering always retains
+            # primacy, then distribute the remainder across the graph terms.
+            w_graph = self.alpha + self.beta + (self.gamma if q_has_signal else 0.0)
+            w_graph = w_graph if w_graph > 0 else 1.0
+            a = self.base_weight
+            scale = (1.0 - a) / w_graph
+
             scored = []
-            for note in base_results:
-                local = self._cosine(e_q, note.e)
-
-                # Intent-grounded Q-value
-                if self.enable_intent_q:
-                    intent_sim = self._cosine(e_q, note.z)
-                    q_effective = note.q * intent_sim
-                else:
-                    q_effective = note.q
-
-                # Global graph score
-                global_score = self._compute_global_score(
-                    note, base_results[0] if base_results else None
-                )
-
-                # Hybrid composite
+            for i, note in enumerate(base_results):
                 hybrid = (
-                    self.alpha * self._norm(local, 0.0, 1.0)
-                    + self.beta * global_score
-                    + self.gamma * self._norm(q_effective, 0.0, 1.0)
+                    a * rank_z[i]
+                    + scale * self.alpha * local_z[i]
+                    + scale * self.beta * global_z[i]
+                    + scale * self.gamma * q_z[i]
                 )
-                scored.append((hybrid, note))
+                scored.append((float(hybrid), note))
 
             scored.sort(key=lambda x: x[0], reverse=True)
             base_results = [n for _, n in scored]
+            self.stats["phase_d_q_has_signal"] = bool(q_has_signal)
 
         self.stats["total_retrieved"] = len(base_results)
         return base_results
@@ -193,7 +244,7 @@ class EnhancedHybridRetriever(HybridRetriever):
                         q_eff *= self._cosine(query_embedding, neighbor.z)
 
                     rel_weight = self.relation_weights.get(
-                        edge_map.get(neighbor.id, ""), 0.5
+                        edge_map.get(neighbor.id, ""), self.unknown_relation_weight
                     )
                     score = sim * (0.5 + 0.5 * q_eff) * decay * rel_weight
                     all_candidates.append((score, neighbor))
@@ -203,11 +254,22 @@ class EnhancedHybridRetriever(HybridRetriever):
                 break
 
         all_candidates.sort(key=lambda x: x[0], reverse=True)
-        added = [note for _, note in all_candidates[: self.multi_hop_topn]]
+        # Relevance gate: only admit a link-neighbour when it is actually
+        # similar to the query (and, optionally, clears an absolute score
+        # floor). Without this the dense THG graph appended a fixed top-N on
+        # every query, pushing gold notes out of the answer window.
+        kept = [
+            (s, n)
+            for s, n in all_candidates
+            if self._cosine(query_embedding, n.e) >= self.multi_hop_min_sim
+            and s >= self.multi_hop_min_score
+        ]
+        added = [note for _, note in kept[: self.multi_hop_topn]]
         _log.debug(
-            "Multi-hop | hops={}  candidates_found={}  added={}",
+            "Multi-hop | hops={}  candidates_found={}  gated={}  added={}",
             self.max_hops,
             len(all_candidates),
+            len(kept),
             len(added),
         )
         return added
@@ -289,3 +351,19 @@ class EnhancedHybridRetriever(HybridRetriever):
             return 0.5
         clamped = max(lo, min(hi, value))
         return (clamped - lo) / (hi - lo)
+
+    @staticmethod
+    def _zscore(values: np.ndarray) -> np.ndarray:
+        """Z-score normalize a vector; returns zeros when variance is 0.
+
+        Used to put local similarity, global graph score and utility on the
+        same (standardized) footing so no single term dominates by magnitude.
+        """
+        arr = np.asarray(values, dtype=float)
+        if arr.size == 0:
+            return arr
+        mu = float(arr.mean())
+        sd = float(arr.std())
+        if sd <= 1e-9:
+            return np.zeros_like(arr)
+        return (arr - mu) / sd

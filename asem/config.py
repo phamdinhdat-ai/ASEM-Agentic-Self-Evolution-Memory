@@ -93,6 +93,10 @@ class PhaseConfig:
     mode: str = "combined"      # "ingest" | "retrieve" | "combined"
     bank_tag: str = "shared"    # shared bank directory tag
     ingest_config: Optional[str] = None  # config used to build banks (defaults to self)
+    # QA prompt selector. Accepts a bare name ("calibrated", "trap") resolved to
+    # data/prompts/P_temporal_qa*.txt, or a path to a custom prompt file.
+    # Defaults to the calibrated (non-refusal-biased) prompt.
+    qa_prompt: str = "calibrated"
 
 
 @dataclass
@@ -196,6 +200,7 @@ class ASEMConfig:
                 mode=ph.get("mode", "combined"),
                 bank_tag=ph.get("bank_tag", "shared"),
                 ingest_config=ph.get("ingest_config"),
+                qa_prompt=ph.get("qa_prompt", "calibrated"),
             )
 
         if "link_tau" in data:
