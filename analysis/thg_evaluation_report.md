@@ -645,13 +645,13 @@ F1 0.4851–0.5762, EM 0.3000–0.3500, depending on bank, context style and N.
 
 ## 8. LongMemEval (task-7) — and does the LoCoMo null replicate?
 
-**Status: the decision rule in §8.4 was written and committed BEFORE the
+**Status: the decision rule in §8.0 was written and committed BEFORE the
 LongMemEval numbers landed.** That ordering is deliberate: pre-committing the
 conclusion criteria is what stops the interpretation being chosen to fit the
 result. **The rule was left unchanged even when the first `gb_full` run came back
 with no judge measurement at all** — which is exactly the moment it would have
-been tempting to re-cut it around EM (§8.7). Read §8.1–§8.3 first; §8.4 states the
-criteria and that the branch fired.
+been tempting to re-cut it around EM (§8.7). Read §8.0 first; §8.4 records which
+branch fired.
 
 ### 8.0 Decision rule (pre-registered — §8.4 records which branch fired)
 
