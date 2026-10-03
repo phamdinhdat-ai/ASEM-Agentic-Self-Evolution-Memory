@@ -3,34 +3,65 @@
   "n_notes": 365,
   "n_pairs": 5,
   "n_evaluated": 5,
-  "n_exposed": 0,
-  "exposure_rate": 0.0,
+  "n_errors": 0,
+  "n_exposed": 5,
+  "exposure_rate": 1.0,
   "measurement": "EXPOSURE PROXY \u2014 not the accuracy ablation",
   "rows": [
     {
       "a": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
       "b": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
-      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+      "a_session": "s1",
+      "b_session": "s4",
+      "a_sentence": "Melanie reacted to Caroline's necklace, saying it was gorgeous and that such items can mean so much; Melanie's own grandmother gave her a necklace from Sweden.",
+      "b_sentence": "Melanie reacted to Caroline's necklace, saying it is gorgeous and that items can mean a lot to us.",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
     },
     {
       "a": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
       "b": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
-      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+      "a_session": "s12",
+      "b_session": "s8",
+      "a_sentence": "Melanie said she appreciates her friendship with Caroline and that Caroline has always been there for her.",
+      "b_sentence": "Melanie appreciates Caroline's friendship and says it is great to have a supporter.",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
     },
     {
       "a": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
       "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
-      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+      "a_session": "s7",
+      "b_session": "s13",
+      "a_sentence": "Melanie has a dog and a cat, which brighten up her day and always make her smile.",
+      "b_sentence": "Melanie's pets are doing well and she recently got another cat named Bailey.",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
     },
     {
       "a": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
       "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
-      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+      "a_session": "s13",
+      "b_session": "s13",
+      "a_sentence": "Melanie has a pet named Oliver.",
+      "b_sentence": "Melanie's pets are doing well and she recently got another cat named Bailey.",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
     },
     {
       "a": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
       "b": "c47a1be6-6029-4475-910d-5a1239924a1c",
-      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+      "a_session": "s18",
+      "b_session": "s10",
+      "a_sentence": "After the accident, Melanie reflected on how much she needs her family, saying they mean the world to her.",
+      "b_sentence": "Melanie says she is really lucky to have her family, who bring her so much joy and love.",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
     }
   ]
 }

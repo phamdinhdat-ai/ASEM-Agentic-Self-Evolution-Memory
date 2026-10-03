@@ -1,0 +1,13 @@
+{
+  "n_keys": 60,
+  "n_differences": 1,
+  "differences": {
+    "answer.context_style": {
+      "legacy": "legacy",
+      "thg_v1": "thg_v1"
+    }
+  },
+  "ablation_arm_a": "configs/models/deepseek_v41_flash.yaml",
+  "ablation_arm_b": "configs/models/deepseek_v41_flash_thg_v1.yaml",
+  "verdict": "IDENTICAL EXCEPT answer.context_style"
+}

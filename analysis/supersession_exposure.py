@@ -127,9 +127,32 @@ def main() -> int:
     n_ok = len(rows) - n_errors
     print(f"\npairs evaluated successfully : {n_ok}")
     print(f"pairs that ERRORED            : {n_errors}")
+
     if n_errors:
-        print("  !! retrieval failed for some pairs; the rate below is over the")
-        print("     successful pairs only and MUST NOT be read as 0 exposure.")
+        # A rate computed over rows that errored is NOT a rate. Refuse to emit
+        # one: a warning beside a plausible number loses to the number, so the
+        # only safe behaviour is to withhold the number entirely.
+        print("\n" + "!" * 70)
+        print(f"REFUSING TO EMIT A RATE: {n_errors} of {len(rows)} retrieval calls failed.")
+        print("A rate over failed calls is not a measurement. Fix the errors first.")
+        print("!" * 70)
+        with open(os.path.join(_ROOT, args.out), "w", encoding="utf-8") as fh:
+            json.dump({
+                "bank": args.bank, "n_notes": len(notes), "n_pairs": len(pairs),
+                "n_evaluated": n_ok, "n_errors": n_errors,
+                "n_exposed": n_exposed,
+                "exposure_rate": None,
+                "refused": True,
+                "refusal_reason": (
+                    f"{n_errors} retrieval call(s) raised; a rate over failed calls "
+                    "is not a measurement."
+                ),
+                "measurement": "EXPOSURE PROXY — not the accuracy ablation",
+                "rows": rows,
+            }, fh, indent=2)
+        close_system(system)
+        return 1
+
     print(f"pairs with >=1 endpoint retrieved (EXPOSED): {n_exposed}")
     print(f"exposure rate   : {n_exposed/n_ok if n_ok else float('nan'):.4f}  (n={n_ok})")
     print("\nNOTE: this is EXPOSURE, not the accuracy ablation. The ablation needs")
@@ -141,9 +164,12 @@ def main() -> int:
             "n_evaluated": n_ok, "n_errors": n_errors,
             "n_exposed": n_exposed,
             "exposure_rate": (n_exposed / n_ok) if n_ok else None,
+            "refused": False,
             "measurement": "EXPOSURE PROXY — not the accuracy ablation",
             "rows": rows,
         }, fh, indent=2)
+    close_system(system)
+    return 0
     print(f"json -> {args.out}")
     close_system(system)
     return 0

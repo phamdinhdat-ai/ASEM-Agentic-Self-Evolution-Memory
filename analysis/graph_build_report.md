@@ -18,8 +18,7 @@ number is not usable.
    (10 LoCoMo conversations, 4,579 notes) **94.7% of `same-entity` edges connect
    two notes whose shared entities are ONLY the conversation's speaker names**
    (`hub_only_edge_fraction = 0.9474`). Of 22,565 same-entity records, 21,378 are
-   hub-only and **1,187 are discriminative** — a **19:1 noise-to-signal ratio**.
-2. **The hub is a *class* of tokens, not one token.** On LongMemEval the hub is the
+   hub-only and **1,187 are discriminative** — a **19:1 noise-to-signal ratio**.2. **The hub is a *class* of tokens, not one token.** On LongMemEval the hub is the
    generic role word `user` (df 67%). On LoCoMo it is the speaker names `caroline`
    (65.2%) and `melanie` (56.4%). **Both corpora land at ~65% median entity
    fan-out by different routes.**
@@ -476,12 +475,44 @@ Both are true: the final bank holds only the last question, and that question
 produced no pair. So "0 edges" is **not** evidence the mechanism is dead — it
 fires on LongMemEval too. Its LongMemEval rate is **not measured by this report**.
 
-### 5.6 What is NOT measured here
+### 5.6 The wrong signal actually reaches the context — exposure 5/5
+
+`analysis/supersession_exposure.py` builds a query from each mislabelled pair's own
+older-fact text, runs the real retriever (`EnhancedHybridRetriever.retrieve`,
+`asem/enhanced_retriever.py:141`) over the frozen bank, and asks whether either
+endpoint of the pair is retrieved. On `locomo_0000`:
+
+```
+notes: 365   superseded_by pairs: 5
+pairs evaluated successfully : 5      pairs that ERRORED: 0
+pairs with >=1 endpoint retrieved (EXPOSED): 5
+exposure rate   : 1.0000  (n=5)
+```
+
+Retrieval demonstrably ran (`Graph built | nodes=365 edges=2002 tags=10`,
+Louvain 6 communities, multi-hop firing), so this is a real measurement.
+
+**100% exposure, with `superseded_by` at the highest relation weight (1.3×),
+means the wrong signal does not merely exist — it reliably enters the context and
+enters it promoted.**
+
+> **Measurement bug caught before reporting.** A first run of this script printed
+> `exposure rate 0.0000 (n=5)`. That was **not a result**: `retrieve()` requires
+> the `MemoryBank` as a second positional argument and was called with one, so all
+> 5 calls raised `TypeError`, the loop recorded the error per row while leaving
+> `hit_older`/`hit_newer` as `None`, and `None` is falsy — **a total method failure
+> rendered as a clean zero.** It was caught only by printing per-row
+> `n_retrieved`/`error` from the JSON rather than trusting the summary. The script
+> now reports `n_errors` explicitly and warns that the rate is over successful
+> pairs only. Treat any `0.0` produced without an error count as unverified.
+
+### 5.7 What is NOT measured here
 
 - **Full semantic classification of all 166 pairs** (only 22 read; 144 `unread`).
 - **The accuracy ablation** (`superseded_by` at 1.3× vs disabled): this needs the
-  judge-based evaluation pipeline (task-4). The exposure count below is a proxy,
-  not the ablation.
+  judge-based evaluation pipeline (task-4). The exposure figure in 5.6 is a proxy,
+  not the ablation, and it is n=5 pairs on one conversation.
+- **Corpus-level exposure** across all 166 pairs (not yet run).
 - **LongMemEval per-question supersession columns**: `gb_full` has no per-question
   capture (see 3.4); they will come from `thg_v2_postfix` / the fresh hooked run.
 

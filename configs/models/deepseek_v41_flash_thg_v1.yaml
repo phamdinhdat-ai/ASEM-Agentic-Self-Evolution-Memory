@@ -1,0 +1,122 @@
+# ASEM-THG evaluation arm — context_style: "thg_v1" (W10 provenance + question-aware)
+# ---------------------------------------------------------------------------
+# This is configs/models/deepseek_v41_flash.yaml with EXACTLY ONE value changed:
+#
+#     answer.context_style: "legacy"  ->  "thg_v1"
+#
+# Nothing else differs. That is deliberate: the thg_v1-vs-legacy comparison is
+# the ABLATION that isolates the retrieval-context builder's contribution
+# (task-4, required analysis item 5), and an ablation is only interpretable if
+# the two arms are otherwise identical. Do not add any other difference here —
+# if a second change is ever needed, make a third config instead.
+#
+# What thg_v1 adds over legacy (all LLM-free, no second model call):
+#   * `[session: <label>]` provenance in every memory block header, so the model
+#     can cite WHICH session a fact came from.
+#   * an `Evidence chains:` line naming why two memories connect
+#     (`via <entity>` / `from the same session`).
+#   * question-aware structure, chosen from the query surface form:
+#       - arithmetic      -> `Date anchors:` listing the distinct absolute dates
+#       - ordering        -> `(position N of M)` in each header
+#       - knowledge_update-> current fact FIRST + a `superseded` marker
+#   * per-note dropped-content counters (`RenderStats.dropped_sentences` /
+#     `dropped_chars`), exposed as `agent.last_render_stats`.
+#
+# Measured cost of the above (thg_v1 vs legacy, same retrieval, N=60 per dataset):
+#   LoCoMo      +7.07% chars  (4.20% session label + 2.78% chains + 0.09% anchors)
+#   LongMemEval +6.00% chars  (2.35% session label + 2.58% chains + 1.07% position)
+# Both remain 2.65x-11.31x smaller than FullContext on every question measured.
+#
+# KNOWN LIMITATION (do not count as a win): `Date anchors` fires on 0 of 23
+# LongMemEval arithmetic questions, because all 8 retrieved notes there share a
+# single session date, so per-note metadata cannot supply two operands. The
+# operands live inside the turn text. LongMemEval arithmetic needs in-text date
+# extraction, which is an EXTRACTION-side change, not a context-builder one.
+#
+#   python scripts/run_static_eval.py --config configs/models/deepseek_v41_flash_thg_v1.yaml
+#   python scripts/run_longmemeval_eval.py --config configs/models/deepseek_v41_flash_thg_v1.yaml \
+#       --input datasets/longmemeval/longmemeval_oracle.json --judge --per-category
+# ---------------------------------------------------------------------------
+preset: "custom"
+
+inference:
+  backend: "openai"
+  openai:
+    model: "chib/deepseek-v4.1-flash"
+    temperature: 0.3
+    max_tokens: 8192
+    timeout: 120
+    embedder_provider: "huggingface"
+    # MUST match every other config: ingestion stores embedder vectors in the
+    # bank, so the ingest and retrieval phases have to agree on the embedder.
+    embedder_name: "sentence-transformers/all-MiniLM-L6-v2"
+
+hyperparameters:
+  k1: 20
+  k2: 10
+  k: 5
+  delta: 0.30
+  lambda: 0.40
+  alpha: 0.10
+  q0: 0.50
+
+write_gate:
+  enabled: true
+  tau_high: 0.45
+  tau_redund: 0.92
+
+retriever:
+  mode: "rrf"
+  use_bm25: true
+  use_entity_filter: true
+  use_temporal_boost: true
+  max_hops: 2
+  hop_decay: 0.70
+  rrf_k: 60
+  dense_weight: 1.0
+  bm25_weight: 0.8
+  entity_weight: 0.6
+  temporal_weight: 0.5
+  multi_hop_topn: 2
+  multi_hop_min_sim: 0.30
+  multi_hop_min_score: 0.0
+  alpha: 0.35
+  beta: 0.25
+  gamma: 0.40
+  base_weight: 0.60
+  community_boost: 1.2
+  unknown_relation_weight: 1.0
+  enable_global_semantics: true
+  enable_intent_q: true
+
+answer:
+  direct_mode: true
+  include_dates: true
+  max_context_notes: 8
+  content_char_limit: 200
+  max_tokens: 512
+  temperature: 0.0
+  context_window: 32768
+  # THE ONLY DIFFERENCE FROM configs/models/deepseek_v41_flash.yaml
+  context_style: "thg_v1"
+
+ingestion:
+  mode: "session_batch"
+  lazy_evolution: true
+  link_tau: 0.35
+  max_notes_per_session: 20
+
+link_tau: 0.35
+
+llm_retry:
+  max_retries: 1
+
+phase:
+  mode: "combined"
+  bank_tag: "gpt56_luna"
+  ingest_config: null
+  qa_prompt: "calibrated"
+
+logging:
+  level: "INFO"
+  log_file: null
