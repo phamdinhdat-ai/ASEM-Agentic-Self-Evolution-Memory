@@ -13,8 +13,8 @@
     "ASEM-THG"
   ],
   "created_at": "2026-10-03T13:19:16",
-  "updated_at": "2026-10-03T13:48:47",
-  "elapsed_sec": 0.0,
+  "updated_at": "2026-10-03T13:56:12",
+  "elapsed_sec": 2216.85,
   "conversations": [
     {
       "conversation_id": "locomo_0000",
@@ -175,18 +175,65 @@
           "elapsed_sec": 253.75
         }
       }
+    },
+    {
+      "conversation_id": "locomo_0008",
+      "sessions": 25,
+      "turns": 509,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 414,
+          "link_edges": 6640,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0008\\asem_thg.sqlite",
+          "bytes": 8216576,
+          "elapsed_sec": 215.62
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0009",
+      "sessions": 30,
+      "turns": 568,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 478,
+          "link_edges": 7782,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0009\\asem_thg.sqlite",
+          "bytes": 9469952,
+          "elapsed_sec": 230.27
+        }
+      }
     }
   ],
   "totals": {
-    "conversations": 8,
-    "banks_ok": 8,
+    "conversations": 10,
+    "banks_ok": 10,
     "banks_skipped": 0,
     "banks_error": 0,
     "notes": {
-      "ASEM-THG": 3687
+      "ASEM-THG": 4579
     }
   },
-  "run": {},
+  "run": {
+    "built": 10,
+    "skipped": 0,
+    "errors": 0,
+    "notes": 4579,
+    "discarded_partial": 0,
+    "interrupted": false
+  },
   "config_history": [
     {
       "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",

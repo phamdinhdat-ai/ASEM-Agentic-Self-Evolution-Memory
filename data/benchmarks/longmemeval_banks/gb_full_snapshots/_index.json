@@ -1,0 +1,830 @@
+{
+  "tag": "gb_full",
+  "snapshots": [
+    {
+      "idx": 0,
+      "question_id": "gpt4_2655b836",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0000_gpt4_2655b836.sqlite",
+      "n_notes": 63,
+      "captured_at": "2026-10-03T13:20:06"
+    },
+    {
+      "idx": 1,
+      "question_id": "gpt4_2487a7cb",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0001_gpt4_2487a7cb.sqlite",
+      "n_notes": 63,
+      "captured_at": "2026-10-03T13:20:06"
+    },
+    {
+      "idx": 2,
+      "question_id": "gpt4_76048e76",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0002_gpt4_76048e76.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:20:11"
+    },
+    {
+      "idx": 3,
+      "question_id": "gpt4_2312f94c",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0003_gpt4_2312f94c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:20:36"
+    },
+    {
+      "idx": 4,
+      "question_id": "0bb5a684",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0004_0bb5a684.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:20:46"
+    },
+    {
+      "idx": 5,
+      "question_id": "08f4fc43",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0005_08f4fc43.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:21:06"
+    },
+    {
+      "idx": 6,
+      "question_id": "2c63a862",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0006_2c63a862.sqlite",
+      "n_notes": 18,
+      "captured_at": "2026-10-03T13:21:27"
+    },
+    {
+      "idx": 7,
+      "question_id": "gpt4_385a5000",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0007_gpt4_385a5000.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:21:37"
+    },
+    {
+      "idx": 8,
+      "question_id": "2a1811e2",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0008_2a1811e2.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:21:52"
+    },
+    {
+      "idx": 9,
+      "question_id": "bbf86515",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0009_bbf86515.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:22:12"
+    },
+    {
+      "idx": 10,
+      "question_id": "gpt4_5dcc0aab",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0010_gpt4_5dcc0aab.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:22:47"
+    },
+    {
+      "idx": 11,
+      "question_id": "gpt4_0b2f1d21",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0011_gpt4_0b2f1d21.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:23:02"
+    },
+    {
+      "idx": 12,
+      "question_id": "f0853d11",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0012_f0853d11.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:23:27"
+    },
+    {
+      "idx": 13,
+      "question_id": "gpt4_6ed717ea",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0013_gpt4_6ed717ea.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:23:42"
+    },
+    {
+      "idx": 14,
+      "question_id": "gpt4_70e84552",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0014_gpt4_70e84552.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:24:03"
+    },
+    {
+      "idx": 15,
+      "question_id": "a3838d2b",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0015_a3838d2b.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:24:43"
+    },
+    {
+      "idx": 16,
+      "question_id": "gpt4_93159ced",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0016_gpt4_93159ced.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:24:58"
+    },
+    {
+      "idx": 17,
+      "question_id": "gpt4_2d58bcd6",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0017_gpt4_2d58bcd6.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:25:23"
+    },
+    {
+      "idx": 18,
+      "question_id": "gpt4_65aabe59",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0018_gpt4_65aabe59.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:25:43"
+    },
+    {
+      "idx": 19,
+      "question_id": "982b5123",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0019_982b5123.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:26:03"
+    },
+    {
+      "idx": 20,
+      "question_id": "b9cfe692",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0020_b9cfe692.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:26:33"
+    },
+    {
+      "idx": 21,
+      "question_id": "gpt4_4edbafa2",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0021_gpt4_4edbafa2.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:26:53"
+    },
+    {
+      "idx": 22,
+      "question_id": "c8090214",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0022_c8090214.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:27:08"
+    },
+    {
+      "idx": 23,
+      "question_id": "gpt4_483dd43c",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0023_gpt4_483dd43c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:27:28"
+    },
+    {
+      "idx": 24,
+      "question_id": "e4e14d04",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0024_e4e14d04.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:27:44"
+    },
+    {
+      "idx": 25,
+      "question_id": "c9f37c46",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0025_c9f37c46.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:27:54"
+    },
+    {
+      "idx": 26,
+      "question_id": "gpt4_2c50253f",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0026_gpt4_2c50253f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:28:14"
+    },
+    {
+      "idx": 27,
+      "question_id": "dcfa8644",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0027_dcfa8644.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:28:29"
+    },
+    {
+      "idx": 28,
+      "question_id": "gpt4_b4a80587",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0028_gpt4_b4a80587.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:28:49"
+    },
+    {
+      "idx": 29,
+      "question_id": "gpt4_9a159967",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0029_gpt4_9a159967.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:29:14"
+    },
+    {
+      "idx": 30,
+      "question_id": "cc6d1ec1",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0030_cc6d1ec1.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:29:24"
+    },
+    {
+      "idx": 31,
+      "question_id": "gpt4_8c8961ae",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0031_gpt4_8c8961ae.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:29:39"
+    },
+    {
+      "idx": 32,
+      "question_id": "gpt4_d9af6064",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0032_gpt4_d9af6064.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:29:59"
+    },
+    {
+      "idx": 33,
+      "question_id": "gpt4_7de946e7",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0033_gpt4_7de946e7.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:30:14"
+    },
+    {
+      "idx": 34,
+      "question_id": "d01c6aa8",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0034_d01c6aa8.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:30:29"
+    },
+    {
+      "idx": 35,
+      "question_id": "993da5e2",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0035_993da5e2.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:30:45"
+    },
+    {
+      "idx": 36,
+      "question_id": "a3045048",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0036_a3045048.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:31:00"
+    },
+    {
+      "idx": 37,
+      "question_id": "gpt4_d31cdae3",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0037_gpt4_d31cdae3.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:31:10"
+    },
+    {
+      "idx": 38,
+      "question_id": "gpt4_cd90e484",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0038_gpt4_cd90e484.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:31:30"
+    },
+    {
+      "idx": 39,
+      "question_id": "gpt4_88806d6e",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0039_gpt4_88806d6e.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:31:45"
+    },
+    {
+      "idx": 40,
+      "question_id": "gpt4_4cd9eba1",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0040_gpt4_4cd9eba1.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:32:10"
+    },
+    {
+      "idx": 41,
+      "question_id": "gpt4_93f6379c",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0041_gpt4_93f6379c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:32:35"
+    },
+    {
+      "idx": 42,
+      "question_id": "b29f3365",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0042_b29f3365.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:32:50"
+    },
+    {
+      "idx": 43,
+      "question_id": "gpt4_2f56ae70",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0043_gpt4_2f56ae70.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:33:26"
+    },
+    {
+      "idx": 44,
+      "question_id": "6613b389",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0044_6613b389.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:33:51"
+    },
+    {
+      "idx": 45,
+      "question_id": "gpt4_78cf46a3",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0045_gpt4_78cf46a3.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:34:06"
+    },
+    {
+      "idx": 46,
+      "question_id": "gpt4_0a05b494",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0046_gpt4_0a05b494.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:34:21"
+    },
+    {
+      "idx": 47,
+      "question_id": "gpt4_1a1dc16d",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0047_gpt4_1a1dc16d.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:34:46"
+    },
+    {
+      "idx": 48,
+      "question_id": "gpt4_2f584639",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0048_gpt4_2f584639.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:35:06"
+    },
+    {
+      "idx": 49,
+      "question_id": "gpt4_213fd887",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0049_gpt4_213fd887.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:35:26"
+    },
+    {
+      "idx": 50,
+      "question_id": "gpt4_5438fa52",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0050_gpt4_5438fa52.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:35:56"
+    },
+    {
+      "idx": 51,
+      "question_id": "gpt4_c27434e8",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0051_gpt4_c27434e8.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:36:21"
+    },
+    {
+      "idx": 52,
+      "question_id": "gpt4_fe651585",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0052_gpt4_fe651585.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:36:32"
+    },
+    {
+      "idx": 53,
+      "question_id": "8c18457d",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0053_8c18457d.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:36:47"
+    },
+    {
+      "idx": 54,
+      "question_id": "gpt4_70e84552_abs",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0054_gpt4_70e84552_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:37:02"
+    },
+    {
+      "idx": 55,
+      "question_id": "gpt4_93159ced_abs",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0055_gpt4_93159ced_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:37:17"
+    },
+    {
+      "idx": 56,
+      "question_id": "982b5123_abs",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0056_982b5123_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:37:37"
+    },
+    {
+      "idx": 57,
+      "question_id": "c8090214_abs",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0057_c8090214_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:37:52"
+    },
+    {
+      "idx": 58,
+      "question_id": "gpt4_c27434e8_abs",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0058_gpt4_c27434e8_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:38:12"
+    },
+    {
+      "idx": 59,
+      "question_id": "gpt4_fe651585_abs",
+      "question_type": "temporal-reasoning",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0059_gpt4_fe651585_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:38:32"
+    },
+    {
+      "idx": 60,
+      "question_id": "0a995998",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0060_0a995998.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:38:52"
+    },
+    {
+      "idx": 61,
+      "question_id": "6d550036",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0061_6d550036.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:39:27"
+    },
+    {
+      "idx": 62,
+      "question_id": "gpt4_59c863d7",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0062_gpt4_59c863d7.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:40:03"
+    },
+    {
+      "idx": 63,
+      "question_id": "b5ef892d",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0063_b5ef892d.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:40:33"
+    },
+    {
+      "idx": 64,
+      "question_id": "e831120c",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0064_e831120c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:40:48"
+    },
+    {
+      "idx": 65,
+      "question_id": "3a704032",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0065_3a704032.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:41:08"
+    },
+    {
+      "idx": 66,
+      "question_id": "gpt4_d84a3211",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0066_gpt4_d84a3211.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:41:43"
+    },
+    {
+      "idx": 67,
+      "question_id": "aae3761f",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0067_aae3761f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:42:28"
+    },
+    {
+      "idx": 68,
+      "question_id": "gpt4_f2262a51",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0068_gpt4_f2262a51.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:42:48"
+    },
+    {
+      "idx": 69,
+      "question_id": "dd2973ad",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0069_dd2973ad.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:43:04"
+    },
+    {
+      "idx": 70,
+      "question_id": "c4a1ceb8",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0070_c4a1ceb8.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:43:34"
+    },
+    {
+      "idx": 71,
+      "question_id": "gpt4_a56e767c",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0071_gpt4_a56e767c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:43:59"
+    },
+    {
+      "idx": 72,
+      "question_id": "6cb6f249",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0072_6cb6f249.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:44:14"
+    },
+    {
+      "idx": 73,
+      "question_id": "46a3abf7",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0073_46a3abf7.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:45:04"
+    },
+    {
+      "idx": 74,
+      "question_id": "36b9f61e",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0074_36b9f61e.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:45:34"
+    },
+    {
+      "idx": 75,
+      "question_id": "28dc39ac",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0075_28dc39ac.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:46:14"
+    },
+    {
+      "idx": 76,
+      "question_id": "gpt4_2f8be40d",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0076_gpt4_2f8be40d.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:46:49"
+    },
+    {
+      "idx": 77,
+      "question_id": "2e6d26dc",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0077_2e6d26dc.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:47:19"
+    },
+    {
+      "idx": 78,
+      "question_id": "gpt4_15e38248",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0078_gpt4_15e38248.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:47:49"
+    },
+    {
+      "idx": 79,
+      "question_id": "88432d0a",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0079_88432d0a.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:48:30"
+    },
+    {
+      "idx": 80,
+      "question_id": "80ec1f4f",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0080_80ec1f4f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:49:05"
+    },
+    {
+      "idx": 81,
+      "question_id": "d23cf73b",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0081_d23cf73b.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:49:35"
+    },
+    {
+      "idx": 82,
+      "question_id": "gpt4_7fce9456",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0082_gpt4_7fce9456.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:50:40"
+    },
+    {
+      "idx": 83,
+      "question_id": "d682f1a2",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0083_d682f1a2.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:51:05"
+    },
+    {
+      "idx": 84,
+      "question_id": "7024f17c",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0084_7024f17c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:51:35"
+    },
+    {
+      "idx": 85,
+      "question_id": "gpt4_5501fe77",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0085_gpt4_5501fe77.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:52:05"
+    },
+    {
+      "idx": 86,
+      "question_id": "gpt4_2ba83207",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0086_gpt4_2ba83207.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:52:46"
+    },
+    {
+      "idx": 87,
+      "question_id": "2318644b",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0087_2318644b.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:53:06"
+    },
+    {
+      "idx": 88,
+      "question_id": "2ce6a0f2",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0088_2ce6a0f2.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:53:41"
+    },
+    {
+      "idx": 89,
+      "question_id": "gpt4_d12ceb0e",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0089_gpt4_d12ceb0e.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:54:16"
+    },
+    {
+      "idx": 90,
+      "question_id": "00ca467f",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0090_00ca467f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:54:41"
+    },
+    {
+      "idx": 91,
+      "question_id": "b3c15d39",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0091_b3c15d39.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:55:06"
+    },
+    {
+      "idx": 92,
+      "question_id": "gpt4_31ff4165",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0092_gpt4_31ff4165.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:55:41"
+    },
+    {
+      "idx": 93,
+      "question_id": "eeda8a6d",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0093_eeda8a6d.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:56:01"
+    },
+    {
+      "idx": 94,
+      "question_id": "2788b940",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0094_2788b940.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:56:26"
+    },
+    {
+      "idx": 95,
+      "question_id": "60bf93ed",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0095_60bf93ed.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:56:47"
+    },
+    {
+      "idx": 96,
+      "question_id": "9d25d4e0",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0096_9d25d4e0.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:57:17"
+    },
+    {
+      "idx": 97,
+      "question_id": "129d1232",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0097_129d1232.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:57:32"
+    },
+    {
+      "idx": 98,
+      "question_id": "60472f9c",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0098_60472f9c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:57:57"
+    },
+    {
+      "idx": 99,
+      "question_id": "gpt4_194be4b3",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0099_gpt4_194be4b3.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:58:27"
+    },
+    {
+      "idx": 100,
+      "question_id": "a9f6b44c",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0100_a9f6b44c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:58:57"
+    },
+    {
+      "idx": 101,
+      "question_id": "d851d5ba",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0101_d851d5ba.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:59:22"
+    },
+    {
+      "idx": 102,
+      "question_id": "5a7937c8",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0102_5a7937c8.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T13:59:47"
+    }
+  ],
+  "double_ingest": []
+}

@@ -481,28 +481,56 @@ def test_semantic_peers_remains_an_on_scan() -> None:
 def test_gb4_reverse_pagerank_surfaces_a_premise() -> None:
     """A note that points INTO the seed set must be reachable in reverse.
 
-    PRE-FIX `personalized_pagerank` walked outward only, so the premise's score
-    was exactly 0.0 — it could appear in the list, but never rank. Direction
-    comes from the persisted `Note.L` records (premise asserts -> seed), because
-    the nx graph itself is undirected and has no `reverse()`.
+    PRE-FIX `personalized_pagerank` walked outward only, so it could not rank a
+    note that merely points at the seed at all, and `reverse=` did not exist.
+
+    The topology is deliberately ASYMMETRIC: the seed has its own outgoing
+    assertions to ``consequence`` while ``premise`` points only INTO the seed. On
+    a symmetric pair the reversal of a single undirected edge is a no-op, which
+    is why a 2-node fixture cannot demonstrate direction.
     """
     graph = TemporalHyperGraph(semantic_tau=2.0, max_entity_links=0, max_semantic_links=0)
-    premise = _note("premise")
-    seed = _note("seed")
-    _add(graph, premise)
-    _add(graph, seed)
-    # The premise asserts a fact the seed depends on.
+    premise, seed, consequence = _note("premise"), _note("seed"), _note("consequence")
+    for n in (premise, seed, consequence):
+        _add(graph, n)
     premise.L.append(LinkRecord(target_id="seed", relation="causal"))
+    seed.L.append(LinkRecord(target_id="consequence", relation="causal"))
 
     forward = dict(graph.personalized_pagerank(["seed"], top_k=10, directions="out"))
     reverse = dict(graph.personalized_pagerank(["seed"], top_k=10, directions="in"))
 
-    assert forward.get("premise", 0.0) == 0.0, (
-        "outward-only PPR must not reach a note that points INTO the seed"
+    # The reverse walk treats the incoming assertion as something the seed
+    # RESTS ON, so the premise must rank strictly higher there than outward.
+    assert reverse.get("premise", 0.0) > forward.get("premise", 0.0), (
+        f"the reverse walk must rank a premise above the outward walk's score: "
+        f"forward={forward.get('premise')} reverse={reverse.get('premise')}"
     )
-    assert reverse.get("premise", 0.0) > 0.0, (
-        "the reverse walk must surface the premise"
-    )
+    # And symmetrically, the outgoing consequence is favoured by the forward walk.
+    assert forward.get("consequence", 0.0) > reverse.get("consequence", 0.0)
+
+
+def test_gb4_outward_walk_cannot_reach_an_isolated_premise() -> None:
+    """With the seed's only edge pointing INWARD from the premise, the outward
+    walk over a DIRECTED view cannot reach it; the reverse walk can.
+
+    This isolates the GB4 direction semantics from the undirected projection:
+    the premise is linked only via its own ``L`` record, which the directed
+    reverse walk honours and a directed outward walk does not.
+    """
+    graph = TemporalHyperGraph(semantic_tau=2.0, max_entity_links=0, max_semantic_links=0)
+    premise, seed = _note("premise"), _note("seed")
+    _add(graph, premise)
+    _add(graph, seed)
+    premise.L.append(LinkRecord(target_id="seed", relation="causal"))
+
+    directed = graph._directed_from_links()
+    # In the directed view the arrow is premise -> seed, so an outward walk from
+    # the seed has NO outgoing edge to follow.
+    assert directed.has_edge("premise", "seed")
+    assert not directed.has_edge("seed", "premise")
+    # The reverse walk flips exactly that arrow, so it reaches the premise.
+    reverse = dict(graph.personalized_pagerank(["seed"], top_k=10, directions="in"))
+    assert reverse.get("premise", 0.0) > 0.0
 
 
 def test_gb4_directions_parameter_and_alias_agree() -> None:

@@ -1,0 +1,370 @@
+{
+  "phase": "eval",
+  "dataset": "locomo10",
+  "tag": "ds_nothink",
+  "model_tag": "deepseek_v4_flash",
+  "config": "configs/models/deepseek_openai.yaml",
+  "judge_config": "configs/models/judge_api.yaml",
+  "metrics": [
+    "em",
+    "f1",
+    "rougeL",
+    "bertscore_f1",
+    "judge"
+  ],
+  "bank_root": "static/memory_banks\\locomo10",
+  "work_copy": true,
+  "n_qa": 1790,
+  "conversations": [
+    "locomo_0000",
+    "locomo_0001",
+    "locomo_0002",
+    "locomo_0003",
+    "locomo_0004",
+    "locomo_0005",
+    "locomo_0006",
+    "locomo_0007",
+    "locomo_0009"
+  ],
+  "elapsed_sec": 56858.28,
+  "systems": {
+    "ASEM": {
+      "n": 1790,
+      "missing_conversations": 0,
+      "n_answer_errors": 0,
+      "aborted": null,
+      "overall": {
+        "n": 1790.0,
+        "em": 0.02905027932960894,
+        "f1": 0.21894921823312993,
+        "rougeL": 0.20871649077241733,
+        "bertscore_f1": 0.8335386371146367,
+        "judge": 0.4172259507829978,
+        "judge_coverage": 0.9988826815642458
+      },
+      "per_category": {
+        "adversarial": {
+          "n": 406.0,
+          "em": 0.019704433497536946,
+          "f1": 0.15826013008824485,
+          "rougeL": 0.15121903224193176,
+          "bertscore_f1": 0.8187186612284242,
+          "judge": 0.21782178217821782,
+          "judge_coverage": 0.9950738916256158
+        },
+        "commonsense": {
+          "n": 83.0,
+          "em": 0.0,
+          "f1": 0.07236082025234811,
+          "rougeL": 0.07008160848759112,
+          "bertscore_f1": 0.8064112462193133,
+          "judge": 0.24096385542168675,
+          "judge_coverage": 1.0
+        },
+        "conversational": {
+          "n": 768.0,
+          "em": 0.044270833333333336,
+          "f1": 0.27844191536373625,
+          "rougeL": 0.26855366308796297,
+          "bertscore_f1": 0.8516785946364204,
+          "judge": 0.5833333333333334,
+          "judge_coverage": 1.0
+        },
+        "single_hop": {
+          "n": 245.0,
+          "em": 0.004081632653061225,
+          "f1": 0.17596530062572022,
+          "rougeL": 0.15337250683763903,
+          "bertscore_f1": 0.8310204537547364,
+          "judge": 0.22448979591836735,
+          "judge_coverage": 1.0
+        },
+        "temporal": {
+          "n": 288.0,
+          "em": 0.03125,
+          "f1": 0.22466892391624793,
+          "rougeL": 0.21724076549012353,
+          "bertscore_f1": 0.8160176343388028,
+          "judge": 0.46875,
+          "judge_coverage": 1.0
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 199.0,
+          "em": 0.03015075376884422,
+          "f1": 0.23576512570904323,
+          "rougeL": 0.22042285772802028,
+          "bertscore_f1": 0.8424333160247036,
+          "judge": 0.41708542713567837,
+          "judge_coverage": 1.0
+        },
+        "locomo_0001": {
+          "n": 105.0,
+          "em": 0.0380952380952381,
+          "f1": 0.17945335740303,
+          "rougeL": 0.17121611056853647,
+          "bertscore_f1": 0.8245139581816537,
+          "judge": 0.4380952380952381,
+          "judge_coverage": 1.0
+        },
+        "locomo_0002": {
+          "n": 193.0,
+          "em": 0.02072538860103627,
+          "f1": 0.20469268662541484,
+          "rougeL": 0.19651868538191,
+          "bertscore_f1": 0.8358349380097858,
+          "judge": 0.3717277486910995,
+          "judge_coverage": 0.9896373056994818
+        },
+        "locomo_0003": {
+          "n": 260.0,
+          "em": 0.023076923076923078,
+          "f1": 0.20642299668954764,
+          "rougeL": 0.19921242165093497,
+          "bertscore_f1": 0.8273448909704502,
+          "judge": 0.34615384615384615,
+          "judge_coverage": 1.0
+        },
+        "locomo_0004": {
+          "n": 242.0,
+          "em": 0.049586776859504134,
+          "f1": 0.24388684655295512,
+          "rougeL": 0.23302665151499452,
+          "bertscore_f1": 0.8437483323014472,
+          "judge": 0.45867768595041325,
+          "judge_coverage": 1.0
+        },
+        "locomo_0005": {
+          "n": 158.0,
+          "em": 0.006329113924050633,
+          "f1": 0.17087191317686862,
+          "rougeL": 0.16279454067417612,
+          "bertscore_f1": 0.8236626126343691,
+          "judge": 0.3670886075949367,
+          "judge_coverage": 1.0
+        },
+        "locomo_0006": {
+          "n": 190.0,
+          "em": 0.021052631578947368,
+          "f1": 0.23829156377877111,
+          "rougeL": 0.22611339293147995,
+          "bertscore_f1": 0.8326979207365136,
+          "judge": 0.4842105263157895,
+          "judge_coverage": 1.0
+        },
+        "locomo_0007": {
+          "n": 239.0,
+          "em": 0.04602510460251046,
+          "f1": 0.2525744328165637,
+          "rougeL": 0.241994660874985,
+          "bertscore_f1": 0.8333790609028549,
+          "judge": 0.4686192468619247,
+          "judge_coverage": 1.0
+        },
+        "locomo_0009": {
+          "n": 204.0,
+          "em": 0.0196078431372549,
+          "f1": 0.2025711016029989,
+          "rougeL": 0.19178964008750904,
+          "bertscore_f1": 0.8317360810789407,
+          "judge": 0.4068627450980392,
+          "judge_coverage": 1.0
+        }
+      }
+    },
+    "FastASEM": {
+      "n": 207,
+      "missing_conversations": 0,
+      "n_answer_errors": 8,
+      "aborted": "8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}",
+      "overall": {
+        "n": 207.0,
+        "em": 0.19806763285024154,
+        "f1": 0.3533362588215193,
+        "rougeL": 0.34479651721990306,
+        "bertscore_f1": 0.8305106203337222,
+        "judge": 0.5,
+        "judge_coverage": 0.17391304347826086
+      },
+      "per_category": {
+        "adversarial": {
+          "n": 47.0,
+          "em": 0.06382978723404255,
+          "f1": 0.10516539575890078,
+          "rougeL": 0.10280132956504737,
+          "bertscore_f1": 0.8107976241314665,
+          "judge": 0.0,
+          "judge_coverage": 0.0
+        },
+        "commonsense": {
+          "n": 13.0,
+          "em": 0.0,
+          "f1": 0.11746031746031747,
+          "rougeL": 0.11746031746031747,
+          "bertscore_f1": 0.7945911425810593,
+          "judge": 0.2,
+          "judge_coverage": 0.38461538461538464
+        },
+        "conversational": {
+          "n": 72.0,
+          "em": 0.2638888888888889,
+          "f1": 0.4627906610169252,
+          "rougeL": 0.4494737196975329,
+          "bertscore_f1": 0.8674419679575496,
+          "judge": 0.0,
+          "judge_coverage": 0.0
+        },
+        "single_hop": {
+          "n": 34.0,
+          "em": 0.058823529411764705,
+          "f1": 0.2023149451168027,
+          "rougeL": 0.18179154436894376,
+          "bertscore_f1": 0.7709533396889182,
+          "judge": 0.16666666666666666,
+          "judge_coverage": 0.35294117647058826
+        },
+        "temporal": {
+          "n": 41.0,
+          "em": 0.4146341463414634,
+          "f1": 0.6456393200295639,
+          "rougeL": 0.6456393200295639,
+          "bertscore_f1": 0.8490314629019761,
+          "judge": 0.7894736842105263,
+          "judge_coverage": 0.4634146341463415
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 199.0,
+          "em": 0.20603015075376885,
+          "f1": 0.3675407315379623,
+          "rougeL": 0.3586576837413062,
+          "bertscore_f1": 0.8638979819551784,
+          "judge": 0.5,
+          "judge_coverage": 0.18090452261306533
+        },
+        "locomo_0001": {
+          "n": 8.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0,
+          "bertscore_f1": 0.0,
+          "judge": 0.0,
+          "judge_coverage": 0.0
+        }
+      }
+    },
+    "FullContext": {
+      "n": 28,
+      "missing_conversations": 0,
+      "n_answer_errors": 8,
+      "aborted": "8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}",
+      "overall": {
+        "n": 28.0,
+        "em": 0.14285714285714285,
+        "f1": 0.3240878169449598,
+        "rougeL": 0.3121830550401979,
+        "bertscore_f1": 0.6235537678003311,
+        "judge": 0.6,
+        "judge_coverage": 0.7142857142857143
+      },
+      "per_category": {
+        "commonsense": {
+          "n": 4.0,
+          "em": 0.0,
+          "f1": 0.23809523809523808,
+          "rougeL": 0.23809523809523808,
+          "bertscore_f1": 0.42476382851600647,
+          "judge": 0.5,
+          "judge_coverage": 0.5
+        },
+        "single_hop": {
+          "n": 10.0,
+          "em": 0.3,
+          "f1": 0.5260606060606061,
+          "rougeL": 0.4927272727272728,
+          "bertscore_f1": 0.7372593700885772,
+          "judge": 0.625,
+          "judge_coverage": 0.8
+        },
+        "temporal": {
+          "n": 14.0,
+          "em": 0.07142857142857142,
+          "f1": 0.2043908472479901,
+          "rougeL": 0.2043908472479901,
+          "bertscore_f1": 0.599132605961391,
+          "judge": 0.6,
+          "judge_coverage": 0.7142857142857143
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 28.0,
+          "em": 0.14285714285714285,
+          "f1": 0.3240878169449598,
+          "rougeL": 0.3121830550401979,
+          "bertscore_f1": 0.6235537678003311,
+          "judge": 0.6,
+          "judge_coverage": 0.7142857142857143
+        }
+      }
+    },
+    "NoMemory": {
+      "n": 28,
+      "missing_conversations": 0,
+      "n_answer_errors": 8,
+      "aborted": "8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}",
+      "overall": {
+        "n": 28.0,
+        "em": 0.0,
+        "f1": 0.0,
+        "rougeL": 0.0,
+        "bertscore_f1": 0.5607646363122123,
+        "judge": 0.0,
+        "judge_coverage": 0.7142857142857143
+      },
+      "per_category": {
+        "commonsense": {
+          "n": 4.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0,
+          "bertscore_f1": 0.4287315905094147,
+          "judge": 0.0,
+          "judge_coverage": 0.5
+        },
+        "single_hop": {
+          "n": 10.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0,
+          "bertscore_f1": 0.6399335443973542,
+          "judge": 0.0,
+          "judge_coverage": 0.8
+        },
+        "temporal": {
+          "n": 14.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0,
+          "bertscore_f1": 0.5419391436236245,
+          "judge": 0.0,
+          "judge_coverage": 0.7142857142857143
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 28.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0,
+          "bertscore_f1": 0.5607646363122123,
+          "judge": 0.0,
+          "judge_coverage": 0.7142857142857143
+        }
+      }
+    }
+  },
+  "resumed_from": 20
+}

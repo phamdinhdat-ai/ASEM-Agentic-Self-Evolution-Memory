@@ -866,8 +866,26 @@ class TemporalHyperGraph:
         return weight if weight > self.entity_idf_floor else 0.0
 
     def _semantic_peers(self, note: Note) -> List[Tuple[str, float]]:
-        """Existing notes at/above ``semantic_tau``, most similar first."""
-        if note.e is None:
+        """Existing notes at/above ``semantic_tau``, most similar first.
+
+        KNOWN REMAINING O(N) TERM, deliberately left in place for WS1. This is a
+        relevance test against every note's embedding, so it cannot be answered
+        from an index without either an ANN structure over the graph's notes or a
+        change to which notes qualify — both of which would alter retrieval. It
+        is therefore a BUILD-TIME cost (query-time `retrieve()` does not call it),
+        and it is measured rather than assumed: at N=2000 it is ~51 ms of a
+        ~141 ms `add_note` (36%, by cProfile), which after GB3 removed the entity
+        scan is the dominant N-proportional term. Pinned by
+        `tests/test_hyper_graph_v2.py::test_semantic_peers_remains_an_on_scan` so
+        it cannot change silently.
+
+        The `max_semantic_links == 0` early-out is NOT just an optimisation: the
+        cap previously trimmed the RESULT list while still computing a cosine
+        against every note, so disabling the channel did not disable its cost —
+        a graph configured with `max_semantic_links=0` still paid the full O(N)
+        scan. Callers that turn the channel off now genuinely turn it off.
+        """
+        if note.e is None or self.max_semantic_links <= 0:
             return []
         similar: List[Tuple[str, float]] = []
         for other_id, other in self._fact_nodes.items():
@@ -877,7 +895,7 @@ class TemporalHyperGraph:
             if sim >= self.semantic_tau:
                 similar.append((other_id, sim))
         similar.sort(key=lambda item: item[1], reverse=True)
-        return similar[: max(0, self.max_semantic_links)]
+        return similar[: self.max_semantic_links]
 
     # ------------------------------------------------------------------
     # Link bookkeeping
@@ -1042,32 +1060,44 @@ class TemporalHyperGraph:
         return directed
 
     def _resolve_ppr_graph(self) -> Optional[Any]:
-        """Return the nx graph to walk, rebuilding it from ``_fact_nodes`` if empty.
+        """Return the nx graph the FORWARD walk uses.
 
-        ``_graph`` is populated by ``add_note``/``hydrate``. A graph that was
-        built by neither — most importantly one constructed and then handed a
-        bank ONLY through ``hydrate`` on a code path that skipped the nx
-        additions, or a caller that populated ``_fact_nodes`` directly — would
-        make every PPR query return nothing. Rebuilding from the notes the graph
-        already holds is cheap relative to the walk and removes that failure mode.
+        ``_graph`` is populated by ``add_note``/``hydrate``. A graph built by
+        neither — one constructed and then handed a bank only through
+        ``hydrate``, or a caller that populated ``_fact_nodes`` directly — would
+        make every PPR query return nothing, so the structure is rebuilt from the
+        notes the graph already holds in that case.
+
+        ``Note.L`` records that are not yet in ``_graph`` are also folded in.
+        They matter on a RESUMED bank: the notes arrive from SQLite carrying
+        their persisted links, and a walk that ignored them would see a
+        disconnected graph even though the edges exist. Adding them is
+        conservative (edges are only ever added, never removed), and it keeps the
+        forward and reverse walks operating on the same topology.
         """
-        if self._graph is not None and self._graph.number_of_nodes() > 0:
-            return self._graph
-        if nx is None or not self._fact_nodes:
-            return None
-        rebuilt = nx.Graph()
+        graph = self._graph
+        if graph is None or graph.number_of_nodes() == 0:
+            if nx is None or not self._fact_nodes:
+                return None
+            graph = nx.Graph()
+            for note_id, note in self._fact_nodes.items():
+                graph.add_node(note_id, type="fact", date=note.session_date or "")
+                for key in self._entity_keys(note):
+                    graph.add_node(key, type="entity")
+                    graph.add_edge(note_id, key, relation="entity_cooccurrence", weight=1.0)
+            self._graph = graph
+
+        # Fold in any persisted note-to-note link the nx graph does not know yet.
         for note_id, note in self._fact_nodes.items():
-            rebuilt.add_node(note_id, type="fact", date=note.session_date or "")
-            for key in self._entity_keys(note):
-                rebuilt.add_node(key, type="entity")
-                rebuilt.add_edge(note_id, key, relation="entity_cooccurrence", weight=1.0)
+            if not graph.has_node(note_id):
+                graph.add_node(note_id, type="fact", date=note.session_date or "")
             for link in note.L or []:
-                if link.target_id in self._fact_nodes:
-                    rebuilt.add_edge(
-                        note_id, link.target_id,
-                        relation=link.relation, weight=1.0,
+                target = link.target_id
+                if target in self._fact_nodes and not graph.has_edge(note_id, target):
+                    graph.add_edge(
+                        note_id, target, relation=link.relation, weight=1.0
                     )
-        return rebuilt
+        return graph
 
     def personalized_pagerank(
         self,
@@ -1116,11 +1146,24 @@ class TemporalHyperGraph:
         # injects a flat term into Phase D. Return [] and let the caller fall
         # through to its other channels (the caller treats a missing score as
         # "below the ranked set", which is the correct reading of "no evidence").
-        if not any(graph.degree(nid) > 0 for nid in valid_seeds):
-            return []
-
+        #
+        # This is checked against the graph that will actually be WALKED, not
+        # against `_graph`: the reverse walk runs over the directed projection of
+        # `Note.L`, where a seed can have incoming edges that the undirected
+        # `_graph` does not know about. Testing `_graph` here silently returned []
+        # for exactly the premise case GB4 exists to serve.
         want = str(directions).lower()
         reverse_walk = bool(reverse) or want == "in"
+        if reverse_walk or want == "both":
+            probe_graph = self._directed_from_links()
+        else:
+            probe_graph = graph
+        if probe_graph is None or not any(
+            probe_graph.has_node(nid) and probe_graph.degree(nid) > 0
+            for nid in valid_seeds
+        ):
+            return []
+
         personalization = {nid: (1.0 / len(valid_seeds)) for nid in valid_seeds}
 
         # The forward walk uses the undirected graph (unchanged from before GB4,

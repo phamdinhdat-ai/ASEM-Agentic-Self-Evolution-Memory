@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "tag": "check_thg_judge",
+    "model": "chib_deepseek_v4_1_flash",
+    "config": "configs/models/deepseek_v41_flash.yaml",
+    "input": "datasets/longmemeval/longmemeval_oracle.json",
+    "questions": 10,
+    "metrics": [
+      "em",
+      "f1",
+      "rougeL",
+      "judge"
+    ],
+    "created": "2026-10-03T10:04:29"
+  },
+  "systems": {
+    "ASEM-THG": {
+      "overall": {
+        "n": 10.0,
+        "em": 0.0,
+        "f1": 0.2667202949555891,
+        "rougeL": 0.2667202949555891,
+        "judge": 0.0,
+        "judge_coverage": 0.0
+      },
+      "per_category": {
+        "temporal-reasoning": {
+          "n": 10.0,
+          "em": 0.0,
+          "f1": 0.2667202949555891,
+          "rougeL": 0.2667202949555891,
+          "judge": 0.0,
+          "judge_coverage": 0.0
+        }
+      },
+      "recall": {
+        "session_recall": 1.0,
+        "session_hit": 1.0,
+        "turn_recall": 0.0
+      },
+      "recall_by_category": {
+        "temporal-reasoning": {
+          "n": 10.0,
+          "session_recall": 1.0,
+          "turn_recall": 0.0,
+          "abstain_rate": 0.0
+        }
+      },
+      "abstention": {
+        "n_abstention_questions": 0.0,
+        "refusal_rate": 0.0,
+        "abstention_accuracy": 1.0
+      },
+      "n": 10.0
+    }
+  }
+}

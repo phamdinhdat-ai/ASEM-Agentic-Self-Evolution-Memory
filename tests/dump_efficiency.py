@@ -12,6 +12,13 @@ Two distinct context sizes are reported, never conflated:
   (2) CANDIDATE POOL   — what retrieval produced BEFORE trimming; FullContext's
                          analogue is len(history).
 
+CONTENT ASSERTIONS: if you add a "is this text present in the rendered block?"
+check, route it through `tests/assert_content.py` (`contains` / `assert_contains`
+/ `assert_absent`). A raw `"text" in block` is False for any `_wrap`-broken line,
+so it passes only while a fixture happens to be short — green for the wrong
+reason. This script currently makes no such check; keep it that way or use the
+helper.
+
 Real questions are read from the on-disk corpora; the NOTE LIST is constructed
 in-code (no bank, no API), and the retrieval order is a deterministic lexical
 overlap ranking so the run is reproducible without an embedder.

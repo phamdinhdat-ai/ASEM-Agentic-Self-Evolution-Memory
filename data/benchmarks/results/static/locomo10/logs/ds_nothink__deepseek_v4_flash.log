@@ -1,0 +1,43 @@
+[2026-09-16T06:18:12] [locomo_0000] ASEM: n=20 err=0
+[2026-09-16T06:18:51] [locomo_0000] FastASEM: n=20 err=0
+[2026-09-16T06:19:52] [locomo_0000] FullContext: n=20 err=0
+[2026-09-16T06:20:23] [locomo_0000] NoMemory: n=20 err=0
+[2026-09-16T06:33:10] [locomo_0000] ASEM: n=199 err=0
+[2026-09-16T06:38:25] [locomo_0001] ASEM: n=304 err=0
+[2026-09-16T19:58:42] [locomo_0002] ASEM: n=497 err=0
+[2026-09-16T20:29:13] [locomo_0003] ASEM: n=757 err=0
+[2026-09-16T20:44:51] [locomo_0004] ASEM: n=999 err=0
+[2026-09-16T20:55:48] [locomo_0005] ASEM: n=1157 err=0
+[2026-09-16T21:09:26] [locomo_0006] ASEM: n=1347 err=0
+[2026-09-16T21:25:31] [locomo_0007] ASEM: n=1586 err=0
+[2026-09-16T21:41:57] [locomo_0009] ASEM: n=1790 err=0
+[2026-09-16T22:00:00] [locomo_0000] FastASEM: n=199 err=0
+[2026-09-16T22:00:21] [FastASEM] ABORTED 8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+[2026-09-16T22:01:32] [locomo_0001] FastASEM: n=207 err=8
+[2026-09-16T22:02:06] [locomo_0002] FastASEM: n=207 err=8
+[2026-09-16T22:02:39] [locomo_0003] FastASEM: n=207 err=8
+[2026-09-16T22:03:13] [locomo_0004] FastASEM: n=207 err=8
+[2026-09-16T22:03:46] [locomo_0005] FastASEM: n=207 err=8
+[2026-09-16T22:04:19] [locomo_0006] FastASEM: n=207 err=8
+[2026-09-16T22:04:53] [locomo_0007] FastASEM: n=207 err=8
+[2026-09-16T22:05:29] [locomo_0009] FastASEM: n=207 err=8
+[2026-09-16T22:05:36] [FullContext] ABORTED 8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+[2026-09-16T22:06:28] [locomo_0000] FullContext: n=28 err=8
+[2026-09-16T22:06:41] [locomo_0001] FullContext: n=28 err=8
+[2026-09-16T22:06:55] [locomo_0002] FullContext: n=28 err=8
+[2026-09-16T22:07:09] [locomo_0003] FullContext: n=28 err=8
+[2026-09-16T22:07:22] [locomo_0004] FullContext: n=28 err=8
+[2026-09-16T22:07:35] [locomo_0005] FullContext: n=28 err=8
+[2026-09-16T22:07:49] [locomo_0006] FullContext: n=28 err=8
+[2026-09-16T22:08:02] [locomo_0007] FullContext: n=28 err=8
+[2026-09-16T22:08:15] [locomo_0009] FullContext: n=28 err=8
+[2026-09-16T22:08:22] [NoMemory] ABORTED 8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+[2026-09-16T22:09:14] [locomo_0000] NoMemory: n=28 err=8
+[2026-09-16T22:09:27] [locomo_0001] NoMemory: n=28 err=8
+[2026-09-16T22:09:42] [locomo_0002] NoMemory: n=28 err=8
+[2026-09-16T22:09:56] [locomo_0003] NoMemory: n=28 err=8
+[2026-09-16T22:10:10] [locomo_0004] NoMemory: n=28 err=8
+[2026-09-16T22:10:25] [locomo_0005] NoMemory: n=28 err=8
+[2026-09-16T22:10:39] [locomo_0006] NoMemory: n=28 err=8
+[2026-09-16T22:10:53] [locomo_0007] NoMemory: n=28 err=8
+[2026-09-16T22:11:08] [locomo_0009] NoMemory: n=28 err=8

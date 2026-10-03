@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "tag": "smoke",
+    "model": "deepseek_v4_flash",
+    "config": "configs/models/deepseek_api.yaml",
+    "input": "datasets/longmemeval/longmemeval_oracle.json",
+    "questions": 5,
+    "metrics": [
+      "em",
+      "f1",
+      "rougeL"
+    ],
+    "created": "2026-10-03T09:35:14"
+  },
+  "systems": {
+    "NoMemory": {
+      "overall": {
+        "n": 5.0,
+        "em": 0.0,
+        "f1": 0.0,
+        "rougeL": 0.0
+      },
+      "per_category": {
+        "temporal-reasoning": {
+          "n": 5.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0
+        }
+      },
+      "recall": {
+        "session_recall": 0.0,
+        "session_hit": 0.0,
+        "turn_recall": 0.0
+      },
+      "recall_by_category": {
+        "temporal-reasoning": {
+          "n": 5.0,
+          "session_recall": 0.0,
+          "turn_recall": 0.0,
+          "abstain_rate": 1.0
+        }
+      },
+      "abstention": {
+        "n_abstention_questions": 0.0,
+        "refusal_rate": 1.0,
+        "abstention_accuracy": 0.0
+      },
+      "n": 5.0
+    },
+    "FullContext": {
+      "overall": {
+        "n": 5.0,
+        "em": 0.0,
+        "f1": 0.0,
+        "rougeL": 0.0
+      },
+      "per_category": {
+        "temporal-reasoning": {
+          "n": 5.0,
+          "em": 0.0,
+          "f1": 0.0,
+          "rougeL": 0.0
+        }
+      },
+      "recall": {
+        "session_recall": 0.0,
+        "session_hit": 0.0,
+        "turn_recall": 0.0
+      },
+      "recall_by_category": {
+        "temporal-reasoning": {
+          "n": 5.0,
+          "session_recall": 0.0,
+          "turn_recall": 0.0,
+          "abstain_rate": 1.0
+        }
+      },
+      "abstention": {
+        "n_abstention_questions": 0.0,
+        "refusal_rate": 1.0,
+        "abstention_accuracy": 0.0
+      },
+      "n": 5.0
+    },
+    "SimRetrieval": {
+      "error": "Error code: 403 - {'error': {'code': 'FORBIDDEN', 'message': 'Please subscribe to model in the API Key: deepseek-v4-flash', 'type': 'permission_error'}}"
+    }
+  }
+}

@@ -1,0 +1,2 @@
+[2026-09-28T20:08:52] [ASEM-THG] ABORTED 8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'code': 'insufficient_quota', 'message': 'Insufficient balance. This request requires at least 26₫ for this request (~2135 input tokens). Add funds to continue.', 'model': 'vult-gpt-5.6-sol', 'param': None, 'request_id': 'req_93553a537cc5a06c38fcfc54', 'type': 'insufficient_quota'}}
+[2026-09-28T20:09:05] [locomo_0000] ASEM-THG: n=175 err=8

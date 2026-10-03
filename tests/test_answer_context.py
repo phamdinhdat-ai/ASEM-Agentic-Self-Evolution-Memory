@@ -39,6 +39,12 @@ from asem.answer_agent import (
 )
 from asem.note import LinkRecord, Note
 from asem.token_budget import estimate_tokens, fit_items, fit_render_exact, fits
+from tests.assert_content import (
+    assert_absent,
+    assert_contains,
+    contains,
+    normalize_ws,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -135,8 +141,11 @@ def test_legacy_and_thg_v1_render_the_same_notes_differently() -> None:
     assert legacy != thg, "thg_v1 must add structure"
     # The evidence text survives; thg_v1 only inserts structural markers around
     # it (the session label goes between the date and the speaker).
+    # Comparisons go through the wrap-safe helpers: a raw `note.X in thg` is
+    # False for any note long enough for `_wrap` to break mid-sentence, so it
+    # would test the wrapper's line breaks rather than whether the fact survived.
     for note in notes:
-        assert note.X in thg
+        assert_contains(thg, note.X, label="rendered thg_v1 block")
     # Every legacy header's date and speaker are still present in thg_v1.
     for line in legacy.split("\n"):
         stripped = line.strip()
@@ -145,7 +154,7 @@ def test_legacy_and_thg_v1_render_the_same_notes_differently() -> None:
         # header is "Memory N — recorded on DD Month YYYY..."
         tail = stripped.split(" — recorded on ")[1]
         date = " ".join(tail.split(" ")[:3]).rstrip(",")
-        assert date in thg, f"date {date!r} lost in thg_v1"
+        assert_contains(thg, date, label="legacy header date")
 
     # and the sizes are measurable, which is what the efficiency table needs
     assert len(legacy) > 0 and len(thg) > len(legacy)
@@ -210,21 +219,22 @@ def test_empty_note_list_is_stable_in_both_styles() -> None:
 def test_thg_v1_never_alters_the_legacy_content_words() -> None:
     """thg_v1 adds structure; it must not rewrite the evidence itself.
 
-    Whitespace is normalised because `_wrap` breaks long sentences across lines —
-    comparing raw strings would test the wrapper's line breaks rather than whether
-    the fact survived (see the real-bank test below, where the short-fact version
-    of this assertion silently passed for exactly that reason).
+    Comparisons go through `assert_contains`, which normalises whitespace, because
+    `_wrap` breaks long sentences across lines — a raw substring comparison would
+    test the wrapper's line breaks rather than whether the fact survived. The first
+    version of this test passed only because its fixture facts were short enough
+    not to wrap; the long-note case at the end now pins that explicitly.
     """
     notes = _corpus()
     thg = _render_notes_block(notes, context_style="thg_v1")
-    flat = " ".join(thg.split())
     for note in notes:
-        assert " ".join(note.X.split()) in flat
+        assert_contains(thg, note.X, label="synthetic corpus fact")
 
-    # And it must hold for a note long enough to actually wrap.
+    # And it must hold for a note long enough that `_wrap` definitely breaks it.
     long_note = mk("long", "word " * 60)
-    wrapped = " ".join(_render_notes_block([long_note], context_style="thg_v1").split())
-    assert " ".join(long_note.X.split()) in wrapped
+    wrapped = _render_notes_block([long_note], context_style="thg_v1")
+    assert wrapped.count("\n") >= 2, "this fixture must actually wrap to be a test"
+    assert_contains(wrapped, long_note.X, label="deliberately wrapping fact")
 
 
 # ===========================================================================
@@ -237,8 +247,9 @@ def test_session_label_appears_in_the_thg_header() -> None:
     legacy = _render_notes_block(notes, context_style="legacy")
     thg = _render_notes_block(notes, context_style="thg_v1")
 
-    assert "session_3" not in legacy, "pre-W10 the session id was rendered nowhere"
-    assert "[session: session_3]" in thg
+    assert_absent(legacy, "session_3",
+                  label="pre-W10 rendered session id nowhere")
+    assert_contains(thg, "[session: session_3]", label="thg_v1 header")
 
 
 def test_long_session_id_is_reduced_to_a_short_ordinal() -> None:
@@ -272,10 +283,10 @@ def test_evidence_chains_render_the_bridge_entity() -> None:
     thg = _render_notes_block([a, b], context_style="thg_v1",
                               question_kind="multi_hop")
 
-    assert "Evidence chains" not in legacy
-    assert "Evidence chains" in thg
-    assert "Memory 1 → Memory 2" in thg
-    assert "via Caroline" in thg
+    assert_absent(legacy, "Evidence chains", label="legacy style")
+    assert_contains(thg, "Evidence chains", label="synthetic bridge pair")
+    assert_contains(thg, "Memory 1 → Memory 2", label="synthetic bridge pair")
+    assert_contains(thg, "via Caroline", label="synthetic bridge pair")
 
 
 def test_chains_degrade_to_nothing_when_note_L_is_empty() -> None:
@@ -284,8 +295,8 @@ def test_chains_degrade_to_nothing_when_note_L_is_empty() -> None:
     chains = _render_chains(notes, {"a": 1, "b": 2})
     assert chains == []
     thg = _render_notes_block(notes, context_style="thg_v1", question_kind="multi_hop")
-    assert "Evidence chains" not in thg
-    assert "reachable via unknown" not in thg
+    assert_absent(thg, "Evidence chains", label="no-link notes")
+    assert_absent(thg, "reachable via unknown", label="no-link notes")
 
 
 def test_each_chain_pair_is_rendered_once() -> None:
@@ -735,13 +746,11 @@ def test_real_bank_chains_fire_positively() -> None:
         assert chain.endswith(")")
 
     rendered = _render_notes_block(block, context_style="thg_v1")
-    assert "Evidence chains:" in rendered
+    assert_contains(rendered, "Evidence chains:", label="real 365-note bank")
     # The bridge names the shared entity, which is the whole point of W10.1.
-    # (`via Caroline` survives wrapping because it is in the trailing chain line,
-    # which is built as one unbroken string.)
-    assert "via Caroline" in rendered
+    assert_contains(rendered, "via Caroline", label="real 365-note bank")
     # And no fabricated placeholder.
-    assert "via unknown" not in rendered
+    assert_absent(rendered, "via unknown", label="real 365-note bank")
 
     # The verbatim line, pinned from the real bank. This is the first evidence
     # that W10.1 works against a REAL bank rather than a synthetic note list.
@@ -768,13 +777,15 @@ def test_real_bank_without_links_degrades_silently() -> None:
     assert _render_chains(block, {n.id: i + 1 for i, n in enumerate(block)}) == []
 
     rendered = _render_notes_block(block, context_style="thg_v1")
-    assert "Evidence chains" not in rendered, "the line must be absent, not empty"
-    assert "via unknown" not in rendered
-    assert " via " not in rendered
+    assert_absent(rendered, "Evidence chains",
+                  label="real bank with L cleared in memory")
+    assert_absent(rendered, "via unknown", label="real bank with L cleared")
+    assert_absent(rendered, " via ", label="real bank with L cleared")
     # The rest of the context must still render — degrading the chain line must
     # not take the evidence blocks down with it.
-    assert "Memory 1" in rendered and "Memory 8" in rendered
-    assert "recorded on" in rendered
+    assert_contains(rendered, "Memory 1", label="real bank degrade case")
+    assert_contains(rendered, "Memory 8", label="real bank degrade case")
+    assert_contains(rendered, "recorded on", label="real bank degrade case")
 
 
 @pytest.mark.skipif(not _REAL_BANK.exists(), reason="frozen bank not built yet")
@@ -792,15 +803,14 @@ def test_real_bank_degrade_matches_legacy_context_exactly() -> None:
 
     # Same number of blocks, and every fact survives.
     assert thg.count("Memory ") >= legacy.count("Memory ")
-    # NOTE: compare with whitespace normalised. `_wrap` inserts a newline plus an
-    # indent mid-sentence, so a raw `note.X in rendered` is False for any note
-    # long enough to wrap — which is most real notes. Asserting on the raw string
-    # tests the wrapper's line breaks, not whether the fact survived.
-    flat = " ".join(thg.split())
+    # Wrap-safe comparison: `_wrap` inserts a newline plus an indent mid-sentence,
+    # so a raw `note.X in thg` is False for any note long enough to wrap — which is
+    # most real notes. See tests/assert_content.py for the rationale.
     for note in block:
-        assert " ".join(note.X.split()) in flat, f"fact lost: {note.X[:60]!r}"
+        assert_contains(thg, note.X, label="real 365-note bank fact")
     # The only additions left are the session labels.
-    assert "[session:" in thg and "[session:" not in legacy
+    assert_contains(thg, "[session:", label="real bank degrade case")
+    assert_absent(legacy, "[session:", label="legacy style")
 
 
 @pytest.mark.skipif(not _REAL_BANK.exists(), reason="frozen bank not built yet")
@@ -811,3 +821,77 @@ def test_real_bank_is_opened_read_only_and_not_modified() -> None:
     assert len(notes) == 365, "the real bank has 365 notes (measured)"
     _render_notes_block(notes, context_style="thg_v1")
     assert _REAL_BANK.stat().st_mtime_ns == before, "the frozen bank was modified"
+
+
+# ===========================================================================
+# The wrap-safe assertion helpers themselves (tests/assert_content.py)
+# ===========================================================================
+# These exist because a raw `text in rendered` is False for any line `_wrap`
+# breaks — it tests the wrapper, not the content, and passes only while a fixture
+# is short. The helpers are only trustworthy if they are themselves tested, so:
+def test_normalize_ws_makes_wrapping_irrelevant() -> None:
+    """The core property: a wrapped sentence equals its unwrapped form."""
+    # A fact long enough for `_wrap` to definitely break it across lines.
+    note = mk("a", "Caroline chose the adoption agency because it helps people " * 3)
+    rendered = _render_notes_block([note], context_style="thg_v1")
+    # Prove the fixture is actually long enough to wrap, otherwise this test
+    # would pass without exercising the property it claims to test.
+    assert len(note.X) > 120, "fixture must be long enough to wrap"
+    assert rendered.count("\n") >= 2, "the render must actually wrap"
+    assert_contains(rendered, note.X, label="deliberately wrapping fact")
+
+
+def test_assert_contains_names_the_artifact_in_its_failure() -> None:
+    """The standing rule: a failed assertion must name its provenance."""
+    with pytest.raises(AssertionError) as exc:
+        assert_contains("some render", "absent text", label="real 365-note bank")
+    assert "real 365-note bank" in str(exc.value)
+
+
+def test_assert_absent_is_wrap_safe() -> None:
+    """A placeholder must not escape detection by straddling a line break."""
+    # Build a render where the needle is split across a newline+indent.
+    needle = "via unknown"
+    rendered = "prefix Memory 1 \u2192 Memory 2 via\n      unknown (linked)."
+    assert needle not in rendered, "fixture must break the needle across lines"
+    # The raw check is fooled; the helper is not.
+    assert contains(rendered, needle)
+    with pytest.raises(AssertionError):
+        assert_absent(rendered, needle, label="mutant M1")
+
+
+def test_all_content_assertions_in_this_file_are_wrap_safe() -> None:
+    """Regression guard: no new raw `x in rendered` content check may creep in.
+
+    Scans this file's own source for the pattern that caused the bug — a raw
+    substring test against rendered content. `assert_contains`/`assert_absent`
+    calls are excluded, since their `label=` argument is not an assertion.
+    """
+    import re
+    src = Path(__file__).read_text(encoding="utf-8")
+    # Only real `assert` statements, and only against the variables that hold
+    # RENDERED CONTEXT (`str(exc.value)`, `template` and `src` are not renders).
+    rendered_vars = (
+        r"(?:thg|legacy|rendered|blk|wrapped|flat|block|notices?|"
+        r"first_block|prompts\[0\]|out|body)\b"
+    )
+    statements = [
+        line.strip() for line in src.split("\n")
+        if line.strip().startswith("assert ")
+        and "assert_contains" not in line
+        and "assert_absent" not in line
+    ]
+    offenders = []
+    for stmt in statements:
+        if not re.search(r"\b%s" % rendered_vars, stmt):
+            continue
+        if re.search(r"(['\"])[^'\"]{18,}\1\s+(not\s+)?in\s+%s" % rendered_vars, stmt):
+            # Structural checks are exempt: anchored to a line prefix, or the
+            # pinned golden (which is a whole-line equality, not a substring).
+            if ".startswith(" in stmt:
+                continue
+            offenders.append(stmt)
+    assert not offenders, (
+        "raw substring content assertions found; use assert_contains/"
+        "assert_absent from tests/assert_content.py instead: %r" % offenders
+    )

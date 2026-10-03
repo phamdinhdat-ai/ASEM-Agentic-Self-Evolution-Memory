@@ -77,12 +77,12 @@ N = 60 questions
   metric                        thg_v1      legacy    FullContext    thg/FC
   --------------------------------------------------------------------------
   tokens min                   1712        1590          5122    0.334
-  tokens median                1928        1820          7782    0.248
-  tokens p90                   2023        1905          9510    0.213
-  tokens max                   2076        1981         22057    0.094
-  tokens mean                1919.0      1811.7        8133.1    0.236
+  tokens median                1928        1819          7782    0.248
+  tokens p90                   2024        1904          9510    0.213
+  tokens max                   2080        1975         22057    0.094
+  tokens mean                1919.2      1812.0        8133.1    0.236
 
-  chars: thg_v1 median=7714  legacy median=7283  FullContext median=31129
+  chars: thg_v1 median=7714  legacy median=7279  FullContext median=31129
 
   CANDIDATE POOL (before trimming):
     ASEM-THG notes available   : median=24  mean=25.1  max=40
@@ -102,28 +102,28 @@ N = 60 questions
 
   per-question detail (first 25):
     question                         kind              thg_tk   leg_tk   fc_tok   thg/fc
-    What was the first issue I had w ordering            1934     1815    10588    0.183
-    Which event did I attend first,  ordering            2076     1965     8637    0.240
-    Which vehicle did I take care of ordering            1882     1759     6445    0.292
-    Which device did I got first, th ordering            1941     1831     6629    0.293
-    How many days before the team me arithmetic          2043     1929     8953    0.228
-    How many days had passed between arithmetic          1969     1882     8318    0.237
-    How many days did it take for me arithmetic          1946     1861     6747    0.288
-    Which seeds were started first,  ordering            1855     1716     5189    0.357
-    How many days had passed between arithmetic          1811     1737     6752    0.268
+    What was the first issue I had w ordering            1930     1811    10588    0.182
+    Which event did I attend first,  ordering            2080     1969     8637    0.241
+    Which vehicle did I take care of ordering            1886     1764     6445    0.293
+    Which device did I got first, th ordering            1945     1835     6629    0.293
+    How many days before the team me arithmetic          2038     1924     8953    0.228
+    How many days had passed between arithmetic          1964     1877     8318    0.236
+    How many days did it take for me arithmetic          1953     1868     6747    0.289
+    Which seeds were started first,  ordering            1856     1718     5189    0.358
+    How many days had passed between arithmetic          1807     1732     6752    0.268
     How many days before the 'Rack F arithmetic          1859     1762     7242    0.257
-    Which pair of shoes did I clean  ordering            1901     1768    15482    0.123
-    Which event happened first, the  ordering            1944     1828     7637    0.255
-    How many days had passed between arithmetic          1884     1809     8706    0.216
-    Which item did I purchase first, ordering            2059     1981     7796    0.264
-    Which task did I complete first, ordering            1962     1821     8296    0.236
-    How many charity events did I pa ordering            1953     1805    22057    0.089
-    How long have I been working bef arithmetic          1844     1760     8374    0.220
-    Which book did I finish reading  ordering            1914     1796     8689    0.220
-    Which device did I set up first, ordering            1879     1760     7678    0.245
-    How many months ago did I book t arithmetic          1849     1760     6847    0.270
-    How long did I take to finish 'T arithmetic          1823     1749     9162    0.199
-    What was the date on which I att ordering            1847     1736     7423    0.249
-    How many days before I bought th arithmetic          1946     1857     6619    0.294
-    Which show did I start watching  ordering            2016     1893     7281    0.277
-    How long had I been a member of  arithmetic          1925     1836     7345    0.262
+    Which pair of shoes did I clean  ordering            1901     1769    15482    0.123
+    Which event happened first, the  ordering            1946     1829     7637    0.255
+    How many days had passed between arithmetic          1883     1808     8706    0.216
+    Which item did I purchase first, ordering            2053     1975     7796    0.263
+    Which task did I complete first, ordering            1960     1819     8296    0.236
+    How many charity events did I pa ordering            1954     1806    22057    0.089
+    How long have I been working bef arithmetic          1852     1769     8374    0.221
+    Which book did I finish reading  ordering            1911     1793     8689    0.220
+    Which device did I set up first, ordering            1879     1761     7678    0.245
+    How many months ago did I book t arithmetic          1848     1759     6847    0.270
+    How long did I take to finish 'T arithmetic          1821     1748     9162    0.199
+    What was the date on which I att ordering            1843     1732     7423    0.248
+    How many days before I bought th arithmetic          1946     1856     6619    0.294
+    Which show did I start watching  ordering            2009     1886     7281    0.276
+    How long had I been a member of  arithmetic          1927     1838     7345    0.262

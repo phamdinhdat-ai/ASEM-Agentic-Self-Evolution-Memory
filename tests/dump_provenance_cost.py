@@ -1,4 +1,12 @@
-"""W10 EVIDENCE 2b — provenance cost, marker firing, and the distribution check."""
+"""W10 EVIDENCE 2b — provenance cost, marker firing, and the distribution check.
+
+CONTENT ASSERTIONS: if you add a "is this text present in the rendered block?"
+check, route it through `tests/assert_content.py` (`contains` / `assert_contains`
+/ `assert_absent`). A raw `"text" in block` is False for any `_wrap`-broken line,
+so it passes only while a fixture happens to be short — green for the wrong
+reason. This script currently makes no such content check; keep it that way or
+use the helper.
+"""
 from __future__ import annotations
 
 import io

@@ -7,8 +7,8 @@ TOTAL N = 80 questions (40 per dataset)
   dataset      N   legacy tok  thg_v1 tok   delta tok   delta %%
   --------------------------------------------------------------
   locomo       40        1019        1089         70     6.89%
-  longmemeval  40        1814        1918        104     5.72%
-  COMBINED     80        1416        1504         87     6.14%
+  longmemeval  40        1816        1920        104     5.73%
+  COMBINED     80        1418        1505         87     6.15%
 
 Threshold check (task-2: fall back to a short ordinal if provenance >8%%):
   worst per-question delta: +12.74%
@@ -44,9 +44,9 @@ DISTRIBUTION CHECK (lead's request) — thg_v1 vs FullContext, per question
 
   longmemeval (N=60)
                    thg_v1 FullContext    ratio
-    min              1713       5122    0.334
-    median           1927       7782    0.248
-    p90              2019       9510    0.212
-    max              2077      22057    0.094
+    min              1720       5122    0.336
+    median           1933       7782    0.248
+    p90              2024       9510    0.213
+    max              2076      22057    0.094
     p90 thg_v1 EXCEEDS p90 FullContext: False
 

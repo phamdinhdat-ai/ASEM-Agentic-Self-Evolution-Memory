@@ -1,0 +1,110 @@
+{
+  "metadata": {
+    "data_path": "datasets/locomo/locomo10.json",
+    "config_path": "configs/presets/sota_benchmark.yaml",
+    "conv_id": "conv-26",
+    "conv_index": 0,
+    "n_sessions": 19,
+    "n_turns": 419,
+    "total_questions": 3,
+    "judge": false,
+    "with_dates": true,
+    "timestamp": "2026-09-28T11:43:59"
+  },
+  "overall": {
+    "FastASEM": {
+      "n": 3,
+      "em": 0.6666666666666666,
+      "rouge_l": 0.7272727272727272,
+      "bertscore_f1": 0.9550635615984598,
+      "null_preds": 0
+    },
+    "ASEMv2": {
+      "n": 3,
+      "em": 0.6666666666666666,
+      "rouge_l": 0.6507936507936508,
+      "bertscore_f1": 0.9164722363154093,
+      "null_preds": 0
+    },
+    "SimRetrieval": {
+      "n": 3,
+      "em": 0.3333333333333333,
+      "rouge_l": 0.6507936507936508,
+      "bertscore_f1": 0.9363707701365153,
+      "null_preds": 0
+    },
+    "FullContext": {
+      "n": 3,
+      "em": 0.6666666666666666,
+      "rouge_l": 0.7619047619047619,
+      "bertscore_f1": 0.9592920740445455,
+      "null_preds": 0
+    }
+  },
+  "by_category": {
+    "FastASEM": {
+      "Multi-Hop / Commonsense": {
+        "n": 1,
+        "em": 0.0,
+        "rouge_l": 0.18181818181818182,
+        "bertscore_f1": 0.8651907444000244,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 2,
+        "em": 1.0,
+        "rouge_l": 1.0,
+        "bertscore_f1": 1.0000000894069672,
+        "null_preds": 0
+      }
+    },
+    "ASEMv2": {
+      "Multi-Hop / Commonsense": {
+        "n": 1,
+        "em": 0.0,
+        "rouge_l": 0.28571428571428575,
+        "bertscore_f1": 0.881576418876648,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 2,
+        "em": 1.0,
+        "rouge_l": 0.8333333333333333,
+        "bertscore_f1": 0.93392014503479,
+        "null_preds": 0
+      }
+    },
+    "SimRetrieval": {
+      "Multi-Hop / Commonsense": {
+        "n": 1,
+        "em": 0.0,
+        "rouge_l": 0.28571428571428575,
+        "bertscore_f1": 0.881576418876648,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 2,
+        "em": 0.5,
+        "rouge_l": 0.8333333333333333,
+        "bertscore_f1": 0.9637680649757385,
+        "null_preds": 0
+      }
+    },
+    "FullContext": {
+      "Multi-Hop / Commonsense": {
+        "n": 1,
+        "em": 0.0,
+        "rouge_l": 0.28571428571428575,
+        "bertscore_f1": 0.8778762817382812,
+        "null_preds": 0
+      },
+      "Temporal Reasoning": {
+        "n": 2,
+        "em": 1.0,
+        "rouge_l": 1.0,
+        "bertscore_f1": 1.0000000894069672,
+        "null_preds": 0
+      }
+    }
+  }
+}

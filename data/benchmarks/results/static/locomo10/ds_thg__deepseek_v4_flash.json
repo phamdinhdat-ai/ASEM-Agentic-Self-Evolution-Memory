@@ -1,0 +1,75 @@
+{
+  "phase": "eval",
+  "dataset": "locomo10",
+  "tag": "ds_thg",
+  "model_tag": "deepseek_v4_flash",
+  "config": "configs/models/deepseek_openai.yaml",
+  "judge_config": "configs/models/deepseek_openai.yaml",
+  "metrics": [
+    "em",
+    "rougeL",
+    "bertscore_f1"
+  ],
+  "bank_root": "static/memory_banks\\locomo10",
+  "work_copy": true,
+  "n_qa": 199,
+  "conversations": [
+    "locomo_0000"
+  ],
+  "elapsed_sec": 877.61,
+  "systems": {
+    "ASEM-THG": {
+      "n": 199,
+      "missing_conversations": 0,
+      "n_answer_errors": 0,
+      "aborted": null,
+      "overall": {
+        "n": 199.0,
+        "em": 0.16080402010050251,
+        "rougeL": 0.3623979086614889,
+        "bertscore_f1": 0.8831057997804191
+      },
+      "per_category": {
+        "adversarial": {
+          "n": 47.0,
+          "em": 0.0,
+          "rougeL": 0.07754020709375556,
+          "bertscore_f1": 0.8256924482102089
+        },
+        "multi_hop": {
+          "n": 32.0,
+          "em": 0.09375,
+          "rougeL": 0.26396423473869124,
+          "bertscore_f1": 0.8673341106623411
+        },
+        "open_domain": {
+          "n": 13.0,
+          "em": 0.0,
+          "rougeL": 0.17957632840928034,
+          "bertscore_f1": 0.8586099468744718
+        },
+        "single_hop": {
+          "n": 70.0,
+          "em": 0.18571428571428572,
+          "rougeL": 0.45867567321602615,
+          "bertscore_f1": 0.9028884674821581
+        },
+        "temporal": {
+          "n": 37.0,
+          "em": 0.43243243243243246,
+          "rougeL": 0.6914634914634914,
+          "bertscore_f1": 0.9408566355705261
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 199.0,
+          "em": 0.16080402010050251,
+          "rougeL": 0.3623979086614889,
+          "bertscore_f1": 0.8831057997804191
+        }
+      }
+    }
+  },
+  "resumed_from": 0
+}

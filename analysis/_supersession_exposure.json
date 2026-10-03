@@ -1,0 +1,36 @@
+{
+  "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG/locomo_0000/asem_thg.sqlite",
+  "n_notes": 365,
+  "n_pairs": 5,
+  "n_evaluated": 5,
+  "n_exposed": 0,
+  "exposure_rate": 0.0,
+  "measurement": "EXPOSURE PROXY \u2014 not the accuracy ablation",
+  "rows": [
+    {
+      "a": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+      "b": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
+      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+    },
+    {
+      "a": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+      "b": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
+      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+    },
+    {
+      "a": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+      "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+    },
+    {
+      "a": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+      "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+    },
+    {
+      "a": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+      "b": "c47a1be6-6029-4475-910d-5a1239924a1c",
+      "error": "TypeError: EnhancedHybridRetriever.retrieve() missing 1 required positional argument: 'M'"
+    }
+  ]
+}

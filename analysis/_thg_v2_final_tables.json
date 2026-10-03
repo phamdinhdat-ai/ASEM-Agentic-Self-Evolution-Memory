@@ -1,0 +1,2409 @@
+{
+  "tag_root": "static/memory_banks/locomo10/thg_v2",
+  "manifest_elapsed_sec": 2216.85,
+  "manifest_run": {
+    "built": 10,
+    "skipped": 0,
+    "errors": 0,
+    "notes": 4579,
+    "discarded_partial": 0,
+    "interrupted": false
+  },
+  "manifest_totals": {
+    "conversations": 10,
+    "banks_ok": 10,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "ASEM-THG": 4579
+    }
+  },
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+  "model": "chib/deepseek-v4.1-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "created_at": "2026-10-03T13:19:16",
+  "updated_at": "2026-10-03T13:56:12",
+  "totals": {
+    "conversations": 10,
+    "notes": 4579,
+    "link_records": 73862,
+    "unique_undirected_pairs": 25205,
+    "same_entity_edges": 22565,
+    "hub_only": 21378,
+    "discriminative": 1187,
+    "hub_only_fraction": 0.9473964103700421,
+    "supersession_pairs": 166,
+    "supersession_same_session": 29,
+    "supersession_cross_session": 137,
+    "elapsed_sec_sum": 2216.71
+  },
+  "per_conversation": [
+    {
+      "conversation": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "notes": 365,
+      "link_records": 6252,
+      "unique_undirected_pairs": 2002,
+      "records_per_note": 17.1288,
+      "pairs_per_note": 5.4849,
+      "edge_histogram": {
+        "same-entity": 3584,
+        "semantic": 1966,
+        "temporal": 692,
+        "superseded_by": 10
+      },
+      "fanout_mean": 252.5150684931507,
+      "fanout_median": 237,
+      "fanout_p90": 362.0,
+      "fanout_max": 363,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 28,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 49346,
+      "hub": {
+        "n_notes": 365,
+        "hubs": [
+          "caroline",
+          "melanie"
+        ],
+        "n_same_entity_edges": 1792,
+        "n_hub_only": 1779,
+        "n_discriminative": 13,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9927455357142857
+      },
+      "supersession": {
+        "n_pairs": 5,
+        "n_same_session": 1,
+        "n_cross_session": 4
+      },
+      "supersession_pairs": [
+        {
+          "a": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+          "b": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
+          "same_session": false,
+          "a_session": "s1",
+          "b_session": "s4",
+          "a_date": "1:56 pm on 8 May, 2023",
+          "b_date": "10:37 am on 27 June, 2023",
+          "a_sentence": "Melanie reacted to Caroline's necklace, saying it was gorgeous and that such items can mean so much; Melanie's own grandmother gave her a necklace from Sweden.",
+          "b_sentence": "Melanie reacted to Caroline's necklace, saying it is gorgeous and that items can mean a lot to us."
+        },
+        {
+          "a": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+          "b": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
+          "same_session": false,
+          "a_session": "s12",
+          "b_session": "s8",
+          "a_date": "1:50 pm on 17 August, 2023",
+          "b_date": "1:51 pm on 15 July, 2023",
+          "a_sentence": "Melanie said she appreciates her friendship with Caroline and that Caroline has always been there for her.",
+          "b_sentence": "Melanie appreciates Caroline's friendship and says it is great to have a supporter."
+        },
+        {
+          "a": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+          "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+          "same_session": false,
+          "a_session": "s7",
+          "b_session": "s13",
+          "a_date": "4:33 pm on 12 July, 2023",
+          "b_date": "3:31 pm on 23 August, 2023",
+          "a_sentence": "Melanie has a dog and a cat, which brighten up her day and always make her smile.",
+          "b_sentence": "Melanie's pets are doing well and she recently got another cat named Bailey."
+        },
+        {
+          "a": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+          "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+          "same_session": true,
+          "a_session": "s13",
+          "b_session": "s13",
+          "a_date": "3:31 pm on 23 August, 2023",
+          "b_date": "3:31 pm on 23 August, 2023",
+          "a_sentence": "Melanie has a pet named Oliver.",
+          "b_sentence": "Melanie's pets are doing well and she recently got another cat named Bailey."
+        },
+        {
+          "a": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+          "b": "c47a1be6-6029-4475-910d-5a1239924a1c",
+          "same_session": false,
+          "a_session": "s18",
+          "b_session": "s10",
+          "a_date": "6:55 pm on 20 October, 2023",
+          "b_date": "8:56 pm on 20 July, 2023",
+          "a_sentence": "After the accident, Melanie reflected on how much she needs her family, saying they mean the world to her.",
+          "b_sentence": "Melanie says she is really lucky to have her family, who bring her so much joy and love."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s4",
+        "s4",
+        "s5",
+        "s4"
+      ],
+      "elapsed_sec": 162.56,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0000\\asem_thg.sqlite",
+      "bank_bytes": 7237632
+    },
+    {
+      "conversation": "locomo_0001",
+      "sessions": 19,
+      "turns": 369,
+      "notes": 347,
+      "link_records": 6290,
+      "unique_undirected_pairs": 1961,
+      "records_per_note": 18.1268,
+      "pairs_per_note": 5.6513,
+      "edge_histogram": {
+        "same-entity": 3416,
+        "semantic": 2146,
+        "temporal": 656,
+        "superseded_by": 72
+      },
+      "fanout_mean": 291.6541786743516,
+      "fanout_median": 274,
+      "fanout_p90": 346.0,
+      "fanout_max": 346,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 7,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 60937,
+      "hub": {
+        "n_notes": 347,
+        "hubs": [
+          "gina",
+          "jon"
+        ],
+        "n_same_entity_edges": 1708,
+        "n_hub_only": 1693,
+        "n_discriminative": 15,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9912177985948478
+      },
+      "supersession": {
+        "n_pairs": 36,
+        "n_same_session": 10,
+        "n_cross_session": 26
+      },
+      "supersession_pairs": [
+        {
+          "a": "97fb54b0-dae9-4bb4-a421-ca7684f5c0c9",
+          "b": "be48b4f9-fc5d-42c7-a55b-6841f75b3d1f",
+          "same_session": true,
+          "a_session": "s4",
+          "b_session": "s4",
+          "a_date": "10:43 am on 4 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Gina tells Jon he will kill it in the competition and that his hard work and talent will pay off, wishing him good luck.",
+          "b_sentence": "Gina encourages Jon to hang in there, saying he will find the perfect dance studio soon."
+        },
+        {
+          "a": "877b627b-0176-41ff-bf15-8ffa2b8f4594",
+          "b": "97fb54b0-dae9-4bb4-a421-ca7684f5c0c9",
+          "same_session": true,
+          "a_session": "s4",
+          "b_session": "s4",
+          "a_date": "10:43 am on 4 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Gina tells Jon he has it, praising his passion and commitment and urging him to keep it up.",
+          "b_sentence": "Gina tells Jon he will kill it in the competition and that his hard work and talent will pay off, wishing him good luck."
+        },
+        {
+          "a": "71b5a1c1-a443-4480-b094-d68a7b4519fa",
+          "b": "86853d5d-c409-4cae-ba58-95c5ef3c5744",
+          "same_session": true,
+          "a_session": "s4",
+          "b_session": "s4",
+          "a_date": "10:43 am on 4 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Gina tells Jon that setbacks are opportunities for comebacks and that he has the skills, passion, and drive, plus her full support.",
+          "b_sentence": "Gina tells Jon she is always there to cheer him on, urging him to make his dreams happen, keep going, and believe in himself."
+        },
+        {
+          "a": "20a51eb9-437f-4b34-884e-710be9e37631",
+          "b": "ec7e8198-6c7d-4ac4-9c07-e83b94c2f896",
+          "same_session": true,
+          "a_session": "s5",
+          "b_session": "s5",
+          "a_date": "9:32 am on 8 February, 2023",
+          "b_date": "9:32 am on 8 February, 2023",
+          "a_sentence": "Jon thanked Gina, saying her help means a lot and he will keep plugging away and stay optimistic.",
+          "b_sentence": "Jon thanked Gina, saying her pep-talk meant a lot and he will not give up on his dreams of his dance studio and business ventures."
+        },
+        {
+          "a": "ce002a22-a9b1-487a-9b68-a1c5fa7badfe",
+          "b": "ec7e8198-6c7d-4ac4-9c07-e83b94c2f896",
+          "same_session": false,
+          "a_session": "s6",
+          "b_session": "s5",
+          "a_date": "2:35 pm on 16 March, 2023",
+          "b_date": "9:32 am on 8 February, 2023",
+          "a_sentence": "Jon thanked Gina for having his back and toasted to taking on new heights and all the trials that come with it.",
+          "b_sentence": "Jon thanked Gina, saying her pep-talk meant a lot and he will not give up on his dreams of his dance studio and business ventures."
+        },
+        {
+          "a": "b55dc1d3-2e13-4080-8a01-5e475f1f88c4",
+          "b": "d65332ea-ec7d-4268-87bf-ef81709fb3d8",
+          "same_session": false,
+          "a_session": "s8",
+          "b_session": "s3",
+          "a_date": "1:26 pm on 3 April, 2023",
+          "b_date": "12:48 am on 1 February, 2023",
+          "a_sentence": "Jon told Gina he is always there for her and wished her good luck with her store.",
+          "b_sentence": "Jon told Gina he is always there to support her and encouraged her to keep up her store work."
+        },
+        {
+          "a": "ce002a22-a9b1-487a-9b68-a1c5fa7badfe",
+          "b": "db7c3a77-9c92-4f7f-a5ee-ef9d09d4b569",
+          "same_session": false,
+          "a_session": "s6",
+          "b_session": "s9",
+          "a_date": "2:35 pm on 16 March, 2023",
+          "b_date": "10:33 am on 9 April, 2023",
+          "a_sentence": "Jon thanked Gina for having his back and toasted to taking on new heights and all the trials that come with it.",
+          "b_sentence": "Jon thanked Gina for her support, saying it means a lot to him."
+        },
+        {
+          "a": "01070b10-7986-460b-83d0-64e9147f77d6",
+          "b": "29436df1-41eb-4dd1-a87e-f38527697b39",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s12",
+          "a_date": "8:29 pm on 13 June, 2023",
+          "b_date": "7:18 pm on 27 May, 2023",
+          "a_sentence": "Jon said he uses a notepad to stay organized and motivated, setting goals, tracking achievements, and identifying areas to improve.",
+          "b_sentence": "Jon uses a whiteboard with a list of dates to keep track of ideas and milestones and to visualize his progress."
+        },
+        {
+          "a": "01070b10-7986-460b-83d0-64e9147f77d6",
+          "b": "ec4719c6-f037-4bbf-8d2f-7cf534e2dc78",
+          "same_session": true,
+          "a_session": "s13",
+          "b_session": "s13",
+          "a_date": "8:29 pm on 13 June, 2023",
+          "b_date": "8:29 pm on 13 June, 2023",
+          "a_sentence": "Jon said he uses a notepad to stay organized and motivated, setting goals, tracking achievements, and identifying areas to improve.",
+          "b_sentence": "Jon said he also uses a whiteboard to stay on track, visualize goals, and tokenize successes."
+        },
+        {
+          "a": "4adab50c-bdbb-4372-95dc-a0ff2b6a7760",
+          "b": "69fe5f69-70fc-40ea-bf93-f743faa11129",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s6",
+          "a_date": "8:29 pm on 13 June, 2023",
+          "b_date": "2:35 pm on 16 March, 2023",
+          "a_sentence": "Gina told Jon she is always around for him.",
+          "b_sentence": "Gina said that she and Jon are on different paths but it is nice to have someone to root for them."
+        },
+        {
+          "a": "1dbe9199-2321-42bf-bf05-0daf9b77fe99",
+          "b": "6a9519a9-4839-4c6f-8033-59df30bd1adb",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s4",
+          "a_date": "9:32 am on 8 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Jon loves dancing because it brings him joy and reminds him why he is passionate about it.",
+          "b_sentence": "Jon says dancing is his passion and brings him joy and fulfillment."
+        },
+        {
+          "a": "1dbe9199-2321-42bf-bf05-0daf9b77fe99",
+          "b": "d304ad60-134a-4995-ad98-739126ce7f14",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s9",
+          "a_date": "9:32 am on 8 February, 2023",
+          "b_date": "10:33 am on 9 April, 2023",
+          "a_sentence": "Jon loves dancing because it brings him joy and reminds him why he is passionate about it.",
+          "b_sentence": "Jon says dancing makes him happy and allows him to express his true self."
+        },
+        {
+          "a": "ce414166-095e-4051-bd62-def211c77ab0",
+          "b": "f06ec7a4-4940-4629-a7cc-07490bb6b0d7",
+          "same_session": false,
+          "a_session": "s6",
+          "b_session": "s1",
+          "a_date": "2:35 pm on 16 March, 2023",
+          "b_date": "4:04 pm on 20 January, 2023",
+          "a_sentence": "Gina lost her job at Door Dash.",
+          "b_sentence": "Gina lost her job at Door Dash in January 2023."
+        },
+        {
+          "a": "2fcf1e70-254a-46dd-8cea-17c60fa104e9",
+          "b": "af3bf69b-f9ad-4c14-9398-5caa959f8296",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s2",
+          "a_date": "10:33 am on 9 April, 2023",
+          "b_date": "2:32 pm on 29 January, 2023",
+          "a_sentence": "Gina has a trophy from a dance contest that reminds her of the hard work, dedication and joy dance brings.",
+          "b_sentence": "Gina owns a clothing store."
+        },
+        {
+          "a": "689b345b-e308-4627-8c0f-37c1e4320359",
+          "b": "79de5cb3-07d9-4641-9525-57869f47a5b5",
+          "same_session": true,
+          "a_session": "s15",
+          "b_session": "s15",
+          "a_date": "10:04 am on 19 June, 2023",
+          "b_date": "10:04 am on 19 June, 2023",
+          "a_sentence": "Gina said she cannot wait for the grand opening of Jon's dance studio on 20 June 2023.",
+          "b_sentence": "Gina said she will be right by Jon's side and that they will make great memories on 20 June 2023."
+        },
+        {
+          "a": "09029e9e-bf9b-4422-b054-19c22348109c",
+          "b": "b0c7ed8c-f5d3-43af-a960-aaf69b423cea",
+          "same_session": true,
+          "a_session": "s15",
+          "b_session": "s15",
+          "a_date": "10:04 am on 19 June, 2023",
+          "b_date": "10:04 am on 19 June, 2023",
+          "a_sentence": "Gina said she cannot wait to make more memories at Jon's dance studio.",
+          "b_sentence": "Gina congratulated Jon, saying his dance studio looks amazing and that she is pumped for the launch on 20 June 2023."
+        },
+        {
+          "a": "09029e9e-bf9b-4422-b054-19c22348109c",
+          "b": "46a77f28-5dec-46f1-afe6-c5dbc3088015",
+          "same_session": true,
+          "a_session": "s15",
+          "b_session": "s15",
+          "a_date": "10:04 am on 19 June, 2023",
+          "b_date": "10:04 am on 19 June, 2023",
+          "a_sentence": "Gina said she cannot wait to make more memories at Jon's dance studio.",
+          "b_sentence": "Gina said she loves being around friends and having a great time, and cannot wait to have fun at Jon's dance studio."
+        },
+        {
+          "a": "78405b2f-a736-470a-892d-f53f2f6533bb",
+          "b": "db7c3a77-9c92-4f7f-a5ee-ef9d09d4b569",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s9",
+          "a_date": "8:29 pm on 13 June, 2023",
+          "b_date": "10:33 am on 9 April, 2023",
+          "a_sentence": "Jon thanked Gina for being there for him and believing in him, saying it means a lot.",
+          "b_sentence": "Jon thanked Gina for her support, saying it means a lot to him."
+        },
+        {
+          "a": "014f61db-80c6-4f9b-9033-0d887fb94c48",
+          "b": "abdd8c33-955c-4b6d-ab64-8f6f7e49cfbc",
+          "same_session": false,
+          "a_session": "s3",
+          "b_session": "s2",
+          "a_date": "12:48 am on 1 February, 2023",
+          "b_date": "2:32 pm on 29 January, 2023",
+          "a_sentence": "Gina encouraged Jon to keep going with his dance studio and stay positive, saying they'll get through this.",
+          "b_sentence": "Gina encouraged Jon to believe in himself, push through the tough process, and take breaks to destress."
+        },
+        {
+          "a": "014f61db-80c6-4f9b-9033-0d887fb94c48",
+          "b": "02e10d03-d2f5-45e4-8f87-48988d87b673",
+          "same_session": false,
+          "a_session": "s3",
+          "b_session": "s4",
+          "a_date": "12:48 am on 1 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Gina encouraged Jon to keep going with his dance studio and stay positive, saying they'll get through this.",
+          "b_sentence": "Gina encourages Jon, telling him his drive will help him make a splash."
+        },
+        {
+          "a": "f43877db-7132-4c20-a18d-0ad41a14a9b8",
+          "b": "f9e1c216-9e19-4b3c-aa49-37c232cbe1c6",
+          "same_session": false,
+          "a_session": "s16",
+          "b_session": "s7",
+          "a_date": "2:15 pm on 21 June, 2023",
+          "b_date": "7:28 pm on 23 March, 2023",
+          "a_sentence": "Gina told Jon to believe in himself and keep going.",
+          "b_sentence": "Gina encourages Jon to keep going, never give up, and believe in himself even when it's tough."
+        },
+        {
+          "a": "91475068-3d31-47aa-9609-d0486a8402c7",
+          "b": "f2b275dd-b27e-4aea-bc6e-cb65c976523e",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s8",
+          "a_date": "9:32 am on 8 February, 2023",
+          "b_date": "1:26 pm on 3 April, 2023",
+          "a_sentence": "Gina encouraged Jon, saying it's tough starting a business but he can make his studio work, and that she is always there for him.",
+          "b_sentence": "Gina said Jon's support means a lot and encouraged him to keep pursuing his goals."
+        },
+        {
+          "a": "3788ecc2-5cd0-4b62-8dac-c81b8343bf41",
+          "b": "f2b275dd-b27e-4aea-bc6e-cb65c976523e",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s8",
+          "a_date": "10:33 am on 9 April, 2023",
+          "b_date": "1:26 pm on 3 April, 2023",
+          "a_sentence": "Gina cheered Jon on, telling him he is almost there and to keep it up.",
+          "b_sentence": "Gina said Jon's support means a lot and encouraged him to keep pursuing his goals."
+        },
+        {
+          "a": "02e10d03-d2f5-45e4-8f87-48988d87b673",
+          "b": "be48b4f9-fc5d-42c7-a55b-6841f75b3d1f",
+          "same_session": true,
+          "a_session": "s4",
+          "b_session": "s4",
+          "a_date": "10:43 am on 4 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Gina encourages Jon, telling him his drive will help him make a splash.",
+          "b_sentence": "Gina encourages Jon to hang in there, saying he will find the perfect dance studio soon."
+        },
+        {
+          "a": "5eeb4702-5dfe-4c6c-8a4b-1704012a72a7",
+          "b": "67f6bed2-fe68-47bc-93eb-b37d8d1794ee",
+          "same_session": false,
+          "a_session": "s15",
+          "b_session": "s4",
+          "a_date": "10:04 am on 19 June, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Jon is still working on his business.",
+          "b_sentence": "Jon is working hard on his business despite obstacles and is determined to make it succeed."
+        },
+        {
+          "a": "64061c85-c0e5-45c0-8042-1d1f223d3dbc",
+          "b": "991e577d-bdf9-46f5-ab31-c5a38be8dd94",
+          "same_session": false,
+          "a_session": "s16",
+          "b_session": "s17",
+          "a_date": "2:15 pm on 21 June, 2023",
+          "b_date": "1:25 pm on 9 July, 2023",
+          "a_sentence": "Jon lost his job, which has made things tough for him.",
+          "b_sentence": "Jon lost his job."
+        },
+        {
+          "a": "2e10090c-5b7a-4286-8b0c-bd2feff2a626",
+          "b": "93ca19a4-a63f-41dd-b11f-f107c209f639",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s16",
+          "a_date": "1:25 pm on 9 July, 2023",
+          "b_date": "2:15 pm on 21 June, 2023",
+          "a_sentence": "Gina offered to always be there to cheer Jon on as of 9 July 2023.",
+          "b_sentence": "Gina offered Jon support and told him to let her know if he needs anything."
+        },
+        {
+          "a": "5d5df5b4-5259-4b00-b512-7ae8052e3966",
+          "b": "64061c85-c0e5-45c0-8042-1d1f223d3dbc",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s16",
+          "a_date": "10:33 am on 9 April, 2023",
+          "b_date": "2:15 pm on 21 June, 2023",
+          "a_sentence": "Jon lost his job, which pushed him to pursue his love of dance.",
+          "b_sentence": "Jon lost his job, which has made things tough for him."
+        },
+        {
+          "a": "9a4c23d8-95d4-4550-9d2b-a6b746bc3b17",
+          "b": "ac8e6046-304e-4a9a-a7e1-1814e41cadfa",
+          "same_session": true,
+          "a_session": "s4",
+          "b_session": "s4",
+          "a_date": "10:43 am on 4 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Jon thanks Gina, saying her kind words mean a lot and that he won't give up.",
+          "b_sentence": "Jon thanks Gina, saying her help means a lot to him and that he will reach his dreams by pushing on."
+        },
+        {
+          "a": "20a51eb9-437f-4b34-884e-710be9e37631",
+          "b": "9a4c23d8-95d4-4550-9d2b-a6b746bc3b17",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s4",
+          "a_date": "9:32 am on 8 February, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "Jon thanked Gina, saying her help means a lot and he will keep plugging away and stay optimistic.",
+          "b_sentence": "Jon thanks Gina, saying her kind words mean a lot and that he won't give up."
+        },
+        {
+          "a": "0afb02fa-7631-48b9-9e50-3f1aeb889d8d",
+          "b": "93ca19a4-a63f-41dd-b11f-f107c209f639",
+          "same_session": false,
+          "a_session": "s11",
+          "b_session": "s16",
+          "a_date": "3:14 pm on 11 May, 2023",
+          "b_date": "2:15 pm on 21 June, 2023",
+          "a_sentence": "Gina tells Jon she is always here to help and cannot wait to see the dance routine video.",
+          "b_sentence": "Gina offered Jon support and told him to let her know if he needs anything."
+        },
+        {
+          "a": "3788ecc2-5cd0-4b62-8dac-c81b8343bf41",
+          "b": "77e8a3d4-22a5-40b2-9091-c21b210d12a5",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s19",
+          "a_date": "10:33 am on 9 April, 2023",
+          "b_date": "6:46 pm on 23 July, 2023",
+          "a_sentence": "Gina cheered Jon on, telling him he is almost there and to keep it up.",
+          "b_sentence": "Gina encouraged Jon on 23 July 2023 with a 'Just do it' motivational message attributed to Shia LaBeouf."
+        },
+        {
+          "a": "78405b2f-a736-470a-892d-f53f2f6533bb",
+          "b": "be6010ee-12c7-4cf0-8c84-9a783a34ae32",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s19",
+          "a_date": "8:29 pm on 13 June, 2023",
+          "b_date": "6:46 pm on 23 July, 2023",
+          "a_sentence": "Jon thanked Gina for being there for him and believing in him, saying it means a lot.",
+          "b_sentence": "On 23 July 2023, Jon thanked Gina, saying her help and encouragement mean a lot and will help him make his studio happen."
+        },
+        {
+          "a": "06968753-d09e-4ac2-9580-65ae492c0d2a",
+          "b": "86853d5d-c409-4cae-ba58-95c5ef3c5744",
+          "same_session": false,
+          "a_session": "s19",
+          "b_session": "s4",
+          "a_date": "6:46 pm on 23 July, 2023",
+          "b_date": "10:43 am on 4 February, 2023",
+          "a_sentence": "On 23 July 2023, Gina told Jon she is there to support him and that every step is getting him closer to his dream.",
+          "b_sentence": "Gina tells Jon she is always there to cheer him on, urging him to make his dreams happen, keep going, and believe in himself."
+        },
+        {
+          "a": "877b627b-0176-41ff-bf15-8ffa2b8f4594",
+          "b": "91475068-3d31-47aa-9609-d0486a8402c7",
+          "same_session": false,
+          "a_session": "s4",
+          "b_session": "s5",
+          "a_date": "10:43 am on 4 February, 2023",
+          "b_date": "9:32 am on 8 February, 2023",
+          "a_sentence": "Gina tells Jon he has it, praising his passion and commitment and urging him to keep it up.",
+          "b_sentence": "Gina encouraged Jon, saying it's tough starting a business but he can make his studio work, and that she is always there for him."
+        },
+        {
+          "a": "98dde767-9a5d-4ef7-b970-5c116c9784b2",
+          "b": "b0c7ed8c-f5d3-43af-a960-aaf69b423cea",
+          "same_session": false,
+          "a_session": "s11",
+          "b_session": "s15",
+          "a_date": "3:14 pm on 11 May, 2023",
+          "b_date": "10:04 am on 19 June, 2023",
+          "a_sentence": "Gina says Jon is living the dream and inspiring others, and his studio will change things for many people.",
+          "b_sentence": "Gina congratulated Jon, saying his dance studio looks amazing and that she is pumped for the launch on 20 June 2023."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s2",
+        "s2",
+        "s2",
+        "s2"
+      ],
+      "elapsed_sec": 165.56,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0001\\asem_thg.sqlite",
+      "bank_bytes": 6934528
+    },
+    {
+      "conversation": "locomo_0002",
+      "sessions": 32,
+      "turns": 663,
+      "notes": 493,
+      "link_records": 7544,
+      "unique_undirected_pairs": 2717,
+      "records_per_note": 15.3022,
+      "pairs_per_note": 5.5112,
+      "edge_histogram": {
+        "same-entity": 4858,
+        "semantic": 1728,
+        "temporal": 922,
+        "superseded_by": 36
+      },
+      "fanout_mean": 358.1419878296146,
+      "fanout_median": 353,
+      "fanout_p90": 489.0,
+      "fanout_max": 490,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 32,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 95819,
+      "hub": {
+        "n_notes": 493,
+        "hubs": [
+          "john",
+          "maria"
+        ],
+        "n_same_entity_edges": 2429,
+        "n_hub_only": 2318,
+        "n_discriminative": 111,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9543021819678881
+      },
+      "supersession": {
+        "n_pairs": 18,
+        "n_same_session": 2,
+        "n_cross_session": 16
+      },
+      "supersession_pairs": [
+        {
+          "a": "4dbd2135-0c96-400e-baef-dcd0918139ec",
+          "b": "5cfdb633-0ebe-4681-9b02-a655a1f0dca1",
+          "same_session": false,
+          "a_session": "s16",
+          "b_session": "s11",
+          "a_date": "1:24 pm on 25 May, 2023",
+          "b_date": "6:13 pm on 10 April, 2023",
+          "a_sentence": "John thanked Maria for letting him help with her fundraiser.",
+          "b_sentence": "John thanked Maria for being a positive force and said it gives hope and reminds people they are not alone."
+        },
+        {
+          "a": "4dbd2135-0c96-400e-baef-dcd0918139ec",
+          "b": "9bc64150-9646-454d-b4a2-5e09b5bf5e15",
+          "same_session": false,
+          "a_session": "s16",
+          "b_session": "s17",
+          "a_date": "1:24 pm on 25 May, 2023",
+          "b_date": "11:51 am on 3 June, 2023",
+          "a_sentence": "John thanked Maria for letting him help with her fundraiser.",
+          "b_sentence": "John thanked Maria for her offer of help with adopting a rescue dog and said he would let her know if he needs help."
+        },
+        {
+          "a": "e5b4b877-d1fd-4c29-b46a-90dd9a3a7d9e",
+          "b": "fd5ffe1a-c3e1-40af-86b8-461590d15115",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s26",
+          "a_date": "12:21 am on 27 June, 2023",
+          "b_date": "1:59 pm on 31 July, 2023",
+          "a_sentence": "Maria intends to continue volunteering as her way of spreading kindness and positivity.",
+          "b_sentence": "Maria agreed with John that kindness matters and said she will keep up her volunteering."
+        },
+        {
+          "a": "0cf7a3d1-c1d2-494a-889d-9d9a4dd96e05",
+          "b": "f49dbd1c-1aa8-4fe0-ae6f-65832ac32bbc",
+          "same_session": false,
+          "a_session": "s2",
+          "b_session": "s1",
+          "a_date": "6:10 pm on 22 December, 2022",
+          "b_date": "11:01 am on 17 December, 2022",
+          "a_sentence": "Maria volunteers at a homeless shelter.",
+          "b_sentence": "Maria has been volunteering at a homeless shelter."
+        },
+        {
+          "a": "0cf7a3d1-c1d2-494a-889d-9d9a4dd96e05",
+          "b": "637912f7-7740-4892-9de9-5e60c5594567",
+          "same_session": false,
+          "a_session": "s2",
+          "b_session": "s7",
+          "a_date": "6:10 pm on 22 December, 2022",
+          "b_date": "8:55 pm on 25 February, 2023",
+          "a_sentence": "Maria volunteers at a homeless shelter.",
+          "b_sentence": "Maria has been volunteering at a homeless shelter and finds it really rewarding."
+        },
+        {
+          "a": "1f65f0de-4380-409d-8761-8484cde1e22e",
+          "b": "5cfdb633-0ebe-4681-9b02-a655a1f0dca1",
+          "same_session": true,
+          "a_session": "s11",
+          "b_session": "s11",
+          "a_date": "6:13 pm on 10 April, 2023",
+          "b_date": "6:13 pm on 10 April, 2023",
+          "a_sentence": "John thanked Maria and said her kind words meant a lot to him.",
+          "b_sentence": "John thanked Maria for being a positive force and said it gives hope and reminds people they are not alone."
+        },
+        {
+          "a": "637912f7-7740-4892-9de9-5e60c5594567",
+          "b": "703a6d13-a69e-4757-bb23-06d639974a55",
+          "same_session": false,
+          "a_session": "s7",
+          "b_session": "s8",
+          "a_date": "8:55 pm on 25 February, 2023",
+          "b_date": "6:03 pm on 6 March, 2023",
+          "a_sentence": "Maria has been volunteering at a homeless shelter and finds it really rewarding.",
+          "b_sentence": "Maria volunteers at a homeless shelter."
+        },
+        {
+          "a": "703a6d13-a69e-4757-bb23-06d639974a55",
+          "b": "d5d2e507-577a-4d8e-8d63-b6cf5538bf0c",
+          "same_session": false,
+          "a_session": "s8",
+          "b_session": "s11",
+          "a_date": "6:03 pm on 6 March, 2023",
+          "b_date": "6:13 pm on 10 April, 2023",
+          "a_sentence": "Maria volunteers at a homeless shelter.",
+          "b_sentence": "Maria volunteers at a homeless shelter."
+        },
+        {
+          "a": "7dcae2f2-90b0-45d0-b83c-91ea527b7b0b",
+          "b": "ab39fc0c-855f-4923-bf9d-4c01a1864361",
+          "same_session": false,
+          "a_session": "s30",
+          "b_session": "s28",
+          "a_date": "12:10 am on 11 August, 2023",
+          "b_date": "5:19 pm on 5 August, 2023",
+          "a_sentence": "Maria suggests to John that taking small steps can help.",
+          "b_sentence": "Maria told John that staying positive makes a big difference even in tough times."
+        },
+        {
+          "a": "42f16c78-c9d0-403f-87f2-47f9cd068178",
+          "b": "94d25e29-5aa9-4d45-9459-6a9c2043bf6d",
+          "same_session": false,
+          "a_session": "s30",
+          "b_session": "s17",
+          "a_date": "12:10 am on 11 August, 2023",
+          "b_date": "11:51 am on 3 June, 2023",
+          "a_sentence": "John thanks Maria for her kind words and says he will let her know if he needs anything else.",
+          "b_sentence": "John thanked Maria again for her support, saying it means a lot to him."
+        },
+        {
+          "a": "b5462a19-2240-4e68-ab61-9bc266403599",
+          "b": "d746144b-9446-4b98-a5ed-0aabd353336b",
+          "same_session": false,
+          "a_session": "s23",
+          "b_session": "s17",
+          "a_date": "6:29 pm on 7 July, 2023",
+          "b_date": "11:51 am on 3 June, 2023",
+          "a_sentence": "Maria expressed sympathy to John about the flood in his area and offered to help.",
+          "b_sentence": "Maria reiterated to John that he should let her know if he needs any help."
+        },
+        {
+          "a": "685117f2-54fb-4d50-91ac-2d58fd934a1c",
+          "b": "b5462a19-2240-4e68-ab61-9bc266403599",
+          "same_session": false,
+          "a_session": "s30",
+          "b_session": "s23",
+          "a_date": "12:10 am on 11 August, 2023",
+          "b_date": "6:29 pm on 7 July, 2023",
+          "a_sentence": "Maria tells John she is happy to help and to let her know if he needs anything else, encouraging him.",
+          "b_sentence": "Maria expressed sympathy to John about the flood in his area and offered to help."
+        },
+        {
+          "a": "94d25e29-5aa9-4d45-9459-6a9c2043bf6d",
+          "b": "9bc64150-9646-454d-b4a2-5e09b5bf5e15",
+          "same_session": true,
+          "a_session": "s17",
+          "b_session": "s17",
+          "a_date": "11:51 am on 3 June, 2023",
+          "b_date": "11:51 am on 3 June, 2023",
+          "a_sentence": "John thanked Maria again for her support, saying it means a lot to him.",
+          "b_sentence": "John thanked Maria for her offer of help with adopting a rescue dog and said he would let her know if he needs help."
+        },
+        {
+          "a": "06658b20-53bd-43e8-8869-046fbdf7a83b",
+          "b": "d746144b-9446-4b98-a5ed-0aabd353336b",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s17",
+          "a_date": "9:36 am on 2 April, 2023",
+          "b_date": "11:51 am on 3 June, 2023",
+          "a_sentence": "Maria offered to help John and noted that she and John work well together.",
+          "b_sentence": "Maria reiterated to John that he should let her know if he needs any help."
+        },
+        {
+          "a": "52188d9d-e19f-4c9d-a04f-cba6f7847421",
+          "b": "79d330e9-3f44-4209-af17-49b0349ca3c6",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s18",
+          "a_date": "11:51 am on 3 June, 2023",
+          "b_date": "2:47 pm on 12 June, 2023",
+          "a_sentence": "John's dog Max died; Max had been an important part of John's family for 10 years.",
+          "b_sentence": "Max, John's pet, died before 12 June 2023."
+        },
+        {
+          "a": "1729492a-6735-4825-9ca8-25bfe003e933",
+          "b": "95ad0df4-a434-4e38-8759-5d29571c07bb",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s31",
+          "a_date": "6:59 pm on 5 July, 2023",
+          "b_date": "3:14 pm on 13 August, 2023",
+          "a_sentence": "Maria reacted to John's family photo, saying his family looks stoked and that their trip must have been incredible.",
+          "b_sentence": "Maria reacted to John's family photo, calling it cute and asking what activities his family enjoys together."
+        },
+        {
+          "a": "724679eb-8fe8-40d4-a747-2e52d131fe57",
+          "b": "eae9160a-f2a3-4aa1-b7ee-22a95a5f9bdb",
+          "same_session": false,
+          "a_session": "s32",
+          "b_session": "s26",
+          "a_date": "11:08 am on 16 August, 2023",
+          "b_date": "1:59 pm on 31 July, 2023",
+          "a_sentence": "On 16 August 2023, John said he is now part of the fire-fighting brigade.",
+          "b_sentence": "John joined a fire-fighting brigade because Maria's homeless shelter work inspired him to give back to his community."
+        },
+        {
+          "a": "2d682152-4ace-4346-9331-62f3aaae99eb",
+          "b": "d01dc590-c494-40e0-a4c8-94a0f07ed6bb",
+          "same_session": false,
+          "a_session": "s32",
+          "b_session": "s22",
+          "a_date": "11:08 am on 16 August, 2023",
+          "b_date": "6:59 pm on 5 July, 2023",
+          "a_sentence": "Maria told John that she is here for him and supports him.",
+          "b_sentence": "Maria offers to lend an ear or help John however she can and tells him he is making a difference."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s3",
+        "s5",
+        "s5",
+        "s1"
+      ],
+      "elapsed_sec": 235.78,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0002\\asem_thg.sqlite",
+      "bank_bytes": 9740288
+    },
+    {
+      "conversation": "locomo_0003",
+      "sessions": 29,
+      "turns": 629,
+      "notes": 492,
+      "link_records": 8424,
+      "unique_undirected_pairs": 2713,
+      "records_per_note": 17.122,
+      "pairs_per_note": 5.5142,
+      "edge_histogram": {
+        "same-entity": 4864,
+        "semantic": 2614,
+        "temporal": 926,
+        "superseded_by": 20
+      },
+      "fanout_mean": 373.6829268292683,
+      "fanout_median": 335.0,
+      "fanout_p90": 491.0,
+      "fanout_max": 491,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 18,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 103299,
+      "hub": {
+        "n_notes": 492,
+        "hubs": [
+          "joanna",
+          "nate"
+        ],
+        "n_same_entity_edges": 2432,
+        "n_hub_only": 2395,
+        "n_discriminative": 37,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9847861842105263
+      },
+      "supersession": {
+        "n_pairs": 10,
+        "n_same_session": 0,
+        "n_cross_session": 10
+      },
+      "supersession_pairs": [
+        {
+          "a": "29e9533d-3a75-43f7-b200-f86c5f665003",
+          "b": "5a1ed340-53de-4371-9201-0480b17f01a3",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s9",
+          "a_date": "6:59 pm on 18 March, 2022",
+          "b_date": "7:44 pm on 21 April, 2022",
+          "a_sentence": "Nate encouraged Joanna not to quit, saying the path forward will show up soon.",
+          "b_sentence": "On 21 April 2022, Nate encouraged Joanna to follow her passion for writing and to give acting a shot if it makes her happy."
+        },
+        {
+          "a": "019d2cb9-3374-49bb-ae24-88a6830b5315",
+          "b": "6e871b79-7e35-4ca6-9555-5a9ebf12cd76",
+          "same_session": false,
+          "a_session": "s15",
+          "b_session": "s8",
+          "a_date": "2:12 pm on 5 June, 2022",
+          "b_date": "6:44 pm on 17 April, 2022",
+          "a_sentence": "Joanna has a cork board full of inspiring quotes and pictures for motivation and creativity in her room.",
+          "b_sentence": "Joanna is lactose intolerant and asked for the dairy-free recipe."
+        },
+        {
+          "a": "6851cb20-c3d5-48bd-8697-93b35c443544",
+          "b": "79c2c5d4-56d2-470d-94b0-0eb86db06af2",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s15",
+          "a_date": "6:59 pm on 18 March, 2022",
+          "b_date": "2:12 pm on 5 June, 2022",
+          "a_sentence": "Nate owns turtles and is drawn to them because they are unique, low-maintenance and calming, and their slow pace is a nice change from the rush of life.",
+          "b_sentence": "Nate has a toy Iron Man figure in his room that makes him feel invincible."
+        },
+        {
+          "a": "6c881565-006a-4302-91be-ba11aaa86c92",
+          "b": "79c2c5d4-56d2-470d-94b0-0eb86db06af2",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s15",
+          "a_date": "6:03 pm on 5 September, 2022",
+          "b_date": "2:12 pm on 5 June, 2022",
+          "a_sentence": "Nate has two pet turtles and finds hanging with them a big help, especially recently.",
+          "b_sentence": "Nate has a toy Iron Man figure in his room that makes him feel invincible."
+        },
+        {
+          "a": "2638ad98-72ac-4fb8-939e-9ad2f4ed8ef6",
+          "b": "ac5b173e-388b-48be-824b-d1916d6b8049",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s3",
+          "a_date": "11:15 am on 6 October, 2022",
+          "b_date": "9:27 am on 7 February, 2022",
+          "a_sentence": "Joanna recommended \"Little Women\" to Nate a while back before 6 October 2022.",
+          "b_sentence": "Joanna recommended the movie \"Little Women\" to Nate, calling it a must-see."
+        },
+        {
+          "a": "4f662818-6b9c-4c0e-9dfd-da31e147643b",
+          "b": "e6f3edbd-5511-4dd4-8c7f-82ca9537549c",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s3",
+          "a_date": "11:15 am on 6 October, 2022",
+          "b_date": "9:27 am on 7 February, 2022",
+          "a_sentence": "Joanna watched \"Little Women\" and it spoke to her, exploring themes of sisterhood, love, and chasing dreams.",
+          "b_sentence": "Joanna watched the movie \"Little Women\" and found it amazing, describing it as a great story about sisterhood, love, and reaching for dreams."
+        },
+        {
+          "a": "818575f7-723c-48bc-84fa-e9053cb09050",
+          "b": "b97bc8e1-8ed8-41e5-9e7d-b44a78d9a061",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s15",
+          "a_date": "11:15 am on 6 October, 2022",
+          "b_date": "2:12 pm on 5 June, 2022",
+          "a_sentence": "Nate congratulated Joanna on finishing her book.",
+          "b_sentence": "Nate congratulated Joanna on seeing her hard work pay off with her screenplay on the big screen."
+        },
+        {
+          "a": "6851cb20-c3d5-48bd-8697-93b35c443544",
+          "b": "77e319d1-4c3a-4251-93a3-d881724b423d",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s27",
+          "a_date": "6:59 pm on 18 March, 2022",
+          "b_date": "8:10 pm on 7 November, 2022",
+          "a_sentence": "Nate owns turtles and is drawn to them because they are unique, low-maintenance and calming, and their slow pace is a nice change from the rush of life.",
+          "b_sentence": "Nate's turtles are doing great and bring joy and calm to his life."
+        },
+        {
+          "a": "ea6f39f9-97c9-4b0d-8e02-009f170f63b4",
+          "b": "eb137f41-0bdd-4af3-94c2-66c89d7da08f",
+          "same_session": false,
+          "a_session": "s25",
+          "b_session": "s29",
+          "a_date": "8:16 pm on 25 October, 2022",
+          "b_date": "12:06 am on 11 November, 2022",
+          "a_sentence": "Joanna said she never knew turtles could be so interesting until she met Nate's turtles.",
+          "b_sentence": "Joanna reacted to Nate's turtles, saying they look serene and happy and that it's great to have something like that."
+        },
+        {
+          "a": "885c5687-abcd-4cf1-8f00-80ed6e25188b",
+          "b": "ea6f39f9-97c9-4b0d-8e02-009f170f63b4",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s25",
+          "a_date": "6:59 pm on 18 March, 2022",
+          "b_date": "8:16 pm on 25 October, 2022",
+          "a_sentence": "Joanna finds Nate's turtles peaceful and says it is amazing how these creatures bring so much calm and joy.",
+          "b_sentence": "Joanna said she never knew turtles could be so interesting until she met Nate's turtles."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s5",
+        "s2",
+        "s7",
+        "s7",
+        "s2"
+      ],
+      "elapsed_sec": 231.52,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0003\\asem_thg.sqlite",
+      "bank_bytes": 9785344
+    },
+    {
+      "conversation": "locomo_0004",
+      "sessions": 29,
+      "turns": 680,
+      "notes": 482,
+      "link_records": 6890,
+      "unique_undirected_pairs": 2620,
+      "records_per_note": 14.2946,
+      "pairs_per_note": 5.4357,
+      "edge_histogram": {
+        "same-entity": 4760,
+        "semantic": 1200,
+        "temporal": 906,
+        "superseded_by": 24
+      },
+      "fanout_mean": 330.3029045643153,
+      "fanout_median": 322.0,
+      "fanout_p90": 480.0,
+      "fanout_max": 480,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 49,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 84264,
+      "hub": {
+        "n_notes": 482,
+        "hubs": [
+          "john",
+          "tim"
+        ],
+        "n_same_entity_edges": 2380,
+        "n_hub_only": 2281,
+        "n_discriminative": 99,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9584033613445379
+      },
+      "supersession": {
+        "n_pairs": 12,
+        "n_same_session": 0,
+        "n_cross_session": 12
+      },
+      "supersession_pairs": [
+        {
+          "a": "04a618f9-ea48-4a93-9098-7cf320d27d51",
+          "b": "1b479faf-b002-42fd-8484-9404273bee75",
+          "same_session": false,
+          "a_session": "s6",
+          "b_session": "s8",
+          "a_date": "1:08 pm on 11 August, 2023",
+          "b_date": "4:29 pm on 21 August, 2023",
+          "a_sentence": "John shared his lucky basketball shoes, saying every mark on them has a story.",
+          "b_sentence": "John said he loves the first Harry Potter movie and has the whole collection."
+        },
+        {
+          "a": "272e6f17-37ad-4750-b07c-146dd23869f4",
+          "b": "c9ac5c04-25c1-4c6b-80e0-15d4165689bf",
+          "same_session": false,
+          "a_session": "s16",
+          "b_session": "s2",
+          "a_date": "11:41 am on 6 November, 2023",
+          "b_date": "5:08 pm on 15 June, 2023",
+          "a_sentence": "Tim owns a prized possession: a basketball signed by his favorite player.",
+          "b_sentence": "As of 15 June 2023, Tim owns a picture from MinaLima, who created all the props for the Harry Potter films."
+        },
+        {
+          "a": "a18b40cd-a93f-412c-b594-5dc8c77b958a",
+          "b": "d6bf1e36-9fa2-4552-a860-b6601219836b",
+          "same_session": false,
+          "a_session": "s3",
+          "b_session": "s8",
+          "a_date": "4:21 pm on 16 July, 2023",
+          "b_date": "4:29 pm on 21 August, 2023",
+          "a_sentence": "Tim does not surf, but reading a great fantasy book helps Tim escape and feel free.",
+          "b_sentence": "Tim has been reading a bunch of fantasy books as a break from stress."
+        },
+        {
+          "a": "d76adce2-94f6-470d-8558-8947158c251b",
+          "b": "dcf9adba-b65f-4655-8854-c5f828ab1eab",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s20",
+          "a_date": "6:59 pm on 26 August, 2023",
+          "b_date": "9:52 am on 1 December, 2023",
+          "a_sentence": "Tim said John's support means a lot to him.",
+          "b_sentence": "Tim says John's support and encouragement have truly made Tim's journey better."
+        },
+        {
+          "a": "445cae0e-d1af-4ff1-b9df-47dd9ee8fcc7",
+          "b": "64b1d153-2b8e-42c7-bde2-c143f89ff988",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s17",
+          "a_date": "1:50 pm on 13 October, 2023",
+          "b_date": "3:36 pm on 11 November, 2023",
+          "a_sentence": "Tim told John he is proud of him and encouraged him to keep it up.",
+          "b_sentence": "Tim encouraged John to take care of himself mentally and physically and told him he's got this."
+        },
+        {
+          "a": "64b1d153-2b8e-42c7-bde2-c143f89ff988",
+          "b": "95de3d7f-20c1-4e77-87a9-826e4e7e427e",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s24",
+          "a_date": "3:36 pm on 11 November, 2023",
+          "b_date": "3:37 pm on 16 December, 2023",
+          "a_sentence": "Tim encouraged John to take care of himself mentally and physically and told him he's got this.",
+          "b_sentence": "Tim told John that rehab can be tough but is key to keep up."
+        },
+        {
+          "a": "d21f8d25-077d-4802-ac5c-042aa505411e",
+          "b": "dde29555-4548-4df4-a896-57d1d52e0616",
+          "same_session": false,
+          "a_session": "s2",
+          "b_session": "s6",
+          "a_date": "5:08 pm on 15 June, 2023",
+          "b_date": "1:08 pm on 11 August, 2023",
+          "a_sentence": "On 15 June 2023, Tim encouraged John to keep going and not give up on his dreams.",
+          "b_sentence": "Tim encouraged John, saying he has tons of determination and passion and will make a difference with his charity work."
+        },
+        {
+          "a": "5aef7530-a560-445a-b5c8-774f125e2ceb",
+          "b": "95de3d7f-20c1-4e77-87a9-826e4e7e427e",
+          "same_session": false,
+          "a_session": "s25",
+          "b_session": "s24",
+          "a_date": "10:04 am on 19 December, 2023",
+          "b_date": "3:37 pm on 16 December, 2023",
+          "a_sentence": "Tim encouraged John to keep believing in himself and said he is there for him.",
+          "b_sentence": "Tim told John that rehab can be tough but is key to keep up."
+        },
+        {
+          "a": "445cae0e-d1af-4ff1-b9df-47dd9ee8fcc7",
+          "b": "dde29555-4548-4df4-a896-57d1d52e0616",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s6",
+          "a_date": "1:50 pm on 13 October, 2023",
+          "b_date": "1:08 pm on 11 August, 2023",
+          "a_sentence": "Tim told John he is proud of him and encouraged him to keep it up.",
+          "b_sentence": "Tim encouraged John, saying he has tons of determination and passion and will make a difference with his charity work."
+        },
+        {
+          "a": "3c7e0deb-197f-4793-a062-23bcc696d38e",
+          "b": "85139f98-8524-46cc-822a-e9825b611534",
+          "same_session": false,
+          "a_session": "s13",
+          "b_session": "s21",
+          "a_date": "1:50 pm on 13 October, 2023",
+          "b_date": "5:34 pm on 6 December, 2023",
+          "a_sentence": "John's team won a trophy and he said all the hard work and effort was totally worth it.",
+          "b_sentence": "Before 6 December 2023, John won a trophy, which he described as awesome."
+        },
+        {
+          "a": "62e603a1-c5d8-4c06-bd47-0416b56d7181",
+          "b": "b7d45368-5313-4860-9644-8075ac6531c8",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s18",
+          "a_date": "5:26 pm on 2 January, 2024",
+          "b_date": "3:59 pm on 16 November, 2023",
+          "a_sentence": "John has a painting in his room of Aragorn to remind him to stay true and be a leader.",
+          "b_sentence": "As of 16 November 2023, John is dealing with an injury and has a bandage on his leg."
+        },
+        {
+          "a": "2775c7e1-4166-4d3c-af20-22b0f628ed77",
+          "b": "e5d157dc-dfdd-44b2-b6e2-93aa6329d4de",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s2",
+          "a_date": "5:26 pm on 2 January, 2024",
+          "b_date": "5:08 pm on 15 June, 2023",
+          "a_sentence": "Tim has a map of Middle-earth from Lord of the Rings showing the different realms and regions.",
+          "b_sentence": "As of 15 June 2023, Tim has lots of Harry Potter reminders that help him escape reality."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s1",
+        "s3",
+        "s3",
+        "s2"
+      ],
+      "elapsed_sec": 233.53,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0004\\asem_thg.sqlite",
+      "bank_bytes": 9482240
+    },
+    {
+      "conversation": "locomo_0005",
+      "sessions": 28,
+      "turns": 675,
+      "notes": 484,
+      "link_records": 8576,
+      "unique_undirected_pairs": 2689,
+      "records_per_note": 17.719,
+      "pairs_per_note": 5.5558,
+      "edge_histogram": {
+        "same-entity": 4768,
+        "semantic": 2876,
+        "temporal": 912,
+        "superseded_by": 20
+      },
+      "fanout_mean": 338.38429752066116,
+      "fanout_median": 328.0,
+      "fanout_p90": 480.0,
+      "fanout_max": 481,
+      "fanout_zero_share": 0.002066115702479339,
+      "n_distinct_entities": 16,
+      "n_notes_empty_entities": 1,
+      "implied_pairs_per_entity_sum": 88300,
+      "hub": {
+        "n_notes": 484,
+        "hubs": [
+          "andrew",
+          "audrey"
+        ],
+        "n_same_entity_edges": 2384,
+        "n_hub_only": 2218,
+        "n_discriminative": 166,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9303691275167785
+      },
+      "supersession": {
+        "n_pairs": 10,
+        "n_same_session": 1,
+        "n_cross_session": 9
+      },
+      "supersession_pairs": [
+        {
+          "a": "0efd3fb5-356c-4ffc-ba03-497d26f08348",
+          "b": "affb2fa8-c92b-40d6-b719-2ac0b02cf2ce",
+          "same_session": false,
+          "a_session": "s7",
+          "b_session": "s21",
+          "a_date": "11:27 am on 2 June, 2023",
+          "b_date": "4:18 pm on 4 October, 2023",
+          "a_sentence": "Audrey offered to help Andrew find a pet-friendly place by asking him to email her his criteria.",
+          "b_sentence": "Audrey offered to help Andrew with advice if he needs it for plants."
+        },
+        {
+          "a": "4e9790e7-6fe2-41c7-9c83-01b37ff1ed4b",
+          "b": "e584390b-8947-4f3a-8387-f7993d57f6f9",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s3",
+          "a_date": "12:24 am on 24 August, 2023",
+          "b_date": "4:19 pm on 16 April, 2023",
+          "a_sentence": "Audrey says she has a strong bond with her dogs.",
+          "b_sentence": "Audrey has always had a strong bond with her dogs and wants to see their happy faces even when they are not with her."
+        },
+        {
+          "a": "c3cf3b3a-a7ca-4eff-a872-eb1cde4d4df3",
+          "b": "f25b310f-6d83-4485-b2bc-28edd08b4ba4",
+          "same_session": false,
+          "a_session": "s18",
+          "b_session": "s17",
+          "a_date": "7:49 pm on 6 September, 2023",
+          "b_date": "12:24 am on 24 August, 2023",
+          "a_sentence": "Audrey advised Andrew to take care of himself and find ways to manage stress.",
+          "b_sentence": "Audrey reminded Andrew that forming a bond takes time and not to rush."
+        },
+        {
+          "a": "47f2f4e8-8be2-4ea9-ac73-a32cf5d53cd7",
+          "b": "d8b72604-1312-4f5a-8ab3-47ae813c00e6",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s19",
+          "a_date": "7:59 pm on 4 November, 2023",
+          "b_date": "5:53 pm on 24 September, 2023",
+          "a_sentence": "Audrey has four dogs.",
+          "b_sentence": "Audrey has a small garden."
+        },
+        {
+          "a": "d8b72604-1312-4f5a-8ab3-47ae813c00e6",
+          "b": "fff3f923-453a-41aa-a401-f45b1927524c",
+          "same_session": true,
+          "a_session": "s19",
+          "b_session": "s19",
+          "a_date": "5:53 pm on 24 September, 2023",
+          "b_date": "5:53 pm on 24 September, 2023",
+          "a_sentence": "Audrey has a small garden.",
+          "b_sentence": "Audrey has four dogs, all of which are mutts."
+        },
+        {
+          "a": "32a42745-abe8-4f59-b839-01c199259922",
+          "b": "c3cf3b3a-a7ca-4eff-a872-eb1cde4d4df3",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s18",
+          "a_date": "7:59 pm on 4 November, 2023",
+          "b_date": "7:49 pm on 6 September, 2023",
+          "a_sentence": "Audrey advised Andrew to take care of Toby and Buddy first and ensure they are happy and healthy before getting more dogs.",
+          "b_sentence": "Audrey advised Andrew to take care of himself and find ways to manage stress."
+        },
+        {
+          "a": "32a42745-abe8-4f59-b839-01c199259922",
+          "b": "b6211ad0-5220-4306-9859-97461efa84e2",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s28",
+          "a_date": "7:59 pm on 4 November, 2023",
+          "b_date": "9:02 am on 22 November, 2023",
+          "a_sentence": "Audrey advised Andrew to take care of Toby and Buddy first and ensure they are happy and healthy before getting more dogs.",
+          "b_sentence": "Audrey advises Andrew to slowly introduce Scout to Toby and Buddy."
+        },
+        {
+          "a": "43c0ba1a-1e15-44d7-87d9-1df74933d313",
+          "b": "9380e691-713f-4f8c-b3e9-1b42e491fed4",
+          "same_session": false,
+          "a_session": "s19",
+          "b_session": "s28",
+          "a_date": "5:53 pm on 24 September, 2023",
+          "b_date": "9:02 am on 22 November, 2023",
+          "a_sentence": "Andrew reacted to Audrey's dog photo saying she looks adorable and that's the connection he'd like to have with Toby.",
+          "b_sentence": "Andrew reacted positively to Audrey's photo of her dog at the park."
+        },
+        {
+          "a": "6fd08332-d5b6-4202-87b3-2942d23c0000",
+          "b": "f5b13fd1-698d-4171-9461-1d44d88d989f",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s19",
+          "a_date": "7:59 pm on 4 November, 2023",
+          "b_date": "5:53 pm on 24 September, 2023",
+          "a_sentence": "Andrew has two dogs, Toby and Buddy.",
+          "b_sentence": "Andrew has a dog named Toby."
+        },
+        {
+          "a": "5d411141-a398-478a-9815-8f5dfffe3392",
+          "b": "8e97a70c-dc03-400c-a2bd-5eb1f76b2fdb",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s19",
+          "a_date": "12:24 am on 24 August, 2023",
+          "b_date": "5:53 pm on 24 September, 2023",
+          "a_sentence": "Audrey loves her dogs very much and wants to make them as happy as possible.",
+          "b_sentence": "Audrey loves her dogs and they bring so much joy into her life."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s1",
+        "s2",
+        "s2",
+        "s1",
+        "s4"
+      ],
+      "elapsed_sec": 235.24,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+      "bank_bytes": 9641984
+    },
+    {
+      "conversation": "locomo_0006",
+      "sessions": 31,
+      "turns": 689,
+      "notes": 513,
+      "link_records": 7346,
+      "unique_undirected_pairs": 2772,
+      "records_per_note": 14.3197,
+      "pairs_per_note": 5.4035,
+      "edge_histogram": {
+        "same-entity": 5046,
+        "semantic": 1312,
+        "temporal": 964,
+        "superseded_by": 24
+      },
+      "fanout_mean": 362.6159844054581,
+      "fanout_median": 327,
+      "fanout_p90": 507.0,
+      "fanout_max": 509,
+      "fanout_zero_share": 0.001949317738791423,
+      "n_distinct_entities": 37,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 101477,
+      "hub": {
+        "n_notes": 513,
+        "hubs": [
+          "james",
+          "john"
+        ],
+        "n_same_entity_edges": 2523,
+        "n_hub_only": 2387,
+        "n_discriminative": 136,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9460959175584621
+      },
+      "supersession": {
+        "n_pairs": 12,
+        "n_same_session": 2,
+        "n_cross_session": 10
+      },
+      "supersession_pairs": [
+        {
+          "a": "254ef07b-05fc-4706-98c2-6d60915f521c",
+          "b": "9f191a8b-d1e4-49f6-b15a-3389967749e5",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s8",
+          "a_date": "7:01 pm on 4 May, 2022",
+          "b_date": "2:36 pm on 29 April, 2022",
+          "a_sentence": "James has a Labrador dog named Daisy who loves to play with her toys and loves to eat.",
+          "b_sentence": "James has a dog named Daisy who lay down next to him while he was playing a game."
+        },
+        {
+          "a": "254ef07b-05fc-4706-98c2-6d60915f521c",
+          "b": "3c4fb073-0392-48ba-bf4b-c7bb202a640e",
+          "same_session": true,
+          "a_session": "s9",
+          "b_session": "s9",
+          "a_date": "7:01 pm on 4 May, 2022",
+          "b_date": "7:01 pm on 4 May, 2022",
+          "a_sentence": "James has a Labrador dog named Daisy who loves to play with her toys and loves to eat.",
+          "b_sentence": "James has two dogs that are shepherds, which John identified from the photo."
+        },
+        {
+          "a": "b3f4913b-c17b-423d-966f-27f89f87e669",
+          "b": "d325b0ef-09a2-47ad-a3df-08367f2c16d4",
+          "same_session": false,
+          "a_session": "s21",
+          "b_session": "s20",
+          "a_date": "9:18 pm on 26 August, 2022",
+          "b_date": "3:57 pm on 21 August, 2022",
+          "a_sentence": "Ned, James's dog, came to James on 26 August 2022 while James was playing on a console.",
+          "b_sentence": "James has a gaming setup with a gaming PC, keyboard, mouse, and a comfy chair."
+        },
+        {
+          "a": "081aad5b-208d-4f50-8110-87b48bbd89b4",
+          "b": "a8094482-ab1d-4860-b92b-0d80bbf4c3f8",
+          "same_session": false,
+          "a_session": "s5",
+          "b_session": "s21",
+          "a_date": "9:52 am on 12 April, 2022",
+          "b_date": "9:18 pm on 26 August, 2022",
+          "a_sentence": "On 5 April 2022, James adopted a puppy named Ned from a shelter in Stamford.",
+          "b_sentence": "James adopted Ned, and Ned has been an awesome companion to James ever since."
+        },
+        {
+          "a": "3c4fb073-0392-48ba-bf4b-c7bb202a640e",
+          "b": "d325b0ef-09a2-47ad-a3df-08367f2c16d4",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s20",
+          "a_date": "7:01 pm on 4 May, 2022",
+          "b_date": "3:57 pm on 21 August, 2022",
+          "a_sentence": "James has two dogs that are shepherds, which John identified from the photo.",
+          "b_sentence": "James has a gaming setup with a gaming PC, keyboard, mouse, and a comfy chair."
+        },
+        {
+          "a": "8806fcb3-352d-46db-ade7-8bc8e4f74113",
+          "b": "e42c70f3-24cb-41f6-b4b8-3b487e4b1c13",
+          "same_session": false,
+          "a_session": "s18",
+          "b_session": "s22",
+          "a_date": "1:45 pm on 6 August, 2022",
+          "b_date": "6:53 pm on 1 September, 2022",
+          "a_sentence": "James offered John financial assistance or advice if John needs it, as of 6 August 2022.",
+          "b_sentence": "James told John he is there if John needs someone to talk or vent to, saying it might help alleviate some of the difficult times John is going through."
+        },
+        {
+          "a": "949696a1-19d7-45ff-9bf6-a791da81bcaa",
+          "b": "a41a9ec4-a655-4ffe-badb-68e85d17ce13",
+          "same_session": false,
+          "a_session": "s25",
+          "b_session": "s22",
+          "a_date": "8:56 pm on 20 September, 2022",
+          "b_date": "6:53 pm on 1 September, 2022",
+          "a_sentence": "John congratulated James on his successful stream, telling him his hard work is paying off.",
+          "b_sentence": "John said completing the game must have been a challenge, especially making sure it was enjoyable and balanced, and congratulated James again."
+        },
+        {
+          "a": "a27fa8ff-80c7-47ba-abf2-0b5327ec9e26",
+          "b": "a41a9ec4-a655-4ffe-badb-68e85d17ce13",
+          "same_session": true,
+          "a_session": "s22",
+          "b_session": "s22",
+          "a_date": "6:53 pm on 1 September, 2022",
+          "b_date": "6:53 pm on 1 September, 2022",
+          "a_sentence": "John congratulated James on finishing his game, saying it looks amazing and that he is proud of all the hard work James put in.",
+          "b_sentence": "John said completing the game must have been a challenge, especially making sure it was enjoyable and balanced, and congratulated James again."
+        },
+        {
+          "a": "80fbd6a3-1400-4250-89be-8c8fbd5df202",
+          "b": "e9ae4020-2200-427b-b827-040383c8fbec",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s12",
+          "a_date": "2:14 pm on 13 October, 2022",
+          "b_date": "7:33 pm on 23 May, 2022",
+          "a_sentence": "John offered James his support, telling James he can count on him for anything.",
+          "b_sentence": "John offered ongoing help and support to James to reach his goals."
+        },
+        {
+          "a": "63bac73a-b67e-48b5-a2f1-46d85f13481d",
+          "b": "fe51380d-d8e0-4128-a42d-99eb0aa052ac",
+          "same_session": false,
+          "a_session": "s28",
+          "b_session": "s22",
+          "a_date": "7:36 pm on 21 October, 2022",
+          "b_date": "6:53 pm on 1 September, 2022",
+          "a_sentence": "James thanked John for the advice and for avoiding spoilers about Cyberpunk 2077.",
+          "b_sentence": "James thanked John for his support and encouragement, saying it made a real difference and that John believed in him."
+        },
+        {
+          "a": "53cc2e91-1cce-4966-9728-fde40a1739d5",
+          "b": "a27fa8ff-80c7-47ba-abf2-0b5327ec9e26",
+          "same_session": false,
+          "a_session": "s4",
+          "b_session": "s22",
+          "a_date": "2:13 pm on 4 April, 2022",
+          "b_date": "6:53 pm on 1 September, 2022",
+          "a_sentence": "John congratulated James on his performance and making it to the semifinals.",
+          "b_sentence": "John congratulated James on finishing his game, saying it looks amazing and that he is proud of all the hard work James put in."
+        },
+        {
+          "a": "7c43a9fb-030e-4bb3-b223-2838f1e89e9c",
+          "b": "ab07ed9c-ddff-43be-af88-1d8e7e72f8bb",
+          "same_session": false,
+          "a_session": "s31",
+          "b_session": "s6",
+          "a_date": "8:57 pm on 7 November, 2022",
+          "b_date": "9:32 pm on 20 April, 2022",
+          "a_sentence": "James has three dogs at home as of 7 November 2022.",
+          "b_sentence": "James has a screenshot of the game character he created for the virtual world."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s1",
+        "s1",
+        "s1",
+        "s1",
+        "s2"
+      ],
+      "elapsed_sec": 252.88,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+      "bank_bytes": 10100736
+    },
+    {
+      "conversation": "locomo_0007",
+      "sessions": 30,
+      "turns": 681,
+      "notes": 511,
+      "link_records": 8118,
+      "unique_undirected_pairs": 2810,
+      "records_per_note": 15.8865,
+      "pairs_per_note": 5.499,
+      "edge_histogram": {
+        "same-entity": 5020,
+        "semantic": 2088,
+        "temporal": 962,
+        "superseded_by": 48
+      },
+      "fanout_mean": 343.1545988258317,
+      "fanout_median": 328,
+      "fanout_p90": 500.0,
+      "fanout_max": 500,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 33,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 93956,
+      "hub": {
+        "n_notes": 511,
+        "hubs": [
+          "deborah",
+          "jolene"
+        ],
+        "n_same_entity_edges": 2510,
+        "n_hub_only": 2323,
+        "n_discriminative": 187,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9254980079681275
+      },
+      "supersession": {
+        "n_pairs": 24,
+        "n_same_session": 1,
+        "n_cross_session": 23
+      },
+      "supersession_pairs": [
+        {
+          "a": "24b35054-315e-49e4-a6ca-102f7f74facf",
+          "b": "39107296-bb85-4285-846d-f61fc457a3ce",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s10",
+          "a_date": "9:11 am on 21 August, 2023",
+          "b_date": "5:35 pm on 22 March, 2023",
+          "a_sentence": "Jolene uses yoga as a way to escape studying and work stress.",
+          "b_sentence": "Jolene uses the Pomodoro Technique, working 25 minutes and taking 5-minute breaks, to avoid burnout."
+        },
+        {
+          "a": "b11192fd-3312-4067-8111-96893cf76da6",
+          "b": "fd9bb2b8-a436-47c6-8e90-62eeb06cb337",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s13",
+          "a_date": "8:50 pm on 12 August, 2023",
+          "b_date": "3:56 pm on 6 June, 2023",
+          "a_sentence": "Jolene thanked Deborah, saying her support means a lot and she will keep pushing to make a difference.",
+          "b_sentence": "Jolene thanked Deborah for the advice and said she would definitely give it a try."
+        },
+        {
+          "a": "74deeedf-4c7c-425e-9062-350280076f1a",
+          "b": "e51be4ed-3097-471d-b4f1-2880eff5e8e1",
+          "same_session": false,
+          "a_session": "s6",
+          "b_session": "s23",
+          "a_date": "4:12 pm on 22 February, 2023",
+          "b_date": "11:46 am on 30 August, 2023",
+          "a_sentence": "Jolene expressed sympathy to Deborah for losing her friend and asked how she is holding up.",
+          "b_sentence": "Jolene expressed sympathy to Deborah about the friend who wrote the quote and will never be able to support her."
+        },
+        {
+          "a": "0d332982-15cc-4fd8-b8d7-5ac76423404e",
+          "b": "df9ace62-3a2f-4258-be48-d4b87eabb6ec",
+          "same_session": false,
+          "a_session": "s25",
+          "b_session": "s17",
+          "a_date": "8:31 pm on 6 September, 2023",
+          "b_date": "8:50 pm on 12 August, 2023",
+          "a_sentence": "Deborah told Jolene she is strong for handling all the challenges and that she's got this.",
+          "b_sentence": "Deborah encouraged Jolene to keep going on her project."
+        },
+        {
+          "a": "3591c46a-86d6-401c-8044-e8cbb056085e",
+          "b": "490e1cb0-8cfc-4b09-84a3-ea5c70a14bfe",
+          "same_session": false,
+          "a_session": "s21",
+          "b_session": "s25",
+          "a_date": "9:34 am on 24 August, 2023",
+          "b_date": "8:31 pm on 6 September, 2023",
+          "a_sentence": "Jolene said Deborah's support means a lot to her.",
+          "b_sentence": "Jolene told Deborah that her support means a lot and she will keep pushing forward."
+        },
+        {
+          "a": "d6ab19cb-4e70-4906-9e62-8a9cb1b5f637",
+          "b": "ec02c526-a236-4227-9a17-0bb172bef325",
+          "same_session": false,
+          "a_session": "s9",
+          "b_session": "s25",
+          "a_date": "11:22 am on 13 March, 2023",
+          "b_date": "8:31 pm on 6 September, 2023",
+          "a_sentence": "Deborah told Jolene she is there for her if needed and suggested they catch up soon.",
+          "b_sentence": "Deborah told Jolene she is there if Jolene needs her and advised Jolene to take care of herself and rest up."
+        },
+        {
+          "a": "69bf444c-6818-42ef-b941-17774162b501",
+          "b": "a129d699-2697-41b6-96f4-d655a4d43b1d",
+          "same_session": false,
+          "a_session": "s4",
+          "b_session": "s7",
+          "a_date": "9:48 am on 4 February, 2023",
+          "b_date": "4:50 pm on 25 February, 2023",
+          "a_sentence": "Deborah told Jolene she is always there to cheer Jolene on and encouraged her to stay in touch and take care of herself.",
+          "b_sentence": "Deborah reacted to Jolene's progress, telling Jolene to keep it up."
+        },
+        {
+          "a": "63b0833e-a8c1-438f-b118-79ccbb8de9e8",
+          "b": "a129d699-2697-41b6-96f4-d655a4d43b1d",
+          "same_session": false,
+          "a_session": "s10",
+          "b_session": "s7",
+          "a_date": "5:35 pm on 22 March, 2023",
+          "b_date": "4:50 pm on 25 February, 2023",
+          "a_sentence": "Deborah encouraged Jolene to take the first steps toward surfing and to believe in herself and keep going.",
+          "b_sentence": "Deborah reacted to Jolene's progress, telling Jolene to keep it up."
+        },
+        {
+          "a": "24b35054-315e-49e4-a6ca-102f7f74facf",
+          "b": "9884d999-620d-4e65-a0a8-0d64599ba45d",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s26",
+          "a_date": "9:11 am on 21 August, 2023",
+          "b_date": "7:39 pm on 8 September, 2023",
+          "a_sentence": "Jolene uses yoga as a way to escape studying and work stress.",
+          "b_sentence": "Jolene relies on a routine and a schedule for classes, studying, and personal time to stay on top of everything."
+        },
+        {
+          "a": "75a4acbf-7305-4769-96a8-fa9b05781020",
+          "b": "97a55f53-eaff-49d3-a43f-2ca1dfd9cc36",
+          "same_session": false,
+          "a_session": "s7",
+          "b_session": "s16",
+          "a_date": "4:50 pm on 25 February, 2023",
+          "b_date": "9:26 am on 1 August, 2023",
+          "a_sentence": "Jolene sets aside time for herself doing yoga and meditation.",
+          "b_sentence": "Jolene prioritizes self-care through yoga and meditation to stay balanced and grounded."
+        },
+        {
+          "a": "405654fe-c74a-4bb7-bc77-d34b0bf8b5f5",
+          "b": "df377951-cb40-43a8-a7c7-76a404d9c0f7",
+          "same_session": false,
+          "a_session": "s27",
+          "b_session": "s18",
+          "a_date": "2:18 pm on 12 September, 2023",
+          "b_date": "2:58 pm on 16 August, 2023",
+          "a_sentence": "Deborah and Jolene support and motivate each other on their mindfulness journey.",
+          "b_sentence": "Deborah told Jolene they are in this together and to give her a shout if she needs anything."
+        },
+        {
+          "a": "475815fa-48a1-4ebd-ae77-2a714cf2faac",
+          "b": "874f58b8-6f13-41fe-ba4c-cda63f1716a3",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s26",
+          "a_date": "5:33 pm on 26 August, 2023",
+          "b_date": "7:39 pm on 8 September, 2023",
+          "a_sentence": "Jolene has been into yoga and meditation lately, finding it helps her recharge, relieves tension, and calms her mind.",
+          "b_sentence": "Jolene practices self-care activities like yoga and meditation to stay balanced and relaxed."
+        },
+        {
+          "a": "63b0833e-a8c1-438f-b118-79ccbb8de9e8",
+          "b": "df9ace62-3a2f-4258-be48-d4b87eabb6ec",
+          "same_session": false,
+          "a_session": "s10",
+          "b_session": "s17",
+          "a_date": "5:35 pm on 22 March, 2023",
+          "b_date": "8:50 pm on 12 August, 2023",
+          "a_sentence": "Deborah encouraged Jolene to take the first steps toward surfing and to believe in herself and keep going.",
+          "b_sentence": "Deborah encouraged Jolene to keep going on her project."
+        },
+        {
+          "a": "2bd7da82-444c-4166-8874-8ee69c054777",
+          "b": "97a55f53-eaff-49d3-a43f-2ca1dfd9cc36",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s16",
+          "a_date": "9:11 am on 21 August, 2023",
+          "b_date": "9:26 am on 1 August, 2023",
+          "a_sentence": "Jolene practices yoga and meditation to relax and stay focused.",
+          "b_sentence": "Jolene prioritizes self-care through yoga and meditation to stay balanced and grounded."
+        },
+        {
+          "a": "1eb32a38-4c6c-4fb3-bcd3-202d6fd5f936",
+          "b": "f4392898-3e35-45c0-b850-7139d48944f3",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s15",
+          "a_date": "5:33 pm on 26 August, 2023",
+          "b_date": "7:37 pm on 9 July, 2023",
+          "a_sentence": "Deborah owns two cats, Luna and Max.",
+          "b_sentence": "Deborah has cats."
+        },
+        {
+          "a": "25934ca6-3c0f-4c7a-9244-acbda6384cc4",
+          "b": "c47fa148-31a2-41e0-abd7-904fcee93cb6",
+          "same_session": false,
+          "a_session": "s12",
+          "b_session": "s2",
+          "a_date": "4:30 pm on 9 April, 2023",
+          "b_date": "9:49 am on 27 January, 2023",
+          "a_sentence": "Jolene owns snakes that cannot chat or understand her, but Jolene values her time with them as it teaches her to take time and be in tune with herself.",
+          "b_sentence": "Jolene owns a snake named Susie."
+        },
+        {
+          "a": "25934ca6-3c0f-4c7a-9244-acbda6384cc4",
+          "b": "92fad7b5-7dd0-4244-bd70-b6a1ed8add5b",
+          "same_session": false,
+          "a_session": "s12",
+          "b_session": "s15",
+          "a_date": "4:30 pm on 9 April, 2023",
+          "b_date": "7:37 pm on 9 July, 2023",
+          "a_sentence": "Jolene owns snakes that cannot chat or understand her, but Jolene values her time with them as it teaches her to take time and be in tune with herself.",
+          "b_sentence": "Jolene decided to get a snake because she was fascinated by reptiles and it felt like the perfect pet for her."
+        },
+        {
+          "a": "4a393021-1d42-4875-96c4-b2eeecacd061",
+          "b": "4b8cef1f-f84b-4f01-9092-17ea9db7a008",
+          "same_session": false,
+          "a_session": "s4",
+          "b_session": "s19",
+          "a_date": "9:48 am on 4 February, 2023",
+          "b_date": "12:52 am on 19 August, 2023",
+          "a_sentence": "Deborah spends a lot of her time teaching yoga.",
+          "b_sentence": "Deborah has been focusing on teaching yoga and spending time with the community."
+        },
+        {
+          "a": "2bd7da82-444c-4166-8874-8ee69c054777",
+          "b": "475815fa-48a1-4ebd-ae77-2a714cf2faac",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s22",
+          "a_date": "9:11 am on 21 August, 2023",
+          "b_date": "5:33 pm on 26 August, 2023",
+          "a_sentence": "Jolene practices yoga and meditation to relax and stay focused.",
+          "b_sentence": "Jolene has been into yoga and meditation lately, finding it helps her recharge, relieves tension, and calms her mind."
+        },
+        {
+          "a": "92fad7b5-7dd0-4244-bd70-b6a1ed8add5b",
+          "b": "ca79e773-1d21-4e5e-aed6-623d2a0bcbb0",
+          "same_session": false,
+          "a_session": "s15",
+          "b_session": "s22",
+          "a_date": "7:37 pm on 9 July, 2023",
+          "b_date": "5:33 pm on 26 August, 2023",
+          "a_sentence": "Jolene decided to get a snake because she was fascinated by reptiles and it felt like the perfect pet for her.",
+          "b_sentence": "Jolene's pet snake likes watching Jolene chill and is great company that brings a sense of calm."
+        },
+        {
+          "a": "3b6d3e78-056d-494e-81ae-9f052ce6c878",
+          "b": "61849b23-0c12-478f-afab-1e5faedc4260",
+          "same_session": true,
+          "a_session": "s1",
+          "b_session": "s1",
+          "a_date": "4:06 pm on 23 January, 2023",
+          "b_date": "4:06 pm on 23 January, 2023",
+          "a_sentence": "Deborah has a pendant that reminds her of her mother.",
+          "b_sentence": "Deborah keeps a last photo together with her mother, who is in a wheelchair."
+        },
+        {
+          "a": "76a9cd7c-ee46-48f9-9e4b-5698f8c0af49",
+          "b": "b68057ea-19cc-4b4e-a192-c4e33ff87679",
+          "same_session": false,
+          "a_session": "s1",
+          "b_session": "s29",
+          "a_date": "4:06 pm on 23 January, 2023",
+          "b_date": "1:24 pm on 17 September, 2023",
+          "a_sentence": "Deborah visited her mother's old house during the week before 23 January 2023.",
+          "b_sentence": "On 10 September 2023, Deborah visited her deceased mother's old house and sat on a bench there."
+        },
+        {
+          "a": "3ebb4db4-804e-40f8-a6ab-7ef0231af367",
+          "b": "d41afbbf-74cc-45d5-a512-3f12c8c86f62",
+          "same_session": false,
+          "a_session": "s29",
+          "b_session": "s15",
+          "a_date": "1:24 pm on 17 September, 2023",
+          "b_date": "7:37 pm on 9 July, 2023",
+          "a_sentence": "Deborah has a big bookshelf in her living room.",
+          "b_sentence": "Deborah has many photos from her running group activity."
+        },
+        {
+          "a": "3b6d3e78-056d-494e-81ae-9f052ce6c878",
+          "b": "d41afbbf-74cc-45d5-a512-3f12c8c86f62",
+          "same_session": false,
+          "a_session": "s1",
+          "b_session": "s15",
+          "a_date": "4:06 pm on 23 January, 2023",
+          "b_date": "7:37 pm on 9 July, 2023",
+          "a_sentence": "Deborah has a pendant that reminds her of her mother.",
+          "b_sentence": "Deborah has many photos from her running group activity."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s2",
+        "s1",
+        "s4",
+        "s4"
+      ],
+      "elapsed_sec": 253.75,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+      "bank_bytes": 10186752
+    },
+    {
+      "conversation": "locomo_0008",
+      "sessions": 25,
+      "turns": 509,
+      "notes": 414,
+      "link_records": 6640,
+      "unique_undirected_pairs": 2274,
+      "records_per_note": 16.0386,
+      "pairs_per_note": 5.4928,
+      "edge_histogram": {
+        "same-entity": 4082,
+        "semantic": 1746,
+        "temporal": 778,
+        "superseded_by": 34
+      },
+      "fanout_mean": 333.8840579710145,
+      "fanout_median": 308.0,
+      "fanout_p90": 413.0,
+      "fanout_max": 413,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 16,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 80786,
+      "hub": {
+        "n_notes": 414,
+        "hubs": [
+          "evan",
+          "sam"
+        ],
+        "n_same_entity_edges": 2041,
+        "n_hub_only": 2006,
+        "n_discriminative": 35,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.9828515433610975
+      },
+      "supersession": {
+        "n_pairs": 17,
+        "n_same_session": 5,
+        "n_cross_session": 12
+      },
+      "supersession_pairs": [
+        {
+          "a": "2edbab85-9cc3-4c58-88da-0060ce8a4bee",
+          "b": "88479f57-cc2b-4fa5-819a-430864c98ef9",
+          "same_session": false,
+          "a_session": "s1",
+          "b_session": "s6",
+          "a_date": "1:47 pm on 18 May, 2023",
+          "b_date": "4:09 pm on 13 August, 2023",
+          "a_sentence": "Evan encouraged Sam to keep trying new things until something sparks his excitement.",
+          "b_sentence": "Evan encouraged Sam to celebrate small wins because every step forward counts."
+        },
+        {
+          "a": "88479f57-cc2b-4fa5-819a-430864c98ef9",
+          "b": "ee6d4b54-c7b2-42ba-b80f-7b185d423ffe",
+          "same_session": false,
+          "a_session": "s6",
+          "b_session": "s7",
+          "a_date": "4:09 pm on 13 August, 2023",
+          "b_date": "4:20 pm on 15 August, 2023",
+          "a_sentence": "Evan encouraged Sam to celebrate small wins because every step forward counts.",
+          "b_sentence": "Evan encouraged Sam to keep moving forward slowly and taking small steps."
+        },
+        {
+          "a": "aa5da0b7-210a-427b-8256-813340b25272",
+          "b": "f0086496-68ac-4146-9950-4f1b4129301b",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s5",
+          "a_date": "7:30 pm on 21 November, 2023",
+          "b_date": "7:52 pm on 7 August, 2023",
+          "a_sentence": "Sam reacted to Evan's photo of a small island with a lone boat, calling it gorgeous and asking where it is.",
+          "b_sentence": "Sam reacted to Evan's photo of an island with a lone boat by saying it was an amazing view and that the key is to find something that keeps you motivated."
+        },
+        {
+          "a": "1f9b7ab5-a62a-4d6a-aa57-345bc6aac9f7",
+          "b": "6792dfd9-4e04-4074-960d-f46b23d7b6b2",
+          "same_session": true,
+          "a_session": "s12",
+          "b_session": "s12",
+          "a_date": "3:09 pm on 8 October, 2023",
+          "b_date": "3:09 pm on 8 October, 2023",
+          "a_sentence": "Evan reminded Sam that it takes time, told Sam to be patient with Sam's self, and said Sam's health matters and Evan believes in Sam.",
+          "b_sentence": "Evan told Sam he can't wait to hear about Sam's progress and encouraged Sam to keep up the hard work."
+        },
+        {
+          "a": "1f9b7ab5-a62a-4d6a-aa57-345bc6aac9f7",
+          "b": "b38c3dde-b583-4875-997d-a8aa20eee739",
+          "same_session": true,
+          "a_session": "s12",
+          "b_session": "s12",
+          "a_date": "3:09 pm on 8 October, 2023",
+          "b_date": "3:09 pm on 8 October, 2023",
+          "a_sentence": "Evan reminded Sam that it takes time, told Sam to be patient with Sam's self, and said Sam's health matters and Evan believes in Sam.",
+          "b_sentence": "Evan told Sam that progress is key and encouraged Sam to keep pushing on and stay positive, and shared an image of a notepad with a note and a pair of scissors."
+        },
+        {
+          "a": "6a72cbad-d46a-4e3e-91db-fd246b8bfcd8",
+          "b": "b38c3dde-b583-4875-997d-a8aa20eee739",
+          "same_session": true,
+          "a_session": "s12",
+          "b_session": "s12",
+          "a_date": "3:09 pm on 8 October, 2023",
+          "b_date": "3:09 pm on 8 October, 2023",
+          "a_sentence": "Evan encouraged Sam to stay motivated and believe in Sam's self, saying Sam has got this.",
+          "b_sentence": "Evan told Sam that progress is key and encouraged Sam to keep pushing on and stay positive, and shared an image of a notepad with a note and a pair of scissors."
+        },
+        {
+          "a": "6792dfd9-4e04-4074-960d-f46b23d7b6b2",
+          "b": "ee6d4b54-c7b2-42ba-b80f-7b185d423ffe",
+          "same_session": false,
+          "a_session": "s12",
+          "b_session": "s7",
+          "a_date": "3:09 pm on 8 October, 2023",
+          "b_date": "4:20 pm on 15 August, 2023",
+          "a_sentence": "Evan told Sam he can't wait to hear about Sam's progress and encouraged Sam to keep up the hard work.",
+          "b_sentence": "Evan encouraged Sam to keep moving forward slowly and taking small steps."
+        },
+        {
+          "a": "4395184e-4f1c-446c-91c9-7d0de4e5c9e9",
+          "b": "4f4ae4da-8d64-4cad-b00a-124f227c7959",
+          "same_session": false,
+          "a_session": "s18",
+          "b_session": "s16",
+          "a_date": "8:16 pm on 5 December, 2023",
+          "b_date": "9:13 pm on 9 November, 2023",
+          "a_sentence": "Sam offered Evan yoga tips or other help whenever Evan needs it.",
+          "b_sentence": "Sam offered Evan support and someone to talk to about Evan losing Evan's job."
+        },
+        {
+          "a": "4395184e-4f1c-446c-91c9-7d0de4e5c9e9",
+          "b": "65266c41-4312-41bf-b06a-1c23ae95dbe3",
+          "same_session": false,
+          "a_session": "s18",
+          "b_session": "s19",
+          "a_date": "8:16 pm on 5 December, 2023",
+          "b_date": "1:45 pm on 9 December, 2023",
+          "a_sentence": "Sam offered Evan yoga tips or other help whenever Evan needs it.",
+          "b_sentence": "Sam offered Evan tips on organizing a big family event and support on 9 December 2023."
+        },
+        {
+          "a": "24e0d0ad-b288-49bc-9fb0-9f7fa48961b2",
+          "b": "3e421639-2324-4e6a-ad80-33d5b2c672fd",
+          "same_session": false,
+          "a_session": "s15",
+          "b_session": "s4",
+          "a_date": "2:56 pm on 25 October, 2023",
+          "b_date": "10:52 am on 27 July, 2023",
+          "a_sentence": "On 25 October 2023, Sam said Sam appreciates Evan's support.",
+          "b_sentence": "On 27 July 2023, Sam told Evan that Sam appreciates Evan's support."
+        },
+        {
+          "a": "110808af-7d70-424e-9e0e-80adec6b307f",
+          "b": "6f61c31d-b40b-44bf-8aea-27a996d69e0e",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s10",
+          "a_date": "6:48 pm on 17 December, 2023",
+          "b_date": "9:28 am on 11 September, 2023",
+          "a_sentence": "Sam reacted to Evan's painting, commenting that the woman in the photo looks confident and asking what kind of painting is in the background.",
+          "b_sentence": "Sam complimented Evan's painting and said they might try painting or find another calming hobby."
+        },
+        {
+          "a": "5ace2b3b-31bf-419c-a051-3e5b42350fcc",
+          "b": "6f61c31d-b40b-44bf-8aea-27a996d69e0e",
+          "same_session": false,
+          "a_session": "s8",
+          "b_session": "s10",
+          "a_date": "6:17 pm on 19 August, 2023",
+          "b_date": "9:28 am on 11 September, 2023",
+          "a_sentence": "On 19 August 2023, Sam reacted to Evan's painting, calling Evan really talented and asking if Evan took other classes.",
+          "b_sentence": "Sam complimented Evan's painting and said they might try painting or find another calming hobby."
+        },
+        {
+          "a": "275bc720-8791-45ed-a480-d47420a0d164",
+          "b": "6a72cbad-d46a-4e3e-91db-fd246b8bfcd8",
+          "same_session": true,
+          "a_session": "s12",
+          "b_session": "s12",
+          "a_date": "3:09 pm on 8 October, 2023",
+          "b_date": "3:09 pm on 8 October, 2023",
+          "a_sentence": "Evan told Sam that Evan is here for Sam and urged Sam to keep taking one step at a time, and that Sam will get there eventually.",
+          "b_sentence": "Evan encouraged Sam to stay motivated and believe in Sam's self, saying Sam has got this."
+        },
+        {
+          "a": "3e13a9d6-6762-4df4-b700-84850e1ea5bb",
+          "b": "6e2a3f1f-68ea-4606-bcac-9a41476dc539",
+          "same_session": false,
+          "a_session": "s4",
+          "b_session": "s17",
+          "a_date": "10:52 am on 27 July, 2023",
+          "b_date": "7:30 pm on 21 November, 2023",
+          "a_sentence": "On 27 July 2023, Evan told Sam that Evan is there if Sam needs Evan and encouraged Sam to keep going.",
+          "b_sentence": "Evan told Sam he is there for Sam and that they should stick together."
+        },
+        {
+          "a": "1bf56f61-8a49-400f-8604-b8f84a532ae2",
+          "b": "6e2a3f1f-68ea-4606-bcac-9a41476dc539",
+          "same_session": true,
+          "a_session": "s17",
+          "b_session": "s17",
+          "a_date": "7:30 pm on 21 November, 2023",
+          "b_date": "7:30 pm on 21 November, 2023",
+          "a_sentence": "Evan thanked Sam and told Sam he is here for Sam if Sam needs to talk.",
+          "b_sentence": "Evan told Sam he is there for Sam and that they should stick together."
+        },
+        {
+          "a": "15315f13-6842-479d-bcaa-b961c3d1cfb7",
+          "b": "1bf56f61-8a49-400f-8604-b8f84a532ae2",
+          "same_session": false,
+          "a_session": "s25",
+          "b_session": "s17",
+          "a_date": "9:37 pm on 11 January, 2024",
+          "b_date": "7:30 pm on 21 November, 2023",
+          "a_sentence": "Evan offered to always be available if Sam needs to chat and told Sam to look after themselves.",
+          "b_sentence": "Evan thanked Sam and told Sam he is here for Sam if Sam needs to talk."
+        },
+        {
+          "a": "2574d6b9-c1c9-4ee0-b123-dcf006e24117",
+          "b": "275bc720-8791-45ed-a480-d47420a0d164",
+          "same_session": false,
+          "a_session": "s17",
+          "b_session": "s12",
+          "a_date": "7:30 pm on 21 November, 2023",
+          "b_date": "3:09 pm on 8 October, 2023",
+          "a_sentence": "Evan encouraged Sam by saying he believes in Sam and that taking small steps can help.",
+          "b_sentence": "Evan told Sam that Evan is here for Sam and urged Sam to keep taking one step at a time, and that Sam will get there eventually."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s2",
+        "s4",
+        "s4",
+        "s3"
+      ],
+      "elapsed_sec": 215.62,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0008\\asem_thg.sqlite",
+      "bank_bytes": 8216576
+    },
+    {
+      "conversation": "locomo_0009",
+      "sessions": 30,
+      "turns": 568,
+      "notes": 478,
+      "link_records": 7782,
+      "unique_undirected_pairs": 2647,
+      "records_per_note": 16.2803,
+      "pairs_per_note": 5.5377,
+      "edge_histogram": {
+        "same-entity": 4732,
+        "semantic": 2110,
+        "temporal": 896,
+        "superseded_by": 44
+      },
+      "fanout_mean": 368.0878661087866,
+      "fanout_median": 337.0,
+      "fanout_p90": 477.0,
+      "fanout_max": 477,
+      "fanout_zero_share": 0.0,
+      "n_distinct_entities": 25,
+      "n_notes_empty_entities": 0,
+      "implied_pairs_per_entity_sum": 100586,
+      "hub": {
+        "n_notes": 478,
+        "hubs": [
+          "calvin",
+          "dave"
+        ],
+        "n_same_entity_edges": 2366,
+        "n_hub_only": 1978,
+        "n_discriminative": 388,
+        "n_no_intersection": 0,
+        "hub_only_edge_fraction": 0.8360101437024514
+      },
+      "supersession": {
+        "n_pairs": 22,
+        "n_same_session": 7,
+        "n_cross_session": 15
+      },
+      "supersession_pairs": [
+        {
+          "a": "60899695-0b73-4d61-9346-f312c80acbd3",
+          "b": "e6354467-c50c-410f-8646-ba632f219cf2",
+          "same_session": false,
+          "a_session": "s2",
+          "b_session": "s9",
+          "a_date": "4:45 pm on 26 March, 2023",
+          "b_date": "3:15 pm on 21 June, 2023",
+          "a_sentence": "Calvin's new car is a red sports car.",
+          "b_sentence": "Calvin owns a red car with black rims."
+        },
+        {
+          "a": "27ed0323-d454-48d6-a534-99748cea7054",
+          "b": "7d3a02ed-78c2-444c-a7e7-15e34c20e94a",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s5",
+          "a_date": "8:57 pm on 22 September, 2023",
+          "b_date": "1:16 pm on 3 May, 2023",
+          "a_sentence": "Dave reacted to Calvin's red sports car photo, saying he loves how the sunlight hits it and that it is a great symbol of Calvin's hard work.",
+          "b_sentence": "Dave reacted to Calvin's photo of a red sports car driving down a road."
+        },
+        {
+          "a": "0117ffe3-3c58-4d72-b960-204ec3660d87",
+          "b": "d4851d9f-096b-447e-be3d-28c5b9d28ab7",
+          "same_session": true,
+          "a_session": "s7",
+          "b_session": "s7",
+          "a_date": "6:06 pm on 31 May, 2023",
+          "b_date": "6:06 pm on 31 May, 2023",
+          "a_sentence": "Calvin felt intensely alive while performing live.",
+          "b_sentence": "Calvin enjoys performing live and finds the rush and connection with the crowd an absolute high."
+        },
+        {
+          "a": "1dd97d6e-6d33-4fe5-a419-3a7c6b8dfb5c",
+          "b": "60899695-0b73-4d61-9346-f312c80acbd3",
+          "same_session": false,
+          "a_session": "s20",
+          "b_session": "s2",
+          "a_date": "8:57 pm on 22 September, 2023",
+          "b_date": "4:45 pm on 26 March, 2023",
+          "a_sentence": "Calvin shared a photo of his red sports car parked in a parking lot, calling it a sign of his hard work and dedication.",
+          "b_sentence": "Calvin's new car is a red sports car."
+        },
+        {
+          "a": "0dfe2fe3-a5a5-4da9-8eb9-3eb8836bdf7b",
+          "b": "7fbdf08b-d60e-4b6d-a4bc-d3a9347d31f1",
+          "same_session": true,
+          "a_session": "s22",
+          "b_session": "s22",
+          "a_date": "3:13 pm on 8 October, 2023",
+          "b_date": "3:13 pm on 8 October, 2023",
+          "a_sentence": "Calvin said doing what you love for a living is the ultimate goal and told Dave to keep going, calling him inspiring.",
+          "b_sentence": "Calvin told Dave to go for it, that chasing dreams is what life is about, and to keep working hard and living his best life."
+        },
+        {
+          "a": "4a822cb4-4a3d-4e99-bd63-5bad1c8659e2",
+          "b": "7fbdf08b-d60e-4b6d-a4bc-d3a9347d31f1",
+          "same_session": true,
+          "a_session": "s22",
+          "b_session": "s22",
+          "a_date": "3:13 pm on 8 October, 2023",
+          "b_date": "3:13 pm on 8 October, 2023",
+          "a_sentence": "Calvin told Dave to keep up the good work and stay focused, saying Dave has got this.",
+          "b_sentence": "Calvin told Dave to go for it, that chasing dreams is what life is about, and to keep working hard and living his best life."
+        },
+        {
+          "a": "3cedafa2-f4cc-4a64-9b4a-b003a52bbb49",
+          "b": "4a822cb4-4a3d-4e99-bd63-5bad1c8659e2",
+          "same_session": false,
+          "a_session": "s23",
+          "b_session": "s22",
+          "a_date": "9:39 am on 15 October, 2023",
+          "b_date": "3:13 pm on 8 October, 2023",
+          "a_sentence": "Calvin encouraged Dave to keep pushing and believe in himself, saying the payoff would be worth it.",
+          "b_sentence": "Calvin told Dave to keep up the good work and stay focused, saying Dave has got this."
+        },
+        {
+          "a": "01f2d6e3-3961-4a1c-80ba-02c83c2a0fcb",
+          "b": "3cedafa2-f4cc-4a64-9b4a-b003a52bbb49",
+          "same_session": true,
+          "a_session": "s23",
+          "b_session": "s23",
+          "a_date": "9:39 am on 15 October, 2023",
+          "b_date": "9:39 am on 15 October, 2023",
+          "a_sentence": "Calvin told Dave he believes in him and urged him never to forget how awesome he is.",
+          "b_sentence": "Calvin encouraged Dave to keep pushing and believe in himself, saying the payoff would be worth it."
+        },
+        {
+          "a": "1007306f-a714-4af1-978a-029f117d7fe8",
+          "b": "8ef2669a-a0a4-4791-ba84-fafd4e351b1a",
+          "same_session": true,
+          "a_session": "s12",
+          "b_session": "s12",
+          "a_date": "1:12 pm on 3 August, 2023",
+          "b_date": "1:12 pm on 3 August, 2023",
+          "a_sentence": "Dave told Calvin he is eager to see what Calvin does and urged him to keep at it and never forget his dreams.",
+          "b_sentence": "Dave told Calvin that having something like his car is motivating and a reminder of what one can achieve."
+        },
+        {
+          "a": "2579d427-b0e3-4f5d-97be-df064edf959f",
+          "b": "585a8ff7-2cfe-403a-b661-34b16c637fbc",
+          "same_session": false,
+          "a_session": "s24",
+          "b_session": "s15",
+          "a_date": "10:11 am on 19 October, 2023",
+          "b_date": "11:06 am on 22 August, 2023",
+          "a_sentence": "Calvin met Frank Ocean in August 2022 at a festival, where Frank Ocean said he wanted to collaborate.",
+          "b_sentence": "Calvin met Frank Ocean at a music festival in Tokyo."
+        },
+        {
+          "a": "45daf9dc-bb1b-465a-a570-f86e429a6d84",
+          "b": "f31d67af-a988-4732-9009-d4834294f836",
+          "same_session": false,
+          "a_session": "s15",
+          "b_session": "s3",
+          "a_date": "11:06 am on 22 August, 2023",
+          "b_date": "4:15 pm on 20 April, 2023",
+          "a_sentence": "Calvin attended a music festival in Tokyo with a lively crowd and buzzing energy.",
+          "b_sentence": "Calvin attended an awesome music festival in Tokyo before 20 April 2023."
+        },
+        {
+          "a": "1c8eb6d4-a6f9-4f2c-b411-622dccccd831",
+          "b": "54a3178f-ee66-411f-be78-dcbe4b09dc72",
+          "same_session": false,
+          "a_session": "s7",
+          "b_session": "s14",
+          "a_date": "6:06 pm on 31 May, 2023",
+          "b_date": "12:35 am on 14 August, 2023",
+          "a_sentence": "During the Frank Ocean tour the week before 31 May 2023, Calvin performed in Tokyo to an insane crowd.",
+          "b_sentence": "Calvin performed a show in Tokyo and the crowd sang along to one of his songs."
+        },
+        {
+          "a": "0dfe2fe3-a5a5-4da9-8eb9-3eb8836bdf7b",
+          "b": "9a02278c-4a4e-43e9-9e68-4f20be1fe221",
+          "same_session": false,
+          "a_session": "s22",
+          "b_session": "s19",
+          "a_date": "3:13 pm on 8 October, 2023",
+          "b_date": "12:13 am on 15 September, 2023",
+          "a_sentence": "Calvin said doing what you love for a living is the ultimate goal and told Dave to keep going, calling him inspiring.",
+          "b_sentence": "Calvin told Dave he is really talented and encouraged him to keep making people happy and doing what he loves."
+        },
+        {
+          "a": "2bca8152-708b-43b9-8e9a-3e5f2e99bbd5",
+          "b": "51323830-c58f-498e-8772-5d698f45cf68",
+          "same_session": true,
+          "a_session": "s22",
+          "b_session": "s22",
+          "a_date": "3:13 pm on 8 October, 2023",
+          "b_date": "3:13 pm on 8 October, 2023",
+          "a_sentence": "Dave told Calvin that Calvin's support means everything to him and that he will keep pushing and reaching for his dreams.",
+          "b_sentence": "Dave said Calvin's support means a lot and that he will keep chasing his dreams and working hard."
+        },
+        {
+          "a": "9a02278c-4a4e-43e9-9e68-4f20be1fe221",
+          "b": "da800066-0f85-4b3a-ba8e-53cce7d41845",
+          "same_session": false,
+          "a_session": "s19",
+          "b_session": "s14",
+          "a_date": "12:13 am on 15 September, 2023",
+          "b_date": "12:35 am on 14 August, 2023",
+          "a_sentence": "Calvin told Dave he is really talented and encouraged him to keep making people happy and doing what he loves.",
+          "b_sentence": "Calvin encouraged Dave, telling him he is always there for him and wishing him good luck with the car restoration."
+        },
+        {
+          "a": "00860890-6b3b-4898-adac-2ecc0b4b8229",
+          "b": "adc42780-13d0-4bd3-9888-55f2d040820e",
+          "same_session": false,
+          "a_session": "s23",
+          "b_session": "s28",
+          "a_date": "9:39 am on 15 October, 2023",
+          "b_date": "5:46 pm on 2 November, 2023",
+          "a_sentence": "Dave congratulated Calvin on his new Ferrari, calling it an incredible ride, and asked him to share a photo when ready.",
+          "b_sentence": "Dave congratulated Calvin on his album release and the party."
+        },
+        {
+          "a": "61b47bfc-b483-4f21-a14f-4945abba877e",
+          "b": "d0666a3b-b0f8-4cd5-838a-859f824734b2",
+          "same_session": false,
+          "a_session": "s1",
+          "b_session": "s27",
+          "a_date": "11:53 am on 23 March, 2023",
+          "b_date": "10:49 am on 29 October, 2023",
+          "a_sentence": "Calvin just had a big life change, showing a new mansion as part of that change.",
+          "b_sentence": "Calvin said he has had some great collaborations recently."
+        },
+        {
+          "a": "2538aac4-b822-4225-87a4-7ff323f2deb6",
+          "b": "a6ab31f5-137f-47a9-bd1d-66455f3ed94c",
+          "same_session": true,
+          "a_session": "s29",
+          "b_session": "s29",
+          "a_date": "9:15 pm on 13 November, 2023",
+          "b_date": "9:15 pm on 13 November, 2023",
+          "a_sentence": "Dave asked Calvin whether he had tried out any new ideas lately.",
+          "b_sentence": "Dave asked Calvin whether having supportive people around him is important for Calvin's artist development."
+        },
+        {
+          "a": "1111561d-0e11-4bf0-aeb3-12e00fd2dad0",
+          "b": "8fd8727d-58f7-456b-8b81-3b862b5ccaf4",
+          "same_session": false,
+          "a_session": "s12",
+          "b_session": "s29",
+          "a_date": "1:12 pm on 3 August, 2023",
+          "b_date": "9:15 pm on 13 November, 2023",
+          "a_sentence": "Dave encouraged Calvin to keep working with different artists and crafting great sounds to reach his goals.",
+          "b_sentence": "Dave encouraged Calvin to keep pushing himself and exploring as an artist."
+        },
+        {
+          "a": "1111561d-0e11-4bf0-aeb3-12e00fd2dad0",
+          "b": "ae754397-39e1-458a-9b1d-8b5573aaf6f7",
+          "same_session": false,
+          "a_session": "s12",
+          "b_session": "s11",
+          "a_date": "1:12 pm on 3 August, 2023",
+          "b_date": "6:38 pm on 21 July, 2023",
+          "a_sentence": "Dave encouraged Calvin to keep working with different artists and crafting great sounds to reach his goals.",
+          "b_sentence": "Dave told Calvin he is Calvin's biggest fan and encouraged him to keep pushing toward his goals."
+        },
+        {
+          "a": "15ff4f6a-7ef4-4976-9ab9-6d4d98322b4c",
+          "b": "23af6fd9-6a43-49de-886c-f06c04d27583",
+          "same_session": false,
+          "a_session": "s14",
+          "b_session": "s23",
+          "a_date": "12:35 am on 14 August, 2023",
+          "b_date": "9:39 am on 15 October, 2023",
+          "a_sentence": "Dave thanked Calvin, saying Calvin's support means a lot to him.",
+          "b_sentence": "Dave thanked Calvin, saying having a believing friend helps him keep pushing."
+        },
+        {
+          "a": "39c7a383-eeff-4b03-8476-a5c3c9b3cfa8",
+          "b": "adc42780-13d0-4bd3-9888-55f2d040820e",
+          "same_session": false,
+          "a_session": "s30",
+          "b_session": "s28",
+          "a_date": "10:54 am on 17 November, 2023",
+          "b_date": "5:46 pm on 2 November, 2023",
+          "a_sentence": "Dave congratulated Calvin on his gala attendance and upcoming performance in Boston.",
+          "b_sentence": "Dave congratulated Calvin on his album release and the party."
+        }
+      ],
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s2",
+        "s3",
+        "s2",
+        "s4",
+        "s4"
+      ],
+      "elapsed_sec": 230.27,
+      "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0009\\asem_thg.sqlite",
+      "bank_bytes": 9469952
+    }
+  ]
+}

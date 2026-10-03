@@ -1,0 +1,75 @@
+{
+  "phase": "eval",
+  "dataset": "locomo10",
+  "tag": "ds_thg",
+  "model_tag": "hotrovlg_vult_gpt_5_6_sol",
+  "config": "configs/models/vult55_openai.yaml",
+  "judge_config": "configs/models/vult55_openai.yaml",
+  "metrics": [
+    "em",
+    "rougeL",
+    "bertscore_f1"
+  ],
+  "bank_root": "static/memory_banks\\locomo10",
+  "work_copy": true,
+  "n_qa": 199,
+  "conversations": [
+    "locomo_0000"
+  ],
+  "elapsed_sec": 2629.35,
+  "systems": {
+    "ASEM-THG": {
+      "n": 175,
+      "missing_conversations": 0,
+      "n_answer_errors": 8,
+      "aborted": "8 consecutive answer errors (>= 8); last: APIStatusError: Error code: 402 - {'error': {'code': 'insufficient_quota', 'message': 'Insufficient balance. This request requires at least 26\u20ab for this request (~2135 input tokens). Add funds to continue.', 'model': 'vult-gpt-5.6-sol', 'param': None, 'request_id': 'req_93553a537cc5a06c38fcfc54', 'type': 'insufficient_quota'}}",
+      "overall": {
+        "n": 175.0,
+        "em": 0.2342857142857143,
+        "rougeL": 0.4523795159501946,
+        "bertscore_f1": 0.8552165641103472
+      },
+      "per_category": {
+        "adversarial": {
+          "n": 23.0,
+          "em": 0.43478260869565216,
+          "rougeL": 0.43856332703213613,
+          "bertscore_f1": 0.6039312481880188
+        },
+        "multi_hop": {
+          "n": 32.0,
+          "em": 0.0625,
+          "rougeL": 0.2917040965274661,
+          "bertscore_f1": 0.8577990476042032
+        },
+        "open_domain": {
+          "n": 13.0,
+          "em": 0.0,
+          "rougeL": 0.19597863436872726,
+          "bertscore_f1": 0.8513681338383601
+        },
+        "single_hop": {
+          "n": 70.0,
+          "em": 0.24285714285714285,
+          "rougeL": 0.46771705920726164,
+          "bertscore_f1": 0.9011343121528625
+        },
+        "temporal": {
+          "n": 37.0,
+          "em": 0.32432432432432434,
+          "rougeL": 0.6610003051179522,
+          "bertscore_f1": 0.9236681864068315
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 175.0,
+          "em": 0.2342857142857143,
+          "rougeL": 0.4523795159501946,
+          "bertscore_f1": 0.8552165641103472
+        }
+      }
+    }
+  },
+  "resumed_from": 0
+}

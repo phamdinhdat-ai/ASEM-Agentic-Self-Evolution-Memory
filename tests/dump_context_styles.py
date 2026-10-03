@@ -6,6 +6,22 @@ No bank, no API. Run:
   $py="C:\\Users\\Dat Pham\\anaconda3\\envs\\memory-r1\\python.exe"
   $env:KMP_DUPLICATE_LIB_OK="TRUE"; $env:PYTHONPATH="."
   & $py tests/dump_context_styles.py
+
+CONTENT ASSERTIONS — READ BEFORE ADDING ONE
+-------------------------------------------
+Any check of the form "is this text present in the rendered block?" MUST go
+through the helpers in `tests/assert_content.py`, e.g.
+
+    from tests.assert_content import contains, assert_contains, assert_absent
+
+    present = contains(block, "some fact")     # wrap-safe
+    assert_contains(block, "some fact")        # raises with provenance label
+
+Do NOT write `"some fact" in block`. `_render_notes_block` calls `_wrap`, which
+inserts a newline plus an indent MID-SENTENCE, so a raw substring check is False
+for any text long enough to wrap. It passes only while a fixture happens to be
+short — i.e. it is green for the wrong reason and stops testing anything the
+moment someone lengthens the fixture. See tests/assert_content.py for details.
 """
 from __future__ import annotations
 
@@ -23,6 +39,7 @@ from asem.answer_agent import (
 )
 from asem.note import LinkRecord, Note
 from asem.token_budget import estimate_tokens
+from tests.assert_content import assert_absent, assert_contains, contains
 
 OUT = io.StringIO()
 
@@ -82,7 +99,7 @@ p("  delta: %+d chars (%+.1f%%)" % (
     len(thg_a) - len(legacy_a),
     100.0 * (len(thg_a) - len(legacy_a)) / max(1, len(legacy_a))))
 p("  legacy says 'session': %s   thg_v1 says 'session:': %s"
-  % ("session" in legacy_a, "session:" in thg_a))
+  % (contains(legacy_a, "session"), contains(thg_a, "session:")))
 p("")
 p("--- legacy block 1..3 ---")
 p("\n".join(legacy_a.split("\n")[:6]))
@@ -110,7 +127,7 @@ thg_b = _render_notes_block(notes_b, context_style="thg_v1", question_kind="arit
 stat_line("legacy", legacy_b)
 stat_line("thg_v1", thg_b)
 p("  has 'Date anchors': legacy=%s thg_v1=%s"
-  % ("Date anchors" in legacy_b, "Date anchors" in thg_b))
+  % (contains(legacy_b, "Date anchors"), contains(thg_b, "Date anchors")))
 for line in thg_b.split("\n"):
     if line.startswith("Date anchors"):
         p("  " + line)
@@ -162,7 +179,7 @@ thg_d = _render_notes_block([h1, h2], context_style="thg_v1", question_kind="mul
 stat_line("legacy", legacy_d)
 stat_line("thg_v1", thg_d)
 p("  has 'Evidence chains': legacy=%s thg_v1=%s"
-  % ("Evidence chains" in legacy_d, "Evidence chains" in thg_d))
+  % (contains(legacy_d, "Evidence chains"), contains(thg_d, "Evidence chains")))
 for line in thg_d.split("\n"):
     if line.startswith("Evidence chains"):
         p("  " + line)
@@ -172,7 +189,7 @@ nolinks = [note("z1", "A fact.", day=0, sid="session_1"),
            note("z2", "Another fact.", day=1, sid="session_2")]
 thg_nl = _render_notes_block(nolinks, context_style="thg_v1", question_kind="multi_hop")
 p("  empty note.L -> 'Evidence chains' present: %s (must be False)"
-  % ("Evidence chains" in thg_nl))
+  % contains(thg_nl, "Evidence chains"))
 
 # ---------------------------------------------------------------------------
 # Scenario E: drop counters (W10.2)
@@ -188,7 +205,7 @@ blk = _render_notes_block([note("L", long_x)], context_style="thg_v1",
 p("  note.X len=%d, max_bullets=2" % len(long_x))
 p("  counters: %s" % st.as_dict())
 p("  block contains the 'more fact(s)' notice: %s"
-  % ("more fact(s)" in blk))
+  % contains(blk, "more fact(s)"))
 
 # ---------------------------------------------------------------------------
 # Scenario F: heterogeneous realistic set, both styles (the headline dump)
@@ -214,4 +231,10 @@ p(thg_f)
 with open("tests/context_styles_dump.txt", "w", encoding="utf-8") as fh:
     fh.write(OUT.getvalue())
 print("written tests/context_styles_dump.txt")
-print(OUT.getvalue())
+
+# Optional: echo to the console for a quick look. The rendered context contains
+# U+2192 (the chain arrow) and the console may be cp1252, so encode defensively
+# rather than crashing AFTER the report was written.
+if "--echo" in sys.argv:
+    enc = sys.stdout.encoding or "utf-8"
+    sys.stdout.write(OUT.getvalue().encode(enc, errors="replace").decode(enc))

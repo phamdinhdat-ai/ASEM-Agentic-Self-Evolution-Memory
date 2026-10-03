@@ -1,10 +1,10 @@
 {
   "root": "static/memory_banks/locomo10/thg_v2/ASEM-THG",
-  "n_conversations": 6,
-  "total_same_entity_edges": 10960,
-  "total_hub_only": 10671,
-  "total_discriminative": 289,
-  "aggregate_hub_only_edge_fraction": 0.9736313868613139,
+  "n_conversations": 10,
+  "total_same_entity_edges": 22565,
+  "total_hub_only": 21378,
+  "total_discriminative": 1187,
+  "aggregate_hub_only_edge_fraction": 0.9473964103700421,
   "per_conversation": [
     {
       "n_notes": 365,
@@ -77,18 +77,74 @@
       "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0004\\asem_thg.sqlite"
     },
     {
-      "n_notes": 50,
+      "n_notes": 484,
       "hubs": [
         "andrew",
         "audrey"
       ],
-      "n_same_entity_edges": 219,
-      "n_hub_only": 205,
-      "n_discriminative": 14,
+      "n_same_entity_edges": 2384,
+      "n_hub_only": 2218,
+      "n_discriminative": 166,
       "n_no_intersection": 0,
-      "hub_only_edge_fraction": 0.9360730593607306,
+      "hub_only_edge_fraction": 0.9303691275167785,
       "conversation": "locomo_0005",
       "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0005\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 513,
+      "hubs": [
+        "james",
+        "john"
+      ],
+      "n_same_entity_edges": 2523,
+      "n_hub_only": 2387,
+      "n_discriminative": 136,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9460959175584621,
+      "conversation": "locomo_0006",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0006\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 511,
+      "hubs": [
+        "deborah",
+        "jolene"
+      ],
+      "n_same_entity_edges": 2510,
+      "n_hub_only": 2323,
+      "n_discriminative": 187,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9254980079681275,
+      "conversation": "locomo_0007",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0007\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 414,
+      "hubs": [
+        "evan",
+        "sam"
+      ],
+      "n_same_entity_edges": 2041,
+      "n_hub_only": 2006,
+      "n_discriminative": 35,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9828515433610975,
+      "conversation": "locomo_0008",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0008\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 478,
+      "hubs": [
+        "calvin",
+        "dave"
+      ],
+      "n_same_entity_edges": 2366,
+      "n_hub_only": 1978,
+      "n_discriminative": 388,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.8360101437024514,
+      "conversation": "locomo_0009",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0009\\asem_thg.sqlite"
     }
   ]
 }
