@@ -13,6 +13,26 @@
 #   python scripts/run_static_eval.py \
 #       --config configs/models/gpt54_api.yaml \
 #       --judge-config configs/models/judge_api.yaml --metrics judge
+#
+# ⚠️  MODEL ID ENTITLEMENT — READ BEFORE CHANGING `model:` BELOW
+# ---------------------------------------------------------------------------
+# This file previously declared `model: "deepseek-v4-flash"`, which the account
+# key is NO LONGER ENTITLED TO. A judge call to that id returns
+#     403 FORBIDDEN: Please subscribe to model in the API Key: deepseek-v4-flash
+# and the judge stage FAILS SILENTLY: each row's exception is swallowed into
+# `judge_error` with `judge_correct=None`, and the aggregate then reports
+#      judge: 0.0, judge_coverage: 0.0
+# i.e. a total judge outage is indistinguishable from "the judge disagreed with
+# every answer". Measured 2026-10-03 on `--limit 3`: 3/3 rows errored, printed
+# 0.0. (`data/benchmarks/results/longmemeval/ws4_bootstrap/scores/*.jsonl`.)
+#
+# Entitlement is a property of the API KEY, not of this repo, so it can change
+# again. The endpoint currently advertises EXACTLY ONE model:
+#     GET https://api.vilao.ai/v1/models  ->  ['deepseek-v4.1-flash']
+# Probe before trusting any judge run:
+#     python scripts/check_judge_entitlement.py
+# ALWAYS report `judge_coverage` next to any judge score. A judge number with
+# coverage != 1.0 is not a result — see analysis/temporal_grounding_improvements.md §3.
 # ---------------------------------------------------------------------------
 preset: "custom"
 
@@ -20,7 +40,12 @@ inference:
   backend: "langchain"
   langchain:
     provider: "openai"
-    model: "deepseek-v4-flash"
+    # Was "deepseek-v4-flash" (403 NOT ENTITLED — silent zero judge). The repo's
+    # own `-`/`chib/` prefix convention; both this and the bare
+    # "deepseek-v4.1-flash" verify as 200. Kept identical to
+    # configs/models/judge_v41_flash.yaml so the two judge configs cannot diverge
+    # into one working and one silently-failing arm.
+    model: "chib/deepseek-v4.1-flash"
     temperature: 0.0
     # Must cover REASONING + the small verdict JSON, or the model can return
     # an empty string (finish_reason="length").
