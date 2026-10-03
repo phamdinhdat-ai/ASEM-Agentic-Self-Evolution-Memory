@@ -1,0 +1,22 @@
+Verify WS1 freeze: hashes match, 339 passed, GB5 ranking reproduced
+
+Independent Lead verification of graph-dev's freeze (commit 70f69c8):
+  hyper_graph.py SHA256 342ECB0A3A57BF600EB5C74AF6D589C1673403EBBE17DBB961BE2015D7FBC2E3  MATCH
+  note.py        SHA256 D12480D238413A401145D493BA898CB978AE08EAA2DB1BD11A92483F66061132  MATCH
+  suite: 339 passed, 1 skipped, 0 failed
+
+Reproduced the GB5 ranking evidence myself (analysis/gb5_ranking_evidence.py):
+  note 00cb74d3 carrying 'sweden' (df=2): its rare-sharing peer 7ab53820 moves
+  #5 (0.6589) -> #1 (3.8245), displacing four hub-only peers. The aggregate top-5
+  is FLAT (hub-only 1769 -> 1769) exactly as the ordering-only design predicts,
+  which is why RANKING and not aggregate is the evidence.
+
+Verified the latent coupling graph-dev flagged and chose NOT to tighten during freeze:
+  _slot_key_for_predicate('is married to') == _slot_key_for_predicate('is gorgeous') == 'is'
+  They are separated ONLY by the _is_single_valued_predicate write gate. Pinned by
+  tests so loosening the gate trips a test rather than silently merging a legitimate
+  slot with a wildcard casualty. TIGHTENING KEY DERIVATION IS UNSAFE - do not do it.
+
+Verified GB1 is FORWARD-ONLY: the thg_v2 bank holds 10 superseded_by records (5 pairs)
+but 0/365 notes carry triplets, so hydrate() rebuilds no versioning index for it.
+Therefore thg_v2's 166 corpus pairs are evidence about the OLD build, NOT about HEAD.

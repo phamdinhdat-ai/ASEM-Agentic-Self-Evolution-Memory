@@ -1,0 +1,1755 @@
+{
+  "root": "static/memory_banks/locomo10/thg_v2/ASEM-THG",
+  "n_conversations": 10,
+  "n_pairs_total": 166,
+  "n_evaluated": 166,
+  "n_errors": 0,
+  "n_exposed": 166,
+  "measurement": "EXPOSURE PROXY \u2014 not the accuracy ablation (that needs task-4's judge pipeline)",
+  "per_conversation": [
+    {
+      "conversation": "locomo_0000",
+      "n_pairs": 5,
+      "n_evaluated": 5,
+      "n_errors": 0,
+      "n_exposed": 5,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0001",
+      "n_pairs": 36,
+      "n_evaluated": 36,
+      "n_errors": 0,
+      "n_exposed": 36,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0002",
+      "n_pairs": 18,
+      "n_evaluated": 18,
+      "n_errors": 0,
+      "n_exposed": 18,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0003",
+      "n_pairs": 10,
+      "n_evaluated": 10,
+      "n_errors": 0,
+      "n_exposed": 10,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0004",
+      "n_pairs": 12,
+      "n_evaluated": 12,
+      "n_errors": 0,
+      "n_exposed": 12,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0005",
+      "n_pairs": 10,
+      "n_evaluated": 10,
+      "n_errors": 0,
+      "n_exposed": 10,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0006",
+      "n_pairs": 12,
+      "n_evaluated": 12,
+      "n_errors": 0,
+      "n_exposed": 12,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0007",
+      "n_pairs": 24,
+      "n_evaluated": 24,
+      "n_errors": 0,
+      "n_exposed": 24,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0008",
+      "n_pairs": 17,
+      "n_evaluated": 17,
+      "n_errors": 0,
+      "n_exposed": 17,
+      "exposure_rate": 1.0
+    },
+    {
+      "conversation": "locomo_0009",
+      "n_pairs": 22,
+      "n_evaluated": 22,
+      "n_errors": 0,
+      "n_exposed": 22,
+      "exposure_rate": 1.0
+    }
+  ],
+  "rows": [
+    {
+      "conversation": "locomo_0000",
+      "a": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+      "b": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
+      "a_session": "s1",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0000",
+      "a": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+      "b": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
+      "a_session": "s12",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0000",
+      "a": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+      "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+      "a_session": "s7",
+      "b_session": "s13",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0000",
+      "a": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+      "b": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+      "a_session": "s13",
+      "b_session": "s13",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0000",
+      "a": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+      "b": "c47a1be6-6029-4475-910d-5a1239924a1c",
+      "a_session": "s18",
+      "b_session": "s10",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "97fb54b0-dae9-4bb4-a421-ca7684f5c0c9",
+      "b": "be48b4f9-fc5d-42c7-a55b-6841f75b3d1f",
+      "a_session": "s4",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "877b627b-0176-41ff-bf15-8ffa2b8f4594",
+      "b": "97fb54b0-dae9-4bb4-a421-ca7684f5c0c9",
+      "a_session": "s4",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "71b5a1c1-a443-4480-b094-d68a7b4519fa",
+      "b": "86853d5d-c409-4cae-ba58-95c5ef3c5744",
+      "a_session": "s4",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "20a51eb9-437f-4b34-884e-710be9e37631",
+      "b": "ec7e8198-6c7d-4ac4-9c07-e83b94c2f896",
+      "a_session": "s5",
+      "b_session": "s5",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "ce002a22-a9b1-487a-9b68-a1c5fa7badfe",
+      "b": "ec7e8198-6c7d-4ac4-9c07-e83b94c2f896",
+      "a_session": "s6",
+      "b_session": "s5",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "b55dc1d3-2e13-4080-8a01-5e475f1f88c4",
+      "b": "d65332ea-ec7d-4268-87bf-ef81709fb3d8",
+      "a_session": "s8",
+      "b_session": "s3",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "ce002a22-a9b1-487a-9b68-a1c5fa7badfe",
+      "b": "db7c3a77-9c92-4f7f-a5ee-ef9d09d4b569",
+      "a_session": "s6",
+      "b_session": "s9",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "01070b10-7986-460b-83d0-64e9147f77d6",
+      "b": "29436df1-41eb-4dd1-a87e-f38527697b39",
+      "a_session": "s13",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "01070b10-7986-460b-83d0-64e9147f77d6",
+      "b": "ec4719c6-f037-4bbf-8d2f-7cf534e2dc78",
+      "a_session": "s13",
+      "b_session": "s13",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "4adab50c-bdbb-4372-95dc-a0ff2b6a7760",
+      "b": "69fe5f69-70fc-40ea-bf93-f743faa11129",
+      "a_session": "s13",
+      "b_session": "s6",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "1dbe9199-2321-42bf-bf05-0daf9b77fe99",
+      "b": "6a9519a9-4839-4c6f-8033-59df30bd1adb",
+      "a_session": "s5",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "1dbe9199-2321-42bf-bf05-0daf9b77fe99",
+      "b": "d304ad60-134a-4995-ad98-739126ce7f14",
+      "a_session": "s5",
+      "b_session": "s9",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "ce414166-095e-4051-bd62-def211c77ab0",
+      "b": "f06ec7a4-4940-4629-a7cc-07490bb6b0d7",
+      "a_session": "s6",
+      "b_session": "s1",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 14
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "2fcf1e70-254a-46dd-8cea-17c60fa104e9",
+      "b": "af3bf69b-f9ad-4c14-9398-5caa959f8296",
+      "a_session": "s9",
+      "b_session": "s2",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "689b345b-e308-4627-8c0f-37c1e4320359",
+      "b": "79de5cb3-07d9-4641-9525-57869f47a5b5",
+      "a_session": "s15",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "09029e9e-bf9b-4422-b054-19c22348109c",
+      "b": "b0c7ed8c-f5d3-43af-a960-aaf69b423cea",
+      "a_session": "s15",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "09029e9e-bf9b-4422-b054-19c22348109c",
+      "b": "46a77f28-5dec-46f1-afe6-c5dbc3088015",
+      "a_session": "s15",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "78405b2f-a736-470a-892d-f53f2f6533bb",
+      "b": "db7c3a77-9c92-4f7f-a5ee-ef9d09d4b569",
+      "a_session": "s13",
+      "b_session": "s9",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "014f61db-80c6-4f9b-9033-0d887fb94c48",
+      "b": "abdd8c33-955c-4b6d-ab64-8f6f7e49cfbc",
+      "a_session": "s3",
+      "b_session": "s2",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "014f61db-80c6-4f9b-9033-0d887fb94c48",
+      "b": "02e10d03-d2f5-45e4-8f87-48988d87b673",
+      "a_session": "s3",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "f43877db-7132-4c20-a18d-0ad41a14a9b8",
+      "b": "f9e1c216-9e19-4b3c-aa49-37c232cbe1c6",
+      "a_session": "s16",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "91475068-3d31-47aa-9609-d0486a8402c7",
+      "b": "f2b275dd-b27e-4aea-bc6e-cb65c976523e",
+      "a_session": "s5",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "3788ecc2-5cd0-4b62-8dac-c81b8343bf41",
+      "b": "f2b275dd-b27e-4aea-bc6e-cb65c976523e",
+      "a_session": "s9",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "02e10d03-d2f5-45e4-8f87-48988d87b673",
+      "b": "be48b4f9-fc5d-42c7-a55b-6841f75b3d1f",
+      "a_session": "s4",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "5eeb4702-5dfe-4c6c-8a4b-1704012a72a7",
+      "b": "67f6bed2-fe68-47bc-93eb-b37d8d1794ee",
+      "a_session": "s15",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 14
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "64061c85-c0e5-45c0-8042-1d1f223d3dbc",
+      "b": "991e577d-bdf9-46f5-ab31-c5a38be8dd94",
+      "a_session": "s16",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 13
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "2e10090c-5b7a-4286-8b0c-bd2feff2a626",
+      "b": "93ca19a4-a63f-41dd-b11f-f107c209f639",
+      "a_session": "s17",
+      "b_session": "s16",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "5d5df5b4-5259-4b00-b512-7ae8052e3966",
+      "b": "64061c85-c0e5-45c0-8042-1d1f223d3dbc",
+      "a_session": "s9",
+      "b_session": "s16",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 13
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "9a4c23d8-95d4-4550-9d2b-a6b746bc3b17",
+      "b": "ac8e6046-304e-4a9a-a7e1-1814e41cadfa",
+      "a_session": "s4",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "20a51eb9-437f-4b34-884e-710be9e37631",
+      "b": "9a4c23d8-95d4-4550-9d2b-a6b746bc3b17",
+      "a_session": "s5",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "0afb02fa-7631-48b9-9e50-3f1aeb889d8d",
+      "b": "93ca19a4-a63f-41dd-b11f-f107c209f639",
+      "a_session": "s11",
+      "b_session": "s16",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "3788ecc2-5cd0-4b62-8dac-c81b8343bf41",
+      "b": "77e8a3d4-22a5-40b2-9091-c21b210d12a5",
+      "a_session": "s9",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "78405b2f-a736-470a-892d-f53f2f6533bb",
+      "b": "be6010ee-12c7-4cf0-8c84-9a783a34ae32",
+      "a_session": "s13",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "06968753-d09e-4ac2-9580-65ae492c0d2a",
+      "b": "86853d5d-c409-4cae-ba58-95c5ef3c5744",
+      "a_session": "s19",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "877b627b-0176-41ff-bf15-8ffa2b8f4594",
+      "b": "91475068-3d31-47aa-9609-d0486a8402c7",
+      "a_session": "s4",
+      "b_session": "s5",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0001",
+      "a": "98dde767-9a5d-4ef7-b970-5c116c9784b2",
+      "b": "b0c7ed8c-f5d3-43af-a960-aaf69b423cea",
+      "a_session": "s11",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "4dbd2135-0c96-400e-baef-dcd0918139ec",
+      "b": "5cfdb633-0ebe-4681-9b02-a655a1f0dca1",
+      "a_session": "s16",
+      "b_session": "s11",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "4dbd2135-0c96-400e-baef-dcd0918139ec",
+      "b": "9bc64150-9646-454d-b4a2-5e09b5bf5e15",
+      "a_session": "s16",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "e5b4b877-d1fd-4c29-b46a-90dd9a3a7d9e",
+      "b": "fd5ffe1a-c3e1-40af-86b8-461590d15115",
+      "a_session": "s20",
+      "b_session": "s26",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "0cf7a3d1-c1d2-494a-889d-9d9a4dd96e05",
+      "b": "f49dbd1c-1aa8-4fe0-ae6f-65832ac32bbc",
+      "a_session": "s2",
+      "b_session": "s1",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 11
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "0cf7a3d1-c1d2-494a-889d-9d9a4dd96e05",
+      "b": "637912f7-7740-4892-9de9-5e60c5594567",
+      "a_session": "s2",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 11
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "1f65f0de-4380-409d-8761-8484cde1e22e",
+      "b": "5cfdb633-0ebe-4681-9b02-a655a1f0dca1",
+      "a_session": "s11",
+      "b_session": "s11",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "637912f7-7740-4892-9de9-5e60c5594567",
+      "b": "703a6d13-a69e-4757-bb23-06d639974a55",
+      "a_session": "s7",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 11
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "703a6d13-a69e-4757-bb23-06d639974a55",
+      "b": "d5d2e507-577a-4d8e-8d63-b6cf5538bf0c",
+      "a_session": "s8",
+      "b_session": "s11",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 11
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "7dcae2f2-90b0-45d0-b83c-91ea527b7b0b",
+      "b": "ab39fc0c-855f-4923-bf9d-4c01a1864361",
+      "a_session": "s30",
+      "b_session": "s28",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "42f16c78-c9d0-403f-87f2-47f9cd068178",
+      "b": "94d25e29-5aa9-4d45-9459-6a9c2043bf6d",
+      "a_session": "s30",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "b5462a19-2240-4e68-ab61-9bc266403599",
+      "b": "d746144b-9446-4b98-a5ed-0aabd353336b",
+      "a_session": "s23",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "685117f2-54fb-4d50-91ac-2d58fd934a1c",
+      "b": "b5462a19-2240-4e68-ab61-9bc266403599",
+      "a_session": "s30",
+      "b_session": "s23",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "94d25e29-5aa9-4d45-9459-6a9c2043bf6d",
+      "b": "9bc64150-9646-454d-b4a2-5e09b5bf5e15",
+      "a_session": "s17",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "06658b20-53bd-43e8-8869-046fbdf7a83b",
+      "b": "d746144b-9446-4b98-a5ed-0aabd353336b",
+      "a_session": "s9",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "52188d9d-e19f-4c9d-a04f-cba6f7847421",
+      "b": "79d330e9-3f44-4209-af17-49b0349ca3c6",
+      "a_session": "s17",
+      "b_session": "s18",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "1729492a-6735-4825-9ca8-25bfe003e933",
+      "b": "95ad0df4-a434-4e38-8759-5d29571c07bb",
+      "a_session": "s22",
+      "b_session": "s31",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "724679eb-8fe8-40d4-a747-2e52d131fe57",
+      "b": "eae9160a-f2a3-4aa1-b7ee-22a95a5f9bdb",
+      "a_session": "s32",
+      "b_session": "s26",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0002",
+      "a": "2d682152-4ace-4346-9331-62f3aaae99eb",
+      "b": "d01dc590-c494-40e0-a4c8-94a0f07ed6bb",
+      "a_session": "s32",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "29e9533d-3a75-43f7-b200-f86c5f665003",
+      "b": "5a1ed340-53de-4371-9201-0480b17f01a3",
+      "a_session": "s5",
+      "b_session": "s9",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "019d2cb9-3374-49bb-ae24-88a6830b5315",
+      "b": "6e871b79-7e35-4ca6-9555-5a9ebf12cd76",
+      "a_session": "s15",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "6851cb20-c3d5-48bd-8697-93b35c443544",
+      "b": "79c2c5d4-56d2-470d-94b0-0eb86db06af2",
+      "a_session": "s5",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "6c881565-006a-4302-91be-ba11aaa86c92",
+      "b": "79c2c5d4-56d2-470d-94b0-0eb86db06af2",
+      "a_session": "s20",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "2638ad98-72ac-4fb8-939e-9ad2f4ed8ef6",
+      "b": "ac5b173e-388b-48be-824b-d1916d6b8049",
+      "a_session": "s22",
+      "b_session": "s3",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "4f662818-6b9c-4c0e-9dfd-da31e147643b",
+      "b": "e6f3edbd-5511-4dd4-8c7f-82ca9537549c",
+      "a_session": "s22",
+      "b_session": "s3",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "818575f7-723c-48bc-84fa-e9053cb09050",
+      "b": "b97bc8e1-8ed8-41e5-9e7d-b44a78d9a061",
+      "a_session": "s22",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "6851cb20-c3d5-48bd-8697-93b35c443544",
+      "b": "77e319d1-4c3a-4251-93a3-d881724b423d",
+      "a_session": "s5",
+      "b_session": "s27",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "ea6f39f9-97c9-4b0d-8e02-009f170f63b4",
+      "b": "eb137f41-0bdd-4af3-94c2-66c89d7da08f",
+      "a_session": "s25",
+      "b_session": "s29",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0003",
+      "a": "885c5687-abcd-4cf1-8f00-80ed6e25188b",
+      "b": "ea6f39f9-97c9-4b0d-8e02-009f170f63b4",
+      "a_session": "s5",
+      "b_session": "s25",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "04a618f9-ea48-4a93-9098-7cf320d27d51",
+      "b": "1b479faf-b002-42fd-8484-9404273bee75",
+      "a_session": "s6",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "272e6f17-37ad-4750-b07c-146dd23869f4",
+      "b": "c9ac5c04-25c1-4c6b-80e0-15d4165689bf",
+      "a_session": "s16",
+      "b_session": "s2",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "a18b40cd-a93f-412c-b594-5dc8c77b958a",
+      "b": "d6bf1e36-9fa2-4552-a860-b6601219836b",
+      "a_session": "s3",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "d76adce2-94f6-470d-8558-8947158c251b",
+      "b": "dcf9adba-b65f-4655-8854-c5f828ab1eab",
+      "a_session": "s9",
+      "b_session": "s20",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "445cae0e-d1af-4ff1-b9df-47dd9ee8fcc7",
+      "b": "64b1d153-2b8e-42c7-bde2-c143f89ff988",
+      "a_session": "s13",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "64b1d153-2b8e-42c7-bde2-c143f89ff988",
+      "b": "95de3d7f-20c1-4e77-87a9-826e4e7e427e",
+      "a_session": "s17",
+      "b_session": "s24",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "d21f8d25-077d-4802-ac5c-042aa505411e",
+      "b": "dde29555-4548-4df4-a896-57d1d52e0616",
+      "a_session": "s2",
+      "b_session": "s6",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "5aef7530-a560-445a-b5c8-774f125e2ceb",
+      "b": "95de3d7f-20c1-4e77-87a9-826e4e7e427e",
+      "a_session": "s25",
+      "b_session": "s24",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "445cae0e-d1af-4ff1-b9df-47dd9ee8fcc7",
+      "b": "dde29555-4548-4df4-a896-57d1d52e0616",
+      "a_session": "s13",
+      "b_session": "s6",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "3c7e0deb-197f-4793-a062-23bcc696d38e",
+      "b": "85139f98-8524-46cc-822a-e9825b611534",
+      "a_session": "s13",
+      "b_session": "s21",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "62e603a1-c5d8-4c06-bd47-0416b56d7181",
+      "b": "b7d45368-5313-4860-9644-8075ac6531c8",
+      "a_session": "s27",
+      "b_session": "s18",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0004",
+      "a": "2775c7e1-4166-4d3c-af20-22b0f628ed77",
+      "b": "e5d157dc-dfdd-44b2-b6e2-93aa6329d4de",
+      "a_session": "s27",
+      "b_session": "s2",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "0efd3fb5-356c-4ffc-ba03-497d26f08348",
+      "b": "affb2fa8-c92b-40d6-b719-2ac0b02cf2ce",
+      "a_session": "s7",
+      "b_session": "s21",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "4e9790e7-6fe2-41c7-9c83-01b37ff1ed4b",
+      "b": "e584390b-8947-4f3a-8387-f7993d57f6f9",
+      "a_session": "s17",
+      "b_session": "s3",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "c3cf3b3a-a7ca-4eff-a872-eb1cde4d4df3",
+      "b": "f25b310f-6d83-4485-b2bc-28edd08b4ba4",
+      "a_session": "s18",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "47f2f4e8-8be2-4ea9-ac73-a32cf5d53cd7",
+      "b": "d8b72604-1312-4f5a-8ab3-47ae813c00e6",
+      "a_session": "s27",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 13
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "d8b72604-1312-4f5a-8ab3-47ae813c00e6",
+      "b": "fff3f923-453a-41aa-a401-f45b1927524c",
+      "a_session": "s19",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 14
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "32a42745-abe8-4f59-b839-01c199259922",
+      "b": "c3cf3b3a-a7ca-4eff-a872-eb1cde4d4df3",
+      "a_session": "s27",
+      "b_session": "s18",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "32a42745-abe8-4f59-b839-01c199259922",
+      "b": "b6211ad0-5220-4306-9859-97461efa84e2",
+      "a_session": "s27",
+      "b_session": "s28",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "43c0ba1a-1e15-44d7-87d9-1df74933d313",
+      "b": "9380e691-713f-4f8c-b3e9-1b42e491fed4",
+      "a_session": "s19",
+      "b_session": "s28",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "6fd08332-d5b6-4202-87b3-2942d23c0000",
+      "b": "f5b13fd1-698d-4171-9461-1d44d88d989f",
+      "a_session": "s27",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0005",
+      "a": "5d411141-a398-478a-9815-8f5dfffe3392",
+      "b": "8e97a70c-dc03-400c-a2bd-5eb1f76b2fdb",
+      "a_session": "s17",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "254ef07b-05fc-4706-98c2-6d60915f521c",
+      "b": "9f191a8b-d1e4-49f6-b15a-3389967749e5",
+      "a_session": "s9",
+      "b_session": "s8",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "254ef07b-05fc-4706-98c2-6d60915f521c",
+      "b": "3c4fb073-0392-48ba-bf4b-c7bb202a640e",
+      "a_session": "s9",
+      "b_session": "s9",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "b3f4913b-c17b-423d-966f-27f89f87e669",
+      "b": "d325b0ef-09a2-47ad-a3df-08367f2c16d4",
+      "a_session": "s21",
+      "b_session": "s20",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "081aad5b-208d-4f50-8110-87b48bbd89b4",
+      "b": "a8094482-ab1d-4860-b92b-0d80bbf4c3f8",
+      "a_session": "s5",
+      "b_session": "s21",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "3c4fb073-0392-48ba-bf4b-c7bb202a640e",
+      "b": "d325b0ef-09a2-47ad-a3df-08367f2c16d4",
+      "a_session": "s9",
+      "b_session": "s20",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "8806fcb3-352d-46db-ade7-8bc8e4f74113",
+      "b": "e42c70f3-24cb-41f6-b4b8-3b487e4b1c13",
+      "a_session": "s18",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "949696a1-19d7-45ff-9bf6-a791da81bcaa",
+      "b": "a41a9ec4-a655-4ffe-badb-68e85d17ce13",
+      "a_session": "s25",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "a27fa8ff-80c7-47ba-abf2-0b5327ec9e26",
+      "b": "a41a9ec4-a655-4ffe-badb-68e85d17ce13",
+      "a_session": "s22",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "80fbd6a3-1400-4250-89be-8c8fbd5df202",
+      "b": "e9ae4020-2200-427b-b827-040383c8fbec",
+      "a_session": "s27",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "63bac73a-b67e-48b5-a2f1-46d85f13481d",
+      "b": "fe51380d-d8e0-4128-a42d-99eb0aa052ac",
+      "a_session": "s28",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "53cc2e91-1cce-4966-9728-fde40a1739d5",
+      "b": "a27fa8ff-80c7-47ba-abf2-0b5327ec9e26",
+      "a_session": "s4",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0006",
+      "a": "7c43a9fb-030e-4bb3-b223-2838f1e89e9c",
+      "b": "ab07ed9c-ddff-43be-af88-1d8e7e72f8bb",
+      "a_session": "s31",
+      "b_session": "s6",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "24b35054-315e-49e4-a6ca-102f7f74facf",
+      "b": "39107296-bb85-4285-846d-f61fc457a3ce",
+      "a_session": "s20",
+      "b_session": "s10",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "b11192fd-3312-4067-8111-96893cf76da6",
+      "b": "fd9bb2b8-a436-47c6-8e90-62eeb06cb337",
+      "a_session": "s17",
+      "b_session": "s13",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "74deeedf-4c7c-425e-9062-350280076f1a",
+      "b": "e51be4ed-3097-471d-b4f1-2880eff5e8e1",
+      "a_session": "s6",
+      "b_session": "s23",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "0d332982-15cc-4fd8-b8d7-5ac76423404e",
+      "b": "df9ace62-3a2f-4258-be48-d4b87eabb6ec",
+      "a_session": "s25",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "3591c46a-86d6-401c-8044-e8cbb056085e",
+      "b": "490e1cb0-8cfc-4b09-84a3-ea5c70a14bfe",
+      "a_session": "s21",
+      "b_session": "s25",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "d6ab19cb-4e70-4906-9e62-8a9cb1b5f637",
+      "b": "ec02c526-a236-4227-9a17-0bb172bef325",
+      "a_session": "s9",
+      "b_session": "s25",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "69bf444c-6818-42ef-b941-17774162b501",
+      "b": "a129d699-2697-41b6-96f4-d655a4d43b1d",
+      "a_session": "s4",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "63b0833e-a8c1-438f-b118-79ccbb8de9e8",
+      "b": "a129d699-2697-41b6-96f4-d655a4d43b1d",
+      "a_session": "s10",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "24b35054-315e-49e4-a6ca-102f7f74facf",
+      "b": "9884d999-620d-4e65-a0a8-0d64599ba45d",
+      "a_session": "s20",
+      "b_session": "s26",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "75a4acbf-7305-4769-96a8-fa9b05781020",
+      "b": "97a55f53-eaff-49d3-a43f-2ca1dfd9cc36",
+      "a_session": "s7",
+      "b_session": "s16",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "405654fe-c74a-4bb7-bc77-d34b0bf8b5f5",
+      "b": "df377951-cb40-43a8-a7c7-76a404d9c0f7",
+      "a_session": "s27",
+      "b_session": "s18",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "475815fa-48a1-4ebd-ae77-2a714cf2faac",
+      "b": "874f58b8-6f13-41fe-ba4c-cda63f1716a3",
+      "a_session": "s22",
+      "b_session": "s26",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "63b0833e-a8c1-438f-b118-79ccbb8de9e8",
+      "b": "df9ace62-3a2f-4258-be48-d4b87eabb6ec",
+      "a_session": "s10",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "2bd7da82-444c-4166-8874-8ee69c054777",
+      "b": "97a55f53-eaff-49d3-a43f-2ca1dfd9cc36",
+      "a_session": "s20",
+      "b_session": "s16",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "1eb32a38-4c6c-4fb3-bcd3-202d6fd5f936",
+      "b": "f4392898-3e35-45c0-b850-7139d48944f3",
+      "a_session": "s22",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "25934ca6-3c0f-4c7a-9244-acbda6384cc4",
+      "b": "c47fa148-31a2-41e0-abd7-904fcee93cb6",
+      "a_session": "s12",
+      "b_session": "s2",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "25934ca6-3c0f-4c7a-9244-acbda6384cc4",
+      "b": "92fad7b5-7dd0-4244-bd70-b6a1ed8add5b",
+      "a_session": "s12",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "4a393021-1d42-4875-96c4-b2eeecacd061",
+      "b": "4b8cef1f-f84b-4f01-9092-17ea9db7a008",
+      "a_session": "s4",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "2bd7da82-444c-4166-8874-8ee69c054777",
+      "b": "475815fa-48a1-4ebd-ae77-2a714cf2faac",
+      "a_session": "s20",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "92fad7b5-7dd0-4244-bd70-b6a1ed8add5b",
+      "b": "ca79e773-1d21-4e5e-aed6-623d2a0bcbb0",
+      "a_session": "s15",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "3b6d3e78-056d-494e-81ae-9f052ce6c878",
+      "b": "61849b23-0c12-478f-afab-1e5faedc4260",
+      "a_session": "s1",
+      "b_session": "s1",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "76a9cd7c-ee46-48f9-9e4b-5698f8c0af49",
+      "b": "b68057ea-19cc-4b4e-a192-c4e33ff87679",
+      "a_session": "s1",
+      "b_session": "s29",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "3ebb4db4-804e-40f8-a6ab-7ef0231af367",
+      "b": "d41afbbf-74cc-45d5-a512-3f12c8c86f62",
+      "a_session": "s29",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0007",
+      "a": "3b6d3e78-056d-494e-81ae-9f052ce6c878",
+      "b": "d41afbbf-74cc-45d5-a512-3f12c8c86f62",
+      "a_session": "s1",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "2edbab85-9cc3-4c58-88da-0060ce8a4bee",
+      "b": "88479f57-cc2b-4fa5-819a-430864c98ef9",
+      "a_session": "s1",
+      "b_session": "s6",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "88479f57-cc2b-4fa5-819a-430864c98ef9",
+      "b": "ee6d4b54-c7b2-42ba-b80f-7b185d423ffe",
+      "a_session": "s6",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "aa5da0b7-210a-427b-8256-813340b25272",
+      "b": "f0086496-68ac-4146-9950-4f1b4129301b",
+      "a_session": "s17",
+      "b_session": "s5",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "1f9b7ab5-a62a-4d6a-aa57-345bc6aac9f7",
+      "b": "6792dfd9-4e04-4074-960d-f46b23d7b6b2",
+      "a_session": "s12",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "1f9b7ab5-a62a-4d6a-aa57-345bc6aac9f7",
+      "b": "b38c3dde-b583-4875-997d-a8aa20eee739",
+      "a_session": "s12",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "6a72cbad-d46a-4e3e-91db-fd246b8bfcd8",
+      "b": "b38c3dde-b583-4875-997d-a8aa20eee739",
+      "a_session": "s12",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "6792dfd9-4e04-4074-960d-f46b23d7b6b2",
+      "b": "ee6d4b54-c7b2-42ba-b80f-7b185d423ffe",
+      "a_session": "s12",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "4395184e-4f1c-446c-91c9-7d0de4e5c9e9",
+      "b": "4f4ae4da-8d64-4cad-b00a-124f227c7959",
+      "a_session": "s18",
+      "b_session": "s16",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "4395184e-4f1c-446c-91c9-7d0de4e5c9e9",
+      "b": "65266c41-4312-41bf-b06a-1c23ae95dbe3",
+      "a_session": "s18",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "24e0d0ad-b288-49bc-9fb0-9f7fa48961b2",
+      "b": "3e421639-2324-4e6a-ad80-33d5b2c672fd",
+      "a_session": "s15",
+      "b_session": "s4",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "110808af-7d70-424e-9e0e-80adec6b307f",
+      "b": "6f61c31d-b40b-44bf-8aea-27a996d69e0e",
+      "a_session": "s20",
+      "b_session": "s10",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "5ace2b3b-31bf-419c-a051-3e5b42350fcc",
+      "b": "6f61c31d-b40b-44bf-8aea-27a996d69e0e",
+      "a_session": "s8",
+      "b_session": "s10",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "275bc720-8791-45ed-a480-d47420a0d164",
+      "b": "6a72cbad-d46a-4e3e-91db-fd246b8bfcd8",
+      "a_session": "s12",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "3e13a9d6-6762-4df4-b700-84850e1ea5bb",
+      "b": "6e2a3f1f-68ea-4606-bcac-9a41476dc539",
+      "a_session": "s4",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "1bf56f61-8a49-400f-8604-b8f84a532ae2",
+      "b": "6e2a3f1f-68ea-4606-bcac-9a41476dc539",
+      "a_session": "s17",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": false,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "15315f13-6842-479d-bcaa-b961c3d1cfb7",
+      "b": "1bf56f61-8a49-400f-8604-b8f84a532ae2",
+      "a_session": "s25",
+      "b_session": "s17",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0008",
+      "a": "2574d6b9-c1c9-4ee0-b123-dcf006e24117",
+      "b": "275bc720-8791-45ed-a480-d47420a0d164",
+      "a_session": "s17",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "60899695-0b73-4d61-9346-f312c80acbd3",
+      "b": "e6354467-c50c-410f-8646-ba632f219cf2",
+      "a_session": "s2",
+      "b_session": "s9",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "27ed0323-d454-48d6-a534-99748cea7054",
+      "b": "7d3a02ed-78c2-444c-a7e7-15e34c20e94a",
+      "a_session": "s20",
+      "b_session": "s5",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "0117ffe3-3c58-4d72-b960-204ec3660d87",
+      "b": "d4851d9f-096b-447e-be3d-28c5b9d28ab7",
+      "a_session": "s7",
+      "b_session": "s7",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "1dd97d6e-6d33-4fe5-a419-3a7c6b8dfb5c",
+      "b": "60899695-0b73-4d61-9346-f312c80acbd3",
+      "a_session": "s20",
+      "b_session": "s2",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "0dfe2fe3-a5a5-4da9-8eb9-3eb8836bdf7b",
+      "b": "7fbdf08b-d60e-4b6d-a4bc-d3a9347d31f1",
+      "a_session": "s22",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "4a822cb4-4a3d-4e99-bd63-5bad1c8659e2",
+      "b": "7fbdf08b-d60e-4b6d-a4bc-d3a9347d31f1",
+      "a_session": "s22",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "3cedafa2-f4cc-4a64-9b4a-b003a52bbb49",
+      "b": "4a822cb4-4a3d-4e99-bd63-5bad1c8659e2",
+      "a_session": "s23",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "01f2d6e3-3961-4a1c-80ba-02c83c2a0fcb",
+      "b": "3cedafa2-f4cc-4a64-9b4a-b003a52bbb49",
+      "a_session": "s23",
+      "b_session": "s23",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "1007306f-a714-4af1-978a-029f117d7fe8",
+      "b": "8ef2669a-a0a4-4791-ba84-fafd4e351b1a",
+      "a_session": "s12",
+      "b_session": "s12",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "2579d427-b0e3-4f5d-97be-df064edf959f",
+      "b": "585a8ff7-2cfe-403a-b661-34b16c637fbc",
+      "a_session": "s24",
+      "b_session": "s15",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "45daf9dc-bb1b-465a-a570-f86e429a6d84",
+      "b": "f31d67af-a988-4732-9009-d4834294f836",
+      "a_session": "s15",
+      "b_session": "s3",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "1c8eb6d4-a6f9-4f2c-b411-622dccccd831",
+      "b": "54a3178f-ee66-411f-be78-dcbe4b09dc72",
+      "a_session": "s7",
+      "b_session": "s14",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "0dfe2fe3-a5a5-4da9-8eb9-3eb8836bdf7b",
+      "b": "9a02278c-4a4e-43e9-9e68-4f20be1fe221",
+      "a_session": "s22",
+      "b_session": "s19",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "2bca8152-708b-43b9-8e9a-3e5f2e99bbd5",
+      "b": "51323830-c58f-498e-8772-5d698f45cf68",
+      "a_session": "s22",
+      "b_session": "s22",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "9a02278c-4a4e-43e9-9e68-4f20be1fe221",
+      "b": "da800066-0f85-4b3a-ba8e-53cce7d41845",
+      "a_session": "s19",
+      "b_session": "s14",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "00860890-6b3b-4898-adac-2ecc0b4b8229",
+      "b": "adc42780-13d0-4bd3-9888-55f2d040820e",
+      "a_session": "s23",
+      "b_session": "s28",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "61b47bfc-b483-4f21-a14f-4945abba877e",
+      "b": "d0666a3b-b0f8-4cd5-838a-859f824734b2",
+      "a_session": "s1",
+      "b_session": "s27",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "2538aac4-b822-4225-87a4-7ff323f2deb6",
+      "b": "a6ab31f5-137f-47a9-bd1d-66455f3ed94c",
+      "a_session": "s29",
+      "b_session": "s29",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "1111561d-0e11-4bf0-aeb3-12e00fd2dad0",
+      "b": "8fd8727d-58f7-456b-8b81-3b862b5ccaf4",
+      "a_session": "s12",
+      "b_session": "s29",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "1111561d-0e11-4bf0-aeb3-12e00fd2dad0",
+      "b": "ae754397-39e1-458a-9b1d-8b5573aaf6f7",
+      "a_session": "s12",
+      "b_session": "s11",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "15ff4f6a-7ef4-4976-9ab9-6d4d98322b4c",
+      "b": "23af6fd9-6a43-49de-886c-f06c04d27583",
+      "a_session": "s14",
+      "b_session": "s23",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    },
+    {
+      "conversation": "locomo_0009",
+      "a": "39c7a383-eeff-4b03-8476-a5c3c9b3cfa8",
+      "b": "adc42780-13d0-4bd3-9888-55f2d040820e",
+      "a_session": "s30",
+      "b_session": "s28",
+      "hit_older": true,
+      "hit_newer": true,
+      "n_retrieved": 15
+    }
+  ],
+  "exposure_rate": 1.0,
+  "refused": false
+}

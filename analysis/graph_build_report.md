@@ -26,14 +26,15 @@ number is not usable.
    compressed to 1,792 stored edges (a **25.7x** reduction) and the hub share moves
    from **99.94% to 99.27%** — removing 96.1% of pair volume changes the hub share
    by **0.67 percentage points**. Only re-weighting can work.
-4. **`superseded_by` is semantically wrong and actively harmful.** 22 of 166 pairs
-   read in full; **22/22 are wrong**. The failure is not random: the mechanism
-   repeatedly marks *still-true* facts obsolete and prefers the thinner statement.
-   It is also boosted at the **highest** relation weight (1.3×), so wrong
-   supersessions are *promoted* in ranking.
-5. **A third defect class exists beyond the wrong pairs: malformed validity
-   intervals.** 18/166 are direction-inverted and 11/166 are zero-width
-   (`valid_from == valid_to`).
+4. **`superseded_by` is semantically wrong, actively harmful, and universally
+   exposed.** 22 of 166 pairs read in full; **22/22 are wrong**. The failure is not
+   random: the mechanism repeatedly marks *still-true* facts obsolete and prefers
+   the thinner statement. It is boosted at the **highest** relation weight (1.3×),
+   and **166/166 (100%) of pairs have an endpoint reaching the retrieved context** —
+   so the wrong signal is not merely present, it is promoted.
+5. **Two further defect classes beyond the wrong pairs.** 18/166 pairs have
+   direction-**inverted** validity intervals and 11/166 are **zero-width**
+   (`valid_from == valid_to`) — **29/166 (17.5%) malformed**.
 
 ---
 
@@ -475,46 +476,92 @@ Both are true: the final bank holds only the last question, and that question
 produced no pair. So "0 edges" is **not** evidence the mechanism is dead — it
 fires on LongMemEval too. Its LongMemEval rate is **not measured by this report**.
 
-### 5.6 The wrong signal actually reaches the context — exposure 5/5
+### 5.6 The wrong signal actually reaches the context — exposure 166/166 (100%)
 
-`analysis/supersession_exposure.py` builds a query from each mislabelled pair's own
-older-fact text, runs the real retriever (`EnhancedHybridRetriever.retrieve`,
-`asem/enhanced_retriever.py:141`) over the frozen bank, and asks whether either
-endpoint of the pair is retrieved. On `locomo_0000`:
+`analysis/supersession_exposure.py` / `_corpus.py` build a query from each
+mislabelled pair's own older-fact text, run the real retriever
+(`EnhancedHybridRetriever.retrieve(query, M)`, `asem/enhanced_retriever.py:141`)
+over the frozen bank, and ask whether either endpoint of the pair is retrieved.
 
 ```
-notes: 365   superseded_by pairs: 5
-pairs evaluated successfully : 5      pairs that ERRORED: 0
-pairs with >=1 endpoint retrieved (EXPOSED): 5
-exposure rate   : 1.0000  (n=5)
+banks: 10   pairs total: 166   evaluated ok: 166   errors: 0   exposed: 166
+EXPOSURE RATE : 1.0000 (n=166)
+per conversation: 5/5, 36/36, 18/18, 10/10, 12/12, 10/10, 12/12, 24/24, 17/17, 22/22
 ```
 
-Retrieval demonstrably ran (`Graph built | nodes=365 edges=2002 tags=10`,
-Louvain 6 communities, multi-hop firing), so this is a real measurement.
+**100% on every conversation, with zero errors.** The n=5 single-conversation
+result was not an anecdote; it is a corpus property. Every one of the 166
+mislabelled pairs has at least one endpoint reaching the retrieved context for a
+query built from its own fact text.
 
 **100% exposure, with `superseded_by` at the highest relation weight (1.3×),
 means the wrong signal does not merely exist — it reliably enters the context and
-enters it promoted.**
+enters it promoted.** Together with 0-of-22-read pairs correct, that is the
+evidence base for disabling the relation by default (GB2e) and keeping it as an
+explicit ablation.
 
 > **Measurement bug caught before reporting.** A first run of this script printed
 > `exposure rate 0.0000 (n=5)`. That was **not a result**: `retrieve()` requires
 > the `MemoryBank` as a second positional argument and was called with one, so all
 > 5 calls raised `TypeError`, the loop recorded the error per row while leaving
-> `hit_older`/`hit_newer` as `None`, and `None` is falsy — **a total method failure
+> `hit_older`/`hit_newer` as `None`, and **`None` is falsy — a total method failure
 > rendered as a clean zero.** It was caught only by printing per-row
-> `n_retrieved`/`error` from the JSON rather than trusting the summary. The script
-> now reports `n_errors` explicitly and warns that the rate is over successful
-> pairs only. Treat any `0.0` produced without an error count as unverified.
+> `n_retrieved`/`error` from the JSON rather than trusting the summary line. The
+> `0.0000` is **withdrawn, not revised**. The scripts now **refuse to emit a rate
+> when `n_errors > 0`** (exit non-zero, write `exposure_rate: null`,
+> `refused: true`) — a warning beside a plausible number loses to the number.
 
-### 5.7 What is NOT measured here
+### 5.7 Failure rendered as a plausible zero — a systemic pattern
+
+Three independent instances occurred in this workstream and its neighbours. Each
+produced a **well-formed, plausible-looking number** from a **total failure**:
+
+| # | failure | rendered as | caught by |
+|---|---|---|---|
+| 1 | `retrieve()` called with 1 arg → `TypeError` on every call | `exposure rate 0.0000` | printing per-row fields, not the summary |
+| 2 | judge model not entitled → `403 FORBIDDEN` on every call | `judge: 0.0, judge_coverage: 0.0` | entitlement preflight script |
+| 3 | inherited bank history (`L` read back) mistaken for new output | a well-formed **nonzero** pair count | clearing `L` and re-running |
+
+This is a **different and more dangerous error class** than an arithmetic mistake:
+a wrong number is visible on recomputation, whereas these are
+**indistinguishable from a legitimate measurement of the thing being measured** —
+`0%` exposure was a *totally plausible finding*. The rule this implies: **any
+aggregate computed over a loop that can fail must report its denominator AND its
+error count, and must refuse to emit a number when errors > 0; and no failure may
+ever flow into a summary as a falsy value (`None`/`[]`/`0`), because those are
+indistinguishable from a measured zero.**
+
+### 5.8 Scope limits on this section — what `thg_v2` can and cannot testify about
+
+- **GB1 is forward-only.** `graph-dev` verified that `locomo_0000`'s `triplets`
+  column is **NULL on every pre-existing row**, so `hydrate()` rebuilds no
+  versioning index for it, and a clean-slate replay emits **0** supersession edges
+  even with the flag on. The 166 pairs are therefore **output of the OLD build
+  only** and are **not evidence about the current code at HEAD**. The 0-of-22-correct
+  verdict is a statement about the revision that built `thg_v2`.
+- **`hub_only_edge_fraction` is the WRONG acceptance metric for GB5.** GB5 is
+  deliberately **ordering-only**: the fixture shows stored same-entity edges
+  1792 → 2724 and hub share **99.27% → 99.01%**, i.e. essentially flat by design
+  (the count moved only because the inverse index finds peers the old capped O(N)
+  scan dropped, not because the cap changed). The real GB5 evidence is **ranking**
+  (note `00cb74d3`'s rare-sharing peer `7ab53820` moved #5 @0.6589 → #1 @3.8245,
+  displacing 4 hub-only peers). §4.2's 94.7% is therefore **the pre-fix defect
+  measurement, NOT a post-fix acceptance target** — a flat post-fix hub share is
+  the expected result, not a failed fix.
+- **The 166 pairs are inherited history, not a leak from new code.** `graph-dev`
+  confirmed loading that bank and re-running `add_note` with
+  `enable_supersession=False` leaves exactly 10 links untouched.
+
+### 5.9 What is NOT measured here
 
 - **Full semantic classification of all 166 pairs** (only 22 read; 144 `unread`).
 - **The accuracy ablation** (`superseded_by` at 1.3× vs disabled): this needs the
   judge-based evaluation pipeline (task-4). The exposure figure in 5.6 is a proxy,
-  not the ablation, and it is n=5 pairs on one conversation.
-- **Corpus-level exposure** across all 166 pairs (not yet run).
+  not the ablation. (Note: the judge config was itself broken — a `403` outage
+  rendered as `judge: 0.0` — and is now fixed; run
+  `scripts/check_judge_entitlement.py` before any judge number.)
 - **LongMemEval per-question supersession columns**: `gb_full` has no per-question
-  capture (see 3.4); they will come from `thg_v2_postfix` / the fresh hooked run.
+  capture (see 3.4); they will come from the post-fix hooked run.
 
 ---
 
