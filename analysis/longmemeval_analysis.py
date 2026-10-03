@@ -80,6 +80,26 @@ def load_scores(tag: str) -> dict[str, dict]:
     return rows
 
 
+def load_bertscore(tag: str) -> dict[str, float]:
+    """Per-question BERTScore from the PREDS jsonl, keyed by question id.
+
+    BERTScore is NOT in `scores/` -- that file carries only judge fields
+    (`idx, pred, ref, judge_correct, judge_reasoning, judge_error`). It lives in
+    `preds/`, which also carries `idx` so the two arms can still be paired.
+    """
+    hits = sorted(RESULTS.glob(f"{tag}/preds/*__ASEM-THG.jsonl"))
+    out: dict[str, float] = {}
+    for path in hits:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            v = r.get("bertscore_f1")
+            if v is not None:
+                out[str(r.get("idx"))] = v
+    return out
+
+
 def load_overall(tag: str) -> dict:
     hits = sorted(RESULTS.glob(f"{tag}/{tag}__*.json"))
     if not hits:
@@ -184,14 +204,27 @@ def main() -> int:
     print("VERDICT: " + ("NOT significant -> ablation NOT resolved." if p >= 0.05
                          else f"significant -> {'thg_v1' if oa > ob else 'legacy'} ahead."))
 
-    da = [sa[q]["bertscore_f1"] for q in common]
-    db = [sb[q]["bertscore_f1"] for q in common]
-    diff = [x - y for x, y in zip(da, db)]
-    w = sum(1 for d in diff if d > 0)
-    l = sum(1 for d in diff if d < 0)
-    print()
-    print(f"BERTScore paired mean diff {st.mean(diff):+.4f} median {st.median(diff):+.4f} "
-          f"win/lose/tie {w}/{l}/{n - w - l} p={sign_test(min(w, l), w + l):.4f}")
+    # BERTScore is NOT in the scores jsonl -- that file carries only judge fields
+    # (`idx, pred, ref, judge_correct, judge_reasoning, judge_error`). BERTScore
+    # lives in the PREDS jsonl, which additionally carries an `idx` we can pair on.
+    bs_a, bs_b = load_bertscore(args.tag_thgv1), load_bertscore(args.tag_legacy)
+    paired_bs = [q for q in common if q in bs_a and q in bs_b]
+    if paired_bs:
+        da = [bs_a[q] for q in paired_bs]
+        db = [bs_b[q] for q in paired_bs]
+        diff = [x - y for x, y in zip(da, db)]
+        w = sum(1 for d in diff if d > 0)
+        l = sum(1 for d in diff if d < 0)
+        m = len(diff)
+        print()
+        print(f"BERTScore-F1, paired (n={m}):")
+        print(f"  thg_v1 mean {st.mean(da):.4f}   legacy mean {st.mean(db):.4f}")
+        print(f"  mean diff {st.mean(diff):+.4f}  median {st.median(diff):+.4f}  "
+              f"win/lose/tie {w}/{l}/{m - w - l}")
+        print(f"  paired sign p {sign_test(min(w, l), w + l):.4f}")
+    else:
+        print()
+        print("BERTScore: no paired preds available (skipped)")
     return 0
 
 
