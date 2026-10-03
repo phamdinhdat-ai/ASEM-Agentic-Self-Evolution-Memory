@@ -236,7 +236,51 @@ def test_gb2_additive_predicates_never_supersede(predicate: str) -> None:
     assert not TemporalHyperGraph._is_single_valued_predicate(predicate)
 
 
-def test_gb2_audited_pair_3_has_does_not_supersede() -> None:
+def test_gb2_key_derivation_does_not_readmit_the_noise_predicates() -> None:
+    """ITEM 4: pin the KEY, not just the boolean, for the audited noise strings.
+
+    `_slot_key_for_predicate` was introduced to fix a real key-derivation bug, so
+    the KEY is now load-bearing and must be regression-pinned: a boolean-only
+    assertion (`_is_single_valued_predicate(x) is False`) is exactly what passed
+    while the original bug was live.
+
+    There is a LATENT COUPLING recorded here deliberately: the gate that keeps
+    noise out of the slot index is `_is_single_valued_predicate`, NOT the key
+    derivation itself — `is gorgeous` and the single-valued `is married to` both
+    derive the key `'is'`. They do not collide only because the slot write is
+    gated. If that gate is ever loosened, these assertions are the tripwire.
+    """
+    for predicate in ("has", "had", "owns", "needs", "reacted_to",
+                      "appreciates", "gave", "said"):
+        assert not TemporalHyperGraph._is_single_valued_predicate(predicate), predicate
+        assert TemporalHyperGraph._slot_key_for_predicate(predicate) == predicate, (
+            f"{predicate!r} must not be rewritten into another predicate's slot"
+        )
+
+    # The wildcard casualties stay non-single-valued AND never reach a live slot.
+    for predicate in ("is gorgeous", "is doing well", "is really lucky", "is"):
+        assert not TemporalHyperGraph._is_single_valued_predicate(predicate), predicate
+
+    # The gate is what protects the collision below, so assert BOTH facts: the
+    # keys are equal (latent coupling) and only one side is allowed to write.
+    assert TemporalHyperGraph._slot_key_for_predicate("is married to") == \
+        TemporalHyperGraph._slot_key_for_predicate("is gorgeous") == "is"
+    assert TemporalHyperGraph._is_single_valued_predicate("is married to") is True
+    assert TemporalHyperGraph._is_single_valued_predicate("is gorgeous") is False
+
+
+def test_gb2_owns_and_has_cannot_supersede_end_to_end() -> None:
+    """ITEM 4, at the edge: the key change must not have readmitted possession.
+
+    `owns A` -> `owns B` is a person acquiring a second thing, not a replacement.
+    """
+    for predicate in ("has", "owns", "needs", "reacted_to", "appreciates"):
+        graph = TemporalHyperGraph(enable_supersession=True)
+        _add(graph, _note("n1"), Triplet("Melanie", predicate, "a dog", "d"))
+        links = _add(graph, _note("n2"), Triplet("Melanie", predicate, "a cat", "d"))
+        assert not _supersedes(links), (
+            f"{predicate!r} is additive and must never produce a superseded_by edge"
+        )
     """The real audited pair, end to end through `add_note`."""
     graph = TemporalHyperGraph(enable_supersession=True)
     _add(graph, _note("n1", "Melanie has a dog and a cat"),

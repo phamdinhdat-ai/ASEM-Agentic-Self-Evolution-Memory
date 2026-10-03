@@ -217,12 +217,12 @@ class TemporalHyperGraph:
             pred_key = self._norm(triplet.predicate)
             obj_key = self._norm(triplet.object)
             exact_key = (subj_key, pred_key, obj_key)
-            # The SLOT key uses the canonical slot form, not the raw phrase. Two
-            # states of the same subject must share ONE slot while keeping
-            # distinct values: `_slot_key_for_predicate` returns `state:happy`
-            # vs `state:sad` (distinct slots, so the second is a REPLACEMENT that
-            # can supersede) and `state:happy` for both `is happy` and
-            # `was happy` (one slot, so a copula change is a re-confirmation).
+            # The SLOT key uses the canonical slot form, not the raw phrase.
+            # All states of a subject share ONE slot ("state") whose VALUE is the
+            # adjective, so `is happy -> is sad` is a replacement that can
+            # supersede, while `is happy -> was happy` is the same slot with the
+            # same value, i.e. a re-confirmation. See
+            # `_slot_key_for_predicate` / `_state_value`.
             slot_key = (subj_key, self._slot_key_for_predicate(pred_key) or pred_key)
 
             old_id = self._subj_pred_index.get(exact_key)
