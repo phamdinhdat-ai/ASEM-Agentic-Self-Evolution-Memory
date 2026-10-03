@@ -39,11 +39,35 @@ RESULTS = REPO_ROOT / "data" / "benchmarks" / "results" / "longmemeval"
 
 
 def load_scores(tag: str) -> dict[str, dict]:
-    """Per-question judge/BERTScore rows, keyed by question id."""
+    """Per-question judge/BERTScore rows, keyed by question id.
+
+    RAISES when the scores file is ABSENT rather than returning `{}`.
+
+    An earlier version returned an empty dict here, and the consequence was the
+    exact error class this module exists to prevent: with `scores/` missing the
+    judge guard could not fire (there were no rows to inspect), so the tool
+    printed `judge=0.0000 cov=0.00` and exited 0 -- a MISSING measurement
+    rendered as a NUMBER. That is the same shape as the outage that produced a
+    silent `judge: 0.0` in the first place.
+
+    The real case: `run_longmemeval_eval.py` gates the judge on the `--judge`
+    FLAG (:676-677, :722), NOT on `"judge" in --metrics`. Omitting it writes no
+    `scores/*.jsonl` at all and the aggregate reports 0.0/0.0. Note the two
+    runners differ -- `run_static_eval.py` enables the judge from
+    `--metrics judge` alone -- so a command pattern learned on one silently
+    half-works on the other.
+    """
     pattern = f"{tag}/scores/*__ASEM-THG.jsonl"
     hits = sorted(RESULTS.glob(pattern))
     if not hits:
-        raise SystemExit(f"no scores for tag '{tag}' (looked for {pattern})")
+        raise SystemExit(
+            f"no scores file for tag '{tag}' (looked for {pattern}).\n"
+            "The judge phase did not run or did not write per-row verdicts, so there\n"
+            "is nothing to test. Do NOT read an aggregate judge=0.0 as a result: check\n"
+            "that the command passed the runner's judge FLAG (run_longmemeval_eval.py\n"
+            "requires --judge; run_static_eval.py does not have that flag and enables\n"
+            "the judge from --metrics judge alone)."
+        )
     rows: dict[str, dict] = {}
     for path in hits:
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -51,6 +75,8 @@ def load_scores(tag: str) -> dict[str, dict]:
                 r = json.loads(line)
                 key = r.get("question_id") or r.get("idx")
                 rows[str(key)] = r
+    if not rows:
+        raise SystemExit(f"scores file(s) for '{tag}' exist but contain no rows")
     return rows
 
 
@@ -95,6 +121,21 @@ def main() -> int:
     print(f"tag {args.tag_thgv1}: n={o.get('n')} em={fmt(o.get('em'))} f1={fmt(o.get('f1'))} "
           f"rougeL={fmt(o.get('rougeL'))} bertscore={fmt(o.get('bertscore_f1'))} "
           f"judge={fmt(o.get('judge'))} cov={fmt(o.get('judge_coverage'), 2, 5)}")
+
+    # Refuse to present a judge figure whose coverage is not 1.0. A judge score
+    # with coverage 0.0 is the ABSENCE of a measurement, not a score of zero, and
+    # printing it beside populated metrics is what makes it look real.
+    cov = o.get("judge_coverage")
+    if "judge" in (o or {}) and (cov is None or cov != 1.0):
+        print()
+        print("!" * 78)
+        print(f"JUDGE NOT MEASURED for tag '{args.tag_thgv1}': judge_coverage={cov}.")
+        print("The judge figure above is NOT a score -- the judge phase did not run or")
+        print("did not produce verdicts. If it is 0.0, the usual cause on this runner is")
+        print("a MISSING --judge FLAG (run_longmemeval_eval.py gates the judge on the flag,")
+        print("not on 'judge' in --metrics). EM/F1/rougeL/BERTScore above remain valid.")
+        print("!" * 78)
+        return 3
 
     pc = a_all.get("per_category") or {}
     if pc:
