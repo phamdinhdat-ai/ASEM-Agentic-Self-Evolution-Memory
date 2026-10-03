@@ -49,6 +49,36 @@
       "bytes": 9482240,
       "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
       "thinking": null
+    },
+    "locomo_0005": {
+      "path": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+      "notes": 484,
+      "link_edges": 8576,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 9641984,
+      "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+      "thinking": null
+    },
+    "locomo_0006": {
+      "path": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+      "notes": 513,
+      "link_edges": 7346,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 10100736,
+      "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+      "thinking": null
+    },
+    "locomo_0007": {
+      "path": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+      "notes": 511,
+      "link_edges": 8118,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 10186752,
+      "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+      "thinking": null
     }
   }
 }

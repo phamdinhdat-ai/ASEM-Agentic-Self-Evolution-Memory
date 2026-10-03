@@ -217,12 +217,13 @@ class TemporalHyperGraph:
             pred_key = self._norm(triplet.predicate)
             obj_key = self._norm(triplet.object)
             exact_key = (subj_key, pred_key, obj_key)
-            # The SLOT key uses the canonical head, not the raw phrase. Two
-            # states of the same subject must share one slot, or `is happy` and
-            # `is sad` key differently and never collide: the raw-phrase form
-            # silently disabled the closed-list state rule (found by a failing
-            # test, not by inspection). `_predicate_key` reduces both to `is`.
-            slot_key = (subj_key, self._predicate_key(pred_key) or pred_key)
+            # The SLOT key uses the canonical slot form, not the raw phrase. Two
+            # states of the same subject must share ONE slot while keeping
+            # distinct values: `_slot_key_for_predicate` returns `state:happy`
+            # vs `state:sad` (distinct slots, so the second is a REPLACEMENT that
+            # can supersede) and `state:happy` for both `is happy` and
+            # `was happy` (one slot, so a copula change is a re-confirmation).
+            slot_key = (subj_key, self._slot_key_for_predicate(pred_key) or pred_key)
 
             old_id = self._subj_pred_index.get(exact_key)
             replacement = False
@@ -252,11 +253,24 @@ class TemporalHyperGraph:
             if old_id and old_id in self._fact_nodes and replacement:
                 old_note_for_obj = self._fact_nodes[old_id]
                 old_obj = ""
+                # Match on the SLOT KEY, not the raw predicate, so a stored
+                # "lives in" is still found when the new triplet says "lives".
+                want_slot = self._slot_key_for_predicate(pred_key)
                 for t in getattr(old_note_for_obj, "triplets", None) or []:
-                    if self._norm(t.predicate) == pred_key:
+                    if self._slot_key_for_predicate(self._norm(t.predicate)) == want_slot:
                         old_obj = t.object
+                        # For a STATE the adjective IS the value, and it lives
+                        # in the predicate ("is happy"), not necessarily in the
+                        # object field. Prefer the adjective when present so
+                        # `is happy -> is sad` compares happy vs sad rather than
+                        # two empty objects (which the guard would reject as
+                        # "unspecified" and silently suppress the edge).
+                        old_state = self._state_value(t.predicate)
+                        if old_state:
+                            old_obj = old_state
                         break
-                if not self._objects_are_distinct(old_obj, triplet.object):
+                new_obj = self._state_value(pred_key) or triplet.object
+                if not self._objects_are_distinct(old_obj, new_obj):
                     old_id = None
 
             if old_id and old_id in self._fact_nodes:
@@ -387,7 +401,10 @@ class TemporalHyperGraph:
                         note.id, key, relation="entity_cooccurrence", weight=1.0
                     )
             # (GB1) rebuild the versioning indices from the persisted triplets,
-            # mirroring exactly what add_note records for a live note.
+            # mirroring exactly what add_note records for a live note — including
+            # the CANONICAL-HEAD slot key, so a hydrated note and a freshly
+            # ingested one land in the same slot (they otherwise key differently
+            # and versioning silently stops crossing the hydrate boundary).
             for triplet in getattr(note, "triplets", None) or []:
                 if not triplet.is_usable:
                     continue
@@ -400,7 +417,10 @@ class TemporalHyperGraph:
                 self._subj_pred_index[exact_key] = note.id
                 if self._is_single_valued_predicate(pred_key):
                     self._subj_pred_index_slot[
-                        (self._norm(triplet.subject), pred_key)
+                        (
+                            self._norm(triplet.subject),
+                            self._slot_key_for_predicate(pred_key) or pred_key,
+                        )
                     ] = note.id
             count += 1
         return count
@@ -666,6 +686,53 @@ class TemporalHyperGraph:
         "can", "could", "may", "might", "must", "going",
         "currently", "now", "just", "still", "really",
     })
+
+    @classmethod
+    def _slot_key_for_predicate(cls, predicate: str) -> str:
+        """The SLOT a predicate occupies: what the subject holds one value of.
+
+        For an ordinary functional predicate the slot is the head verb, so
+        ``lives`` / ``lives in`` / ``is living`` all resolve to ``lives`` and a
+        changed object replaces the old value.
+
+        The STATE-ADJECTIVE form is the exception, and the correct key is neither
+        the bare copula nor the full phrase:
+
+        * keying the SLOT on the bare head ``is`` made ``is happy`` and ``is sad``
+          share one key — but then the second write OVERWROTE the first instead
+          of finding it as a differing value, so no ``superseded_by`` edge was
+          emitted (a real bug: the helper returned the right BOOLEAN while
+          deriving the wrong KEY);
+        * keying it on the FULL phrase (``is happy`` vs ``is sad``) gives every
+          state its own slot, so the two never collide and still no edge fires
+          (the opposite failure, found by tracing rather than by inspection).
+
+        A state is ONE slot — a person's mood — whose VALUES are the adjectives.
+        So every state predicate for a subject shares the single key
+        ``"state"``, and the adjective travels in the triplet's OBJECT, which is
+        exactly what ``_objects_are_distinct`` compares. That is what makes
+        ``is happy -> is sad`` a replacement (same slot, different value) while
+        ``is happy -> was happy`` is a re-confirmation (same slot, same value).
+        """
+        text = cls._norm(predicate)
+        if not text:
+            return ""
+        head = cls._predicate_key(text)
+        tokens = text.split(" ")
+        if head in cls._STATE_VERBS and len(tokens) > 1 and tokens[-1] in cls._SINGLE_VALUED_STATES:
+            return "state"
+        return head or text
+
+    @classmethod
+    def _state_value(cls, predicate: str) -> str:
+        """The state adjective carried by a state predicate (else '')."""
+        text = cls._norm(predicate)
+        tokens = text.split(" ")
+        if not tokens:
+            return ""
+        if cls._predicate_key(text) in cls._STATE_VERBS and tokens[-1] in cls._SINGLE_VALUED_STATES:
+            return tokens[-1]
+        return ""
 
     def _entity_peers(self, note: Note, entity_keys: Set[str]) -> List[Tuple[str, float]]:
         """Existing notes sharing >= 1 entity, best weighted match first.

@@ -1,7 +1,7 @@
 """W10 — retrieval-context builder: provenance, budget contract, question awareness.
 
-LLM-free and bank-free by construction: every note is built in-code and no
-backend is ever called. Covers the four pieces of evidence task-2 requires:
+LLM-free by construction: no backend is ever called. Covers the four pieces of
+evidence task-2 requires:
 
 1. legacy vs thg_v1 rendered from the SAME note list, with measured sizes;
 2. the byte-for-byte legacy guarantee (a pinned golden string);
@@ -9,11 +9,23 @@ backend is ever called. Covers the four pieces of evidence task-2 requires:
    fitted to, proven on a pathological note set;
 4. one test per question kind asserting the right structural marker is/is not
    present.
+
+Plus (task-6) a REAL-BANK pair of tests for the chain-degradation path. Those two
+belong together and are deliberately adjacent: the negative assertion alone would
+pass even if `_render_chains` were entirely broken, so it is only meaningful next
+to a positive assertion against the same bank.
+
+Every expected value in this file is DERIVED FROM THE ARTIFACT it pins (a
+captured render, or a measured property of a real bank) — never written from
+memory. Where a value was hand-authored first and drifted, the artifact wins.
 """
 
 from __future__ import annotations
 
+import json
+import sqlite3
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -196,13 +208,23 @@ def test_empty_note_list_is_stable_in_both_styles() -> None:
 
 
 def test_thg_v1_never_alters_the_legacy_content_words() -> None:
-    """thg_v1 adds structure; it must not rewrite the evidence itself."""
+    """thg_v1 adds structure; it must not rewrite the evidence itself.
+
+    Whitespace is normalised because `_wrap` breaks long sentences across lines —
+    comparing raw strings would test the wrapper's line breaks rather than whether
+    the fact survived (see the real-bank test below, where the short-fact version
+    of this assertion silently passed for exactly that reason).
+    """
     notes = _corpus()
-    legacy = _render_notes_block(notes, context_style="legacy")
     thg = _render_notes_block(notes, context_style="thg_v1")
-    # Every rendered fact still appears verbatim in the thg_v1 context.
+    flat = " ".join(thg.split())
     for note in notes:
-        assert note.X in thg
+        assert " ".join(note.X.split()) in flat
+
+    # And it must hold for a note long enough to actually wrap.
+    long_note = mk("long", "word " * 60)
+    wrapped = " ".join(_render_notes_block([long_note], context_style="thg_v1").split())
+    assert " ".join(long_note.X.split()) in wrapped
 
 
 # ===========================================================================
@@ -619,3 +641,173 @@ def test_config_flag_is_present_and_defaults_to_legacy() -> None:
     m = re.search(r"^\s*context_style:\s*[\"']?(\w+)[\"']?\s*$", text, re.M)
     assert m, "answer.context_style must be settable from the config"
     assert m.group(1) == "legacy", "the default must reproduce today's bytes"
+
+
+# ===========================================================================
+# task-6 — the chain-degradation path, against a REAL frozen bank
+# ===========================================================================
+# Background. The W10.1 base-rate measurement reported "chains == 0 BECAUSE
+# note.L was empty: 0/60" — but every note in that harness was constructed
+# in-code with `note.L` populated, so the degrade branch NEVER EXECUTED. `0/60`
+# was therefore a property of the harness, not evidence about a real bank. A bank
+# loaded without a graph object is the case that exercises it, and the failure
+# mode is a silently wrong context: an emitted chain reading "via unknown", or a
+# chain line that is present-but-empty.
+#
+# These two tests are DELIBERATELY PAIRED. The negative one alone would pass even
+# if `_render_chains` were entirely broken (it asserts absence), so it only means
+# something next to the positive assertion on the same real bank.
+#
+# The bank is opened READ-ONLY (`mode=ro`) and never written.
+_REAL_BANK = (
+    Path(__file__).resolve().parent.parent
+    / "static" / "memory_banks" / "locomo10" / "thg_v2" / "ASEM-THG"
+    / "locomo_0000" / "asem_thg.sqlite"
+)
+
+
+def _load_real_bank(clear_links: bool = False) -> list:
+    """Load the frozen bank's notes read-only.
+
+    ``clear_links=True`` clears ``note.L`` IN MEMORY, which is a faithful
+    simulation of "bank loaded without a graph object" and requires no write to
+    the frozen artifact.
+    """
+    conn = sqlite3.connect("file:%s?mode=ro" % _REAL_BANK.as_posix(), uri=True)
+    try:
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(notes)")]
+        notes = []
+        for row in conn.execute("select * from notes"):
+            d = dict(zip(cols, row))
+            for key in ("K", "G", "L", "entities"):
+                try:
+                    d[key] = json.loads(d[key]) if isinstance(d[key], str) else d[key]
+                except (TypeError, ValueError):
+                    d[key] = []
+            # `e`/`z` are large float vectors the renderer never reads; `z` must
+            # still be array-shaped because Note.from_dict calls `.tolist()`-free
+            # passthrough only, but keep it simple and explicit here.
+            note = Note.from_dict({**d, "e": None, "z": [0.0], "L": d.get("L") or []})
+            if clear_links:
+                note.L = []
+            notes.append(note)
+        return notes
+    finally:
+        conn.close()
+
+
+def _bank_notes_sharing(entities, limit: int = 8) -> list:
+    """The first ``limit`` notes mentioning all ``entities`` (case-insensitive).
+
+    Stands in for a real retrieval: an entity-anchored question ("What does
+    Caroline ...?") returns entity-sharing notes, which is exactly the condition
+    under which a bridge exists to render.
+    """
+    wanted = {e.lower() for e in entities}
+    out = []
+    for note in _load_real_bank():
+        have = {str(e).strip().lower() for e in (note.entities or [])}
+        if wanted <= have:
+            out.append(note)
+            if len(out) >= limit:
+                break
+    return out
+
+
+@pytest.mark.skipif(not _REAL_BANK.exists(), reason="frozen bank not built yet")
+def test_real_bank_chains_fire_positively() -> None:
+    """POSITIVE half: a real bank with populated `L` emits real bridges.
+
+    Without this, the negative test below would pass even if `_render_chains` were
+    a no-op — absence of a line proves nothing about a feature that never emits.
+    """
+    block = _bank_notes_sharing(["Caroline"])
+    assert len(block) == 8, "the real bank must supply 8 entity-sharing notes"
+    assert all(n.L for n in block), "these notes must carry real links"
+
+    chains = _render_chains(block, {n.id: i + 1 for i, n in enumerate(block)})
+    assert chains, "a real entity-sharing block must produce at least one bridge"
+
+    # Every chain must be well-formed: two distinct ranks, an arrow, and a parenthesised relation.
+    for chain in chains:
+        assert chain.startswith("Memory ")
+        assert " → Memory " in chain
+        assert chain.endswith(")")
+
+    rendered = _render_notes_block(block, context_style="thg_v1")
+    assert "Evidence chains:" in rendered
+    # The bridge names the shared entity, which is the whole point of W10.1.
+    # (`via Caroline` survives wrapping because it is in the trailing chain line,
+    # which is built as one unbroken string.)
+    assert "via Caroline" in rendered
+    # And no fabricated placeholder.
+    assert "via unknown" not in rendered
+
+    # The verbatim line, pinned from the real bank. This is the first evidence
+    # that W10.1 works against a REAL bank rather than a synthetic note list.
+    line = next(l for l in rendered.split("\n") if l.startswith("Evidence chains:"))
+    assert line == (
+        "Evidence chains: Memory 2 → Memory 5 via Caroline (shares the same entity); "
+        "Memory 4 → Memory 7 via Caroline (from the same session); "
+        "Memory 5 → Memory 8 via Caroline (shares the same entity)."
+    ), "the real-bank chain line moved; re-derive it from the artifact before editing"
+
+
+@pytest.mark.skipif(not _REAL_BANK.exists(), reason="frozen bank not built yet")
+def test_real_bank_without_links_degrades_silently() -> None:
+    """NEGATIVE half: no links -> NO chain line at all, and no placeholder.
+
+    This is the branch the earlier `0/60` never executed. The requirement is
+    strict: the line must be ABSENT, not present-and-empty, and no
+    `via unknown`-style placeholder may appear anywhere in the context.
+    """
+    block = _bank_notes_sharing(["Caroline"])
+    for note in block:
+        note.L = []          # in-memory only; the frozen bank is untouched
+
+    assert _render_chains(block, {n.id: i + 1 for i, n in enumerate(block)}) == []
+
+    rendered = _render_notes_block(block, context_style="thg_v1")
+    assert "Evidence chains" not in rendered, "the line must be absent, not empty"
+    assert "via unknown" not in rendered
+    assert " via " not in rendered
+    # The rest of the context must still render — degrading the chain line must
+    # not take the evidence blocks down with it.
+    assert "Memory 1" in rendered and "Memory 8" in rendered
+    assert "recorded on" in rendered
+
+
+@pytest.mark.skipif(not _REAL_BANK.exists(), reason="frozen bank not built yet")
+def test_real_bank_degrade_matches_legacy_context_exactly() -> None:
+    """With no links, thg_v1 == legacy + only the W10.1 provenance additions.
+
+    A useful cross-check on the degrade path: dropping the chains must not change
+    any other part of the render.
+    """
+    block = _bank_notes_sharing(["Caroline"])
+    for note in block:
+        note.L = []
+    legacy = _render_notes_block(block, context_style="legacy")
+    thg = _render_notes_block(block, context_style="thg_v1")
+
+    # Same number of blocks, and every fact survives.
+    assert thg.count("Memory ") >= legacy.count("Memory ")
+    # NOTE: compare with whitespace normalised. `_wrap` inserts a newline plus an
+    # indent mid-sentence, so a raw `note.X in rendered` is False for any note
+    # long enough to wrap — which is most real notes. Asserting on the raw string
+    # tests the wrapper's line breaks, not whether the fact survived.
+    flat = " ".join(thg.split())
+    for note in block:
+        assert " ".join(note.X.split()) in flat, f"fact lost: {note.X[:60]!r}"
+    # The only additions left are the session labels.
+    assert "[session:" in thg and "[session:" not in legacy
+
+
+@pytest.mark.skipif(not _REAL_BANK.exists(), reason="frozen bank not built yet")
+def test_real_bank_is_opened_read_only_and_not_modified() -> None:
+    """Guard: the suite must never write to a frozen bank."""
+    before = _REAL_BANK.stat().st_mtime_ns
+    notes = _load_real_bank(clear_links=True)
+    assert len(notes) == 365, "the real bank has 365 notes (measured)"
+    _render_notes_block(notes, context_style="thg_v1")
+    assert _REAL_BANK.stat().st_mtime_ns == before, "the frozen bank was modified"

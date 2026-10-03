@@ -13,7 +13,7 @@
     "ASEM-THG"
   ],
   "created_at": "2026-10-03T13:19:16",
-  "updated_at": "2026-10-03T13:36:25",
+  "updated_at": "2026-10-03T13:48:47",
   "elapsed_sec": 0.0,
   "conversations": [
     {
@@ -115,15 +115,75 @@
           "elapsed_sec": 233.53
         }
       }
+    },
+    {
+      "conversation_id": "locomo_0005",
+      "sessions": 28,
+      "turns": 675,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 484,
+          "link_edges": 8576,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+          "bytes": 9641984,
+          "elapsed_sec": 235.24
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0006",
+      "sessions": 31,
+      "turns": 689,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 513,
+          "link_edges": 7346,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+          "bytes": 10100736,
+          "elapsed_sec": 252.88
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0007",
+      "sessions": 30,
+      "turns": 681,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 511,
+          "link_edges": 8118,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+          "bytes": 10186752,
+          "elapsed_sec": 253.75
+        }
+      }
     }
   ],
   "totals": {
-    "conversations": 5,
-    "banks_ok": 5,
+    "conversations": 8,
+    "banks_ok": 8,
     "banks_skipped": 0,
     "banks_error": 0,
     "notes": {
-      "ASEM-THG": 2179
+      "ASEM-THG": 3687
     }
   },
   "run": {},
