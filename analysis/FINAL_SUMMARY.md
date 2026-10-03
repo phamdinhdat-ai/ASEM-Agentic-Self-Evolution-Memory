@@ -5,12 +5,16 @@ my method, no run other baseline. run simple and verify please."* So this summar
 covers **ASEM-THG only**. No baseline system was run. The graph-builder work from
 the earlier round is summarised in §1; the evaluation is §2–§4.
 
+**Both datasets are covered.** LoCoMo10 (6 arms, up to n=199) and LongMemEval oracle
+(2 arms, **full n=500**) — see §2 and §2b. The ablation result is a **negative that
+replicates on both**; §3 records what that leaves standing.
+
 Two supporting reports carry the full detail:
 
 | report | what it holds |
 |---|---|
-| [graph_build_report.md](graph_build_report.md) | the graph builder: banks, counting rules, supersession audit, 4-instance honesty table |
-| [thg_evaluation_report.md](thg_evaluation_report.md) | the evaluation: six measured arms, paired significance test, per-category breakdown |
+| [graph_build_report.md](graph_build_report.md) | the graph builder: banks, counting rules, supersession audit, honesty table |
+| [thg_evaluation_report.md](thg_evaluation_report.md) | the evaluation: six LoCoMo arms + both LongMemEval arms at n=500, paired significance tests, per-category breakdown, the two-dataset headline (§9) |
 
 ---
 
@@ -27,7 +31,7 @@ re-verified at `2f41444`.
 |---|---:|---:|---:|
 | `thg_v2` (LoCoMo10) | 4,579 | 73,862 | 2,216.9 s |
 | `thg_v2_postfix` (LoCoMo10) | 4,664 | 73,640 | 2,047.5 s |
-| LongMemEval oracle | 27 (smoke, last question) | 237 | — |
+| LongMemEval oracle | per-question (private haystacks, reset each question) | — | — |
 
 **Three graph findings that constrain the design:**
 
@@ -85,15 +89,58 @@ tilt that briefly favoured the method at N=20 also **reverses at N=199**.
 any N measured.** This is reported as the headline rather than buried, because a
 "+0.05 win" from the first bank alone would not have survived a second bank.
 
+### 2b. LongMemEval — same ablation, full 500 questions, and the null REPLICATES
+
+Run after the LoCoMo arms, on the user's instruction to check LongMemEval as well.
+**Both arms reached the full 500**, each with `judge_coverage` 1.00 and **0 judge
+failures in 500**:
+
+| arm | n | EM | F1 | ROUGE-L | BERTScore-F1 | judge |
+|---|---:|---:|---:|---:|---:|---:|
+| `thg_v1` (the method) | 500 | 0.2740 | 0.4166 | 0.4092 | 0.8833 | 0.5880 |
+| `legacy` | 500 | 0.2680 | 0.4232 | 0.4131 | 0.8860 | 0.6140 |
+
+Paired by question id, `analysis/longmemeval_analysis.py`:
+
+```
+both correct 236 | thg_v1 only 58 | legacy only 71 | neither 135
+judge accuracy  thg_v1 0.5880 (294/500)   legacy 0.6140 (307/500)
+discordant 129   exact two-sided binomial p = 0.2907   -> NOT significant
+```
+
+**The negative finding replicates across both datasets**: p ≥ 0.05 on LoCoMo (0.2100,
+n=199) and LongMemEval (0.2907, n=500), with the sign leaning to `legacy` in both.
+
+**And the long-term-memory weakness is now measured at large n, not asserted:**
+
+| `question_type` | n | EM | judge |
+|---|---:|---:|---:|
+| multi-session | 133 | 0.1729 | **0.4586** |
+| temporal-reasoning | 133 | 0.1353 | **0.4887** |
+| knowledge-update | 78 | 0.3333 | 0.7051 |
+| single-session-user | 70 | 0.6714 | **0.9571** |
+| single-session-assistant | 56 | 0.4107 | 0.6071 |
+| single-session-preference | 30 | 0.0000 | 0.4000 |
+
+**`single-session-user` 0.9571 vs `multi-session` 0.4586 is a 0.50 absolute judge
+gap** — larger than anything on LoCoMo, and the two slices the claim rests on
+(`multi-session`, `temporal-reasoning`) are the weak ones. On LoCoMo that slice was
+n=32; here it is **n=266 combined**.
+
+**One metric lesson worth keeping:** `single-session-preference` (n=30) scores **EM
+0.0000 in both arms** while the judge scores **0.4000 / 0.5333**. An EM-led headline
+would report a total-failure cell where the judge measures 0.40–0.53 — which is why
+the judge/BERTScore framing in §3 is the right one for this dataset.
+
 ---
 
 ## 3. What the original claim decomposes into
 
 | claim | status | evidence |
 |---|---|---|
-| **less context than full history** | **PROVEN** | 8 bounded notes vs ~15,687-token history; **16.491×** (LoCoMo) / **4.035×** (LongMemEval) median smaller, **0/120 inversions**, budget-matched at 32,192 tokens |
-| **still answers LTM questions** | **PARTIALLY SHOWN** | temporal EM 0.4595 / judge 0.8649; single_hop judge 0.7286 — but these are single-fact/ordering slices |
-| **multi-hop** | **NOT SHOWN** | n=32: EM **0.0625**, judge **0.2500** vs legacy judge 0.3438 |
+| **less context than full history** | **PROVEN on both datasets** | 8 bounded notes vs ~15,687-token history; **16.491×** (LoCoMo) / **4.012×** (LongMemEval) median smaller, **0/120 inversions**, budget-matched at 32,192 tokens |
+| **still answers LTM questions** | **PARTIALLY SHOWN** | temporal EM 0.4595 / judge 0.8649; single_hop judge 0.7286; LongMemEval `single-session-user` judge 0.9571 — but these are single-fact/ordering slices |
+| **multi-hop** | **NOT SHOWN** | LoCoMo n=32: EM **0.0625**, judge **0.2500** vs legacy 0.3438. LongMemEval `multi-session` (n=133) judge **0.4586** / EM **0.1729** |
 
 The cost claim is the strong one, and it is **independent of the ablation**: every
 arm renders exactly **8 notes** (`max_context_notes=8`), so context is **bounded and
@@ -132,8 +179,8 @@ predates the fix and must never be described as "supersession disabled".**
 defect was in **which object the ingestor ends up holding**, invisible to any
 class-level test by construction.
 
-**The error class, in four instances from four different people:** a result that
-cannot distinguish *the code is broken* from *the measurement was broken*.
+**The error class, in six instances from several people:** a result that cannot
+distinguish *the code is broken* from *the measurement was broken*.
 1. `judge_api.yaml` named an unentitled model → `403` on every call → falsy `None` →
    `judge 0.0, coverage 0.0` — a clean-looking zero. It was the **default**
    `--judge-config`, referenced in 20 places. Fixed in `1164aa3`; new preflight
@@ -146,6 +193,14 @@ cannot distinguish *the code is broken* from *the measurement was broken*.
 4. **My own wiring guard** required `OPENAI_API_KEY` and printed `2 failed, 2 passed`
    — **identical output to the regression it existed to catch**. Fixable only because
    a teammate ran the suite to verify my quoted count rather than trusting it.
+5. **The `--judge` flag omitted** from the LongMemEval run → `judge 0.0, coverage 0.0`
+   with **no `scores/` file**. The two runners differ: one gates the judge on a flag,
+   the other on `--metrics`. **A command pattern learned on one silently half-works
+   on the other, producing a complete-looking file with a plausible zero.**
+6. **My own analysis tool printed that missing measurement as `judge=0.0000` and
+   exited 0** — its guard keyed on a field *inside* the absent file. **The instrument
+   built to prevent this error class committed it.** Now raises, and refuses a judge
+   figure at any coverage other than 1.0.
 
 The operational rule this produced: every headline number must be **printed by a
 tool**, never arithmetic on another number; any aggregate over a loop that can fail
@@ -157,6 +212,10 @@ it asserts.
 
 ## 5. Verification status
 
+Suite at final revision: **345 passed, 1 skipped, 0 failed** (reproduced WITH and
+WITHOUT credentials). LongMemEval artifact integrity: both arms **500/500 preds,
+500/500 judge rows, 0 judge failures, coverage 1.00**.
+
 ```
 suite at final revision 6842ebc : 345 passed, 1 skipped, 0 failed
                                   (reproduced WITH and WITHOUT credentials)
@@ -166,9 +225,32 @@ asem/single_pass_ingest.py           : 2650CEEA7658116CDFD774E91DA05AAA89DD7373E
 asem/hyper_graph.py (frozen)          : 342ECB0A3A57BF600EB5C74AF6D589C1673403EBBE17DBB961BE2015D7FBC2E3
 ```
 
+**Artifacts:** `data/benchmarks/results/longmemeval/gb_full/` and `gb_full_legacy/`
+(aggregate `.json`/`.md`, `preds/` 500 rows, `scores/` 500 judge rows each);
+LoCoMo arms under `data/benchmarks/results/locomo/`.
+
 **Not done, and not claimed:** no baseline system was run (per direction) so the
-quality-vs-FullContext axis is **unmeasured**; the ablation is unresolved; `multi_hop`
-is not shown; the `superseded_by` defect is documented but the production bank was
-not rebuilt; 144/166 supersession pairs were left semantically `unread`; `gb_full`
-(LongMemEval) is paused at **160/500** and must **not** be reported as a
-500-question result.
+quality-vs-FullContext axis is **unmeasured**; the ablation is unresolved on both
+datasets; `multi_hop` is not shown; the `superseded_by` defect is documented but the
+production bank was not rebuilt; 144/166 supersession pairs were left semantically
+`unread`. A **paired BERTScore test was not computable on LongMemEval** (BERTScore is
+not carried in `scores/*.jsonl` and the legacy `preds/*.jsonl` lacks the column), so
+its BERTScore figures are **unpaired aggregates** and must not be read as a paired
+effect. Both LongMemEval arms are **two-window predictions** (164 carried forward,
+336 generated here) with **single-pass uniform scoring** over all 500 — the code was
+verified unchanged across the boundary, so this is weaker than `thg_v2`'s
+mixed-window issue and applies equally to both arms.
+
+**Two further defects found during the LongMemEval runs, both in the Lead's own
+tooling** — the error class is now at **six instances**:
+5. **The `--judge` flag was omitted** from the first `gb_full` run, giving
+   `judge 0.0 / coverage 0.0` with **no `scores/` file at all**.
+   `run_longmemeval_eval.py` gates the judge on the **flag** (`:676-677`, `:722`),
+   *not* on `"judge" in --metrics`; `run_static_eval.py` has no such flag. **A
+   command pattern learned on one runner silently half-works on the other.** Repair
+   was a record re-score, not a re-answer.
+6. **`analysis/longmemeval_analysis.py` printed that missing measurement as
+   `judge=0.0000` and exited 0** — the guard keyed on `judge_correct is None` *in the
+   scores file*, and with no scores file there were no rows, so it never fired. **The
+   instrument built to prevent this error class committed it.** Fixed: raises on an
+   absent scores file and refuses when `judge_coverage != 1.0` (exit 3).
