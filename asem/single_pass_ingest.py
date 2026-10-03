@@ -171,7 +171,22 @@ class SinglePassSessionIngestor:
         temperature: Optional[float] = None,
     ) -> None:
         self.backend = backend
-        self.hyper_graph = hyper_graph or TemporalHyperGraph()
+        # ``hyper_graph or TemporalHyperGraph()`` was WRONG and silently discarded
+        # the caller's graph whenever it was EMPTY. ``TemporalHyperGraph`` defines
+        # ``__len__`` (returns the fact-node count), so a freshly-constructed graph
+        # is FALSY, and the ``or`` fell through to a brand-new default graph. The
+        # effect was that ``enable_supersession`` (and any other constructor option)
+        # set by the caller never reached the ingestor: the retriever held the
+        # configured graph while the ingestor wrote into an unconfigured one, so
+        # GB2e's disable-by-default suppressed the relation on the READ side only.
+        #   Measured on configs/models/thg_v2_postfix_off.yaml (supersession OFF):
+        #     retriever.hyper_graph.enable_supersession  = False
+        #     ingestor.hyper_graph.enable_supersession   = True    <- default, ignored
+        #     retriever.hyper_graph is ingestor.hyper_graph -> False
+        # and the resulting bank carried 242 ``superseded_by`` records instead of 0.
+        # An explicit ``is None`` test keeps "no graph supplied" working while never
+        # second-guessing a graph the caller actually passed.
+        self.hyper_graph = hyper_graph if hyper_graph is not None else TemporalHyperGraph()
         self.q0 = q0
         self.max_retries = max_retries
         # Structured output: `"json_schema"` (this stage's own schema) or any
