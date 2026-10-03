@@ -23,6 +23,7 @@ from .memory_bank import MemoryBank
 from .note import (
     LinkRecord,
     Note,
+    TripletRecord,
     _try_extract_json,
     cap_description,
     cap_keywords,
@@ -43,13 +44,38 @@ SESSION DATE: {session_date}
 
 CRITICAL RULES
 1. RESOLVE PRONOUNS: replace every pronoun with the person's name ("I went there" -> "Caroline went to Hawaii").
-2. RESOLVE RELATIVE TIME TO ABSOLUTE DATES using the session date:
-   - "yesterday" -> the day before the session date
-   - "last week" / "a few days ago" -> the matching earlier date in the same month
-   - "last Saturday" -> the most recent Saturday before the session date
-   - "next week" / "next month" -> the following week / month
-   - "last year" -> the previous calendar year
-   State the resolved absolute date inside the fact (e.g. "On 6 May 2023, ...").
+2. RESOLVE EVERY DATE TO AN ABSOLUTE CALENDAR DATE. This is the single most
+   important rule: the memory is queried later with questions that SUBTRACT two
+   dates ("how many days between X and Y"), so a fact that keeps a relative or
+   shorthand date is unusable.
+   a) NORMALISE dates the speaker already stated. Write the full month name and
+      the year, never a bare numeric shorthand:
+        - "on 3/1"        -> "on 1 March 2022"
+        - "on 2/15"       -> "on 15 February 2022"
+        - "January 10th"  -> "on 10 January 2023"
+        - "on Feb 26th"   -> "on 26 February 2023"
+      Infer the YEAR from the session date when the speaker omits it.
+   b) RESOLVE relative wording against the session date:
+        - "yesterday" -> the day before the session date
+        - "last week" / "a few days ago" -> the matching earlier date in the same month
+        - "last Saturday" -> the most recent Saturday before the session date
+        - "next week" / "next month" -> the following week / month
+        - "last year" -> the previous calendar year
+   c) ONE DATE PER FACT. If a single turn states or implies TWO or more dated
+      events, emit a SEPARATE note for each with its own absolute date. Never
+      merge two differently-dated events into one sentence, and never put two
+      competing dates in one fact — the reader must be able to pair each event
+      with exactly one date.
+      Example — one turn saying "I started working with her on 2/15 ... I saw a
+      house I love on 3/1" becomes TWO notes:
+        {{"fact": "The user started working with realtor Rachel on 15 February 2022.", ...}}
+        {{"fact": "The user saw a house they love on 1 March 2022.", ...}}
+      NOT one note containing both dates.
+   d) State the date INSIDE the fact sentence (e.g. "On 6 May 2023, ...") so it
+      survives without external context.
+   e) If a fact has no determinable date, write it without a date. NEVER invent
+      a date, and never copy the session date onto an event that did not happen
+      on it.
 3. ONE FACT PER NOTE: emit a separate object for EVERY distinct event, activity,
    plan, intention, preference, relationship and status.
    - Do NOT merge several events into one thematic summary.
@@ -58,6 +84,8 @@ CRITICAL RULES
 4. ATOMIC TRIPLET: give the (subject, predicate, object) the fact is about, so the
    graph can version it deterministically. subject = main person/entity,
    predicate = verb/status/relationship, object = target entity or value.
+   For a DATED EVENT, put the date in the fact sentence (rule 2d) and keep the
+   object the entity/value the predicate points at (not the date).
 5. REACTIVE / ATTRIBUTION TURNS: when a speaker REACTS to or MENTIONS a fact
    about the OTHER person, emit a note that captures the attribution. Example:
    - Turn: "That's gorgeous, Caroline! It's awesome what items can mean so much to us, right? Got
@@ -140,6 +168,7 @@ class SinglePassSessionIngestor:
         q0: float = 0.5,
         max_retries: int = 0,
         response_format: Optional[Any] = None,
+        temperature: Optional[float] = None,
     ) -> None:
         self.backend = backend
         self.hyper_graph = hyper_graph or TemporalHyperGraph()
@@ -149,6 +178,11 @@ class SinglePassSessionIngestor:
         # raw `response_format` dict the provider understands. `None` keeps the
         # plain prompt-only contract.
         self.response_format = response_format
+        # Extraction temperature. None inherits the backend's config value. Set
+        # this for reproducible graph builds: fact/entity extraction at a nonzero
+        # temperature produces a different graph on every ingest, so a bank built
+        # twice is not comparable.
+        self.temperature = temperature
         # Observability: how the last ingest session actually went.
         self.last_stats: Dict[str, Any] = {}
 
@@ -158,9 +192,25 @@ class SinglePassSessionIngestor:
 
     def _call_model(self, prompt: str) -> str:
         """One extraction call, with the configured structured-output mode."""
+        kwargs: Dict[str, Any] = {}
         if self.response_format:
-            return self.backend.generate(prompt, response_format=self.response_format)
-        return self.backend.generate(prompt)
+            kwargs["response_format"] = self.response_format
+        if self.temperature is not None:
+            kwargs["temperature"] = float(self.temperature)
+        if not kwargs:
+            return self.backend.generate(prompt)
+        try:
+            return self.backend.generate(prompt, **kwargs)
+        except TypeError as exc:
+            # A backend that does not accept these kwargs falls back to defaults.
+            if "unexpected keyword" in str(exc) or "positional argument" in str(exc):
+                _log.debug("Ingest backend ignores per-call kwargs: {}", exc)
+                if self.response_format:
+                    return self.backend.generate(
+                        prompt, response_format=self.response_format
+                    )
+                return self.backend.generate(prompt)
+            raise
 
     def _extract_facts(
         self, prompt: str, dialogue_turns: List[str]
@@ -252,8 +302,26 @@ class SinglePassSessionIngestor:
 
         # 2. Build single-pass prompt & call LLM (1 call)
         dialogue_text = "\n".join(dialogue_turns)
+
+        # The extractor is asked to "resolve relative time to absolute dates
+        # USING THE SESSION DATE", so it needs a date it can actually reason
+        # about. The raw corpus stamp is machine-formatted and sometimes carries
+        # a weekday — "2022/03/02 (Wed) 22:25" — and the instruction used to
+        # receive exactly that. When the central parser can resolve it, hand over
+        # the human form ("2 March 2022") and keep the raw string only as a
+        # parenthetical, so "yesterday"/"last Saturday" arithmetics have a clear
+        # anchor. When parsing failed the date is UNKNOWN, not "whatever string
+        # was passed" — saying so stops the model from inventing one.
+        resolved_date: str
+        if iso_str is None:
+            resolved_date = "UNKNOWN (no reliable session date was supplied)"
+        else:
+            resolved_date = dt_obj.strftime("%d %B %Y").lstrip("0")
+            if session_date and str(session_date).strip() not in resolved_date:
+                resolved_date = f"{resolved_date} (raw stamp: {session_date})"
+
         prompt = _SINGLE_PASS_PROMPT_TEMPLATE.format(
-            session_date=session_date or (dt_obj.strftime("%d %B %Y") if dt_obj else "Unknown"),
+            session_date=resolved_date,
             dialogue=dialogue_text,
         )
 
@@ -320,6 +388,22 @@ class SinglePassSessionIngestor:
             # Deterministic hyper-graph links (zero LLM): same-entity peers,
             # semantic neighbours and -- through the triplet -- temporal versioning.
             triplet = Triplet(subject=subj, predicate=pred, object=obj, timestamp=iso_str or "")
+            # Persist the triplet ON the note as well as passing it to the graph.
+            # The in-memory versioning indices do not survive the process
+            # boundary between ingest and evaluation, so without this a note that
+            # already exists in the bank can never be superseded by a freshly
+            # ingested one (measured: 0 superseded_by edges on the LongMemEval
+            # bank). Only a usable triplet is recorded, mirroring add_note's own
+            # subject/predicate guard, so the note gains no empty record.
+            if triplet.subject and triplet.predicate:
+                note.triplets.append(
+                    TripletRecord(
+                        subject=triplet.subject,
+                        predicate=triplet.predicate,
+                        object=triplet.object,
+                        recorded_at=triplet.timestamp or None,
+                    )
+                )
             note.L.extend(self.hyper_graph.add_note(note, triplet))
 
             created_notes.append(note)

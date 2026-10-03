@@ -1,0 +1,1152 @@
+"""System builders for evaluation runners.
+
+Each system (baseline or ASEM) gets its own isolated MemoryBank so that
+evaluations are independent and reproducible.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime
+import os
+import re
+from typing import Any, Dict, List, Optional, Tuple
+
+import yaml
+
+from asem.answer_agent import AnswerAgent
+from asem.backends import build_backend
+from asem.hyper_graph import TemporalHyperGraph
+from asem.link_evolver import LinkEvolver
+from asem.logging_utils import get_logger
+from asem.memory_bank import MemoryBank
+from asem.memory_manager import MemoryManager
+from asem.note import Note, NoteConstructor
+from asem.pipeline import ASEMPipeline
+from asem.retriever import HybridRetriever
+from asem.utility_updater import UtilityUpdater
+from asem.write_gate import WriteGate
+from eval.baselines import (
+    AtomicLinking,
+    FullContext,
+    NoMemory,
+    RLManagerOnly,
+    SimRetrieval,
+    ValueRetrievalOnly,
+)
+
+
+@dataclass
+class ASEMSystem:
+    """Wrapper that exposes the ASEM pipeline as a baseline-style interface."""
+
+    pipeline: ASEMPipeline
+    _logger = get_logger(__name__)
+
+    # Track whether this conversation has been pre-ingested
+    _pre_ingested: bool = False
+
+    def ingest(self, content: str) -> None:
+        """Write a single turn into the memory bank without answering.
+
+        Used for session-aware pre-ingestion: all conversation turns for a
+        session are ingested first, then queries are answered.
+        """
+        self._logger.debug("ASEMSystem.ingest | content={!r}", content[:120])
+        try:
+            self.pipeline.write_path(content, datetime.utcnow())
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.ingest | write_path failed | content={!r}", content[:80])
+            raise
+
+    def ingest_session(self, turns: List[str], session_label: str) -> List[Note]:
+        """Ingest all turns from one session as a batch through S1→S2→S3.
+
+        Args:
+            turns: List of dialogue turn texts (e.g., '[Caroline] Hey! ...')
+            session_label: Session identifier with date (e.g.,
+                'session_1 — 1:56 pm on 8 May, 2023')
+
+        Returns:
+            List of notes created or updated during ingestion.
+        """
+        self._logger.info("ASEMSystem.ingest_session | session={!r} | turns={} | bank_size={}",
+                         session_label, len(turns), self.bank_size)
+        try:
+            notes = self.pipeline.write_batch(turns, session_label, datetime.utcnow())
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.ingest_session | write_batch failed | session={!r}", session_label)
+            raise
+        self._pre_ingested = True
+        return notes
+
+    def ingest_conversation(
+        self, session_batches: List[Tuple[str, List[str]]]
+    ) -> List[Note]:
+        """Ingest a conversation session-by-session, each session fully batched.
+
+        Each session gets 3 LLM calls (S1 batch + S2 batch + S3 global).
+        Cross-chunk link evolution runs once at the end.
+
+        Args:
+            session_batches: List of (session_label, turns) for all sessions.
+
+        Returns:
+            List of all notes created or updated.
+        """
+        total_turns = sum(len(t) for _, t in session_batches)
+        self._logger.info("ASEMSystem.ingest_conversation | sessions={} | total_turns={} | bank_size={}",
+                         len(session_batches), total_turns, self.bank_size)
+
+        all_notes: List[Note] = []
+        for i, (label, turns) in enumerate(session_batches):
+            self._logger.info("ingest_conversation | session {}/{}: {!r} ({} turns)",
+                            i + 1, len(session_batches), label, len(turns))
+            notes = self.pipeline.write_batch(turns, label, datetime.utcnow())
+            all_notes.extend(notes)
+            self._logger.info("ingest_conversation | session {}/{} done | bank_size={}",
+                            i + 1, len(session_batches), self.bank_size)
+
+        self._pre_ingested = True
+        return all_notes
+
+    def finalize_conversation(self) -> int:
+        """Run cross-chunk link evolution after all sessions are ingested.
+
+        Returns:
+            Number of new edges created across chunks.
+        """
+        self._logger.info("ASEMSystem.finalize_conversation | bank_size={}", self.bank_size)
+        try:
+            new_edges = self.pipeline.cross_chunk_link_evolve()
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.finalize_conversation | cross_chunk_link_evolve failed")
+            raise
+        stats = self.pipeline.get_stats()
+        self._logger.info("ASEMSystem.finalize_conversation | stats={}", stats)
+        return new_edges
+
+    @property
+    def bank_size(self) -> int:
+        """Return the number of notes currently in the memory bank (fast)."""
+        return self.pipeline.memory_bank.size()
+
+    def answer(self, query: str, history: List[str]) -> str:
+        self._logger.debug("ASEMSystem.answer | query={!r} | history_turns={} | bank_size={} | pre_ingested={}",
+                          query[:120], len(history), self.bank_size, self._pre_ingested)
+
+        # If pre-ingested, skip history replay and go straight to retrieval
+        if not self._pre_ingested:
+            for i, item in enumerate(history):
+                try:
+                    self.pipeline.write_path(item, datetime.utcnow())
+                except Exception as exc:
+                    self._logger.opt(exception=exc).error(
+                        "ASEMSystem.answer | write_path failed at turn {} | content={!r}",
+                        i, item[:80])
+                    raise
+
+        try:
+            used_notes, answer = self.pipeline.read_path(query)
+        except Exception as exc:
+            self._logger.opt(exception=exc).error(
+                "ASEMSystem.answer | read_path failed for query={!r}", query[:120])
+            raise
+
+        self._logger.info("ASEMSystem.answer → answer={!r} | used_notes={} | bank_size={}",
+                         answer[:150], [n.id for n in used_notes], self.bank_size)
+        return answer
+
+    def reset(self) -> None:
+        """Clear the pipeline's memory bank between conversations."""
+        self._pre_ingested = False
+        self.pipeline.memory_bank.clear()
+
+
+@dataclass
+class ASEMSystemV2:
+    """Two-phase ASEM system: pre-ingest once, then retrieval-only per QA.
+
+    **Phase 1 (offline)**: Call ``ingest_conversation(turns)`` once to build
+    the full knowledge graph from all dialogue turns.
+
+    **Phase 2 (online)**: Call ``answer(query)`` for each QA pair — NO
+    re-ingestion, retrieval-only.
+
+    This eliminates the deduplication bug in ASEMSystem v1 where the same
+    turns were re-ingested for every QA pair.
+    """
+
+    pipeline: ASEMPipeline
+    batch_ingestor: object  # BatchIngestor (lazy import to avoid circular deps)
+
+    # ---- private --------------------------------------------------------
+    _ingested: bool = False
+
+    def ingest_conversation(self, dialogue_turns: List[str]) -> int:
+        """Pre-ingest all dialogue turns ONCE before any QA queries.
+
+        Returns the number of notes created.
+        """
+        from asem.batch_ingestion import BatchIngestor
+        notes = self.batch_ingestor.ingest_conversation(
+            dialogue_turns, self.pipeline.memory_bank,
+        )
+        self._ingested = True
+        return len(notes)
+
+    def answer(self, query: str, history: List[str] = None) -> str:
+        """Retrieve + answer from the pre-built knowledge graph.
+
+        The ``history`` parameter is accepted for interface compatibility but
+        **ignored** — all turns must be ingested via ``ingest_conversation()``
+        before calling this method.
+        """
+        # If not yet ingested and history is provided, auto-ingest
+        if not self._ingested and history:
+            self.ingest_conversation(history)
+        used_notes, answer = self.pipeline.read_path(query)
+        return answer
+
+
+@dataclass
+class FastASEMSystem:
+    """Fast-ASEM (ASEM-v3): High-speed session-level atomic fact ingestion,
+    multi-channel RRF hybrid retrieval with temporal grounding, and direct QA answering.
+    """
+
+    pipeline: ASEMPipeline
+    fast_ingestor: object  # FastSessionIngestor
+    config: object = None  # ASEMConfig
+    _ingested: bool = False
+
+    def ingest_session(self, turns: List[str], session_date: str, session_id: str) -> List[Note]:
+        notes = self.fast_ingestor.ingest_session(
+            turns=turns,
+            session_date_str=session_date,
+            session_id=session_id,
+            memory_bank=self.pipeline.memory_bank,
+        )
+        self._ingested = True
+        return notes
+
+    def ingest_conversation(self, sessions: List[Dict[str, Any]]) -> int:
+        """Ingest all sessions of a conversation with explicit temporal dates."""
+        total_notes = 0
+        for s in sessions:
+            notes = self.ingest_session(
+                turns=s.get("turns", []),
+                session_date=s.get("date", ""),
+                session_id=s.get("session_id", "sess_0"),
+            )
+            total_notes += len(notes)
+        self._ingested = True
+        return total_notes
+
+    def answer(self, query: str, history: List[str] = None) -> str:
+        used_notes, answer = self.pipeline.read_path(query)
+        return answer
+
+    def reset(self) -> None:
+        self.pipeline.memory_bank.clear()
+        self._ingested = False
+
+
+# ---------------------------------------------------------------------------
+# Shared prompt templates (extracted once)
+# ---------------------------------------------------------------------------
+
+_NO_MEMORY_PROMPT = (
+    "Answer the following question as concisely as possible. "
+    "Give only the answer (a few words or one sentence). "
+    "If you are not sure, provide your best guess rather than asking for more information.\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
+_FULL_CONTEXT_PROMPT = (
+    "Use the conversation excerpts below to answer the question. "
+    "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+    "Conversation:\n{context}\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
+_RETRIEVAL_PROMPT = (
+    "Use the retrieved memory notes below to answer the question. "
+    "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+    "Memory:\n{context}\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
+# Date-leveled variants: the context carries each session's absolute date (the
+# same ``[<session date>]`` prefix FastASEM stamps on its notes), so the
+# baselines can resolve relative time the way FastASEM does at ingestion time.
+_FULL_CONTEXT_PROMPT_DATED = (
+    "Each conversation line is prefixed with the absolute session date in brackets, "
+    "e.g. [1:56 pm on 8 May, 2023]. When the question asks for a time or date, "
+    "resolve any relative expressions (yesterday, last week, next month, last year) "
+    "against that session date and give the exact absolute date.\n\n"
+    "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+    "Conversation:\n{context}\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
+_RETRIEVAL_PROMPT_DATED = (
+    "Use the retrieved memory notes below to answer the question. Each note may be "
+    "prefixed with its session date in brackets, e.g. [1:56 pm on 8 May, 2023]. When "
+    "the question asks for a time or date, resolve any relative expressions (yesterday, "
+    "last week, next month, last year) against that session date and give the exact "
+    "absolute date.\n\n"
+    "Reply with only the answer — a few words or one sentence, no explanation.\n\n"
+    "Memory:\n{context}\n\n"
+    "Question: {query}\n\nAnswer:"
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _opt_float(value: Any) -> Optional[float]:
+    """Parse an optional float from config, treating blanks/None as 'unset'."""
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_text(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _load_config(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+# QA baseline prompt selector. ``phase.qa_prompt`` in the config picks one of
+# these by name; an unknown value is treated as a path relative to data/prompts.
+# "calibrated" is the non-refusal-biased prompt; "trap" is the historical
+# misattribution-trap prompt kept for ablation only.
+_QA_PROMPT_FILES = {
+    "calibrated": os.path.join("data", "prompts", "P_temporal_qa.txt"),
+    "trap": os.path.join("data", "prompts", "P_temporal_qa_trap.txt"),
+    # Merged prompt: calibrated aggregation/completeness + the trap's
+    # misattribution rule. Fixes multi_hop partial answers AND adversarial
+    # "Not mentioned" hallucination in one prompt.
+    "calibrated_v2": os.path.join("data", "prompts", "P_temporal_qa_v2.txt"),
+}
+
+
+def _qa_prompt_key(cfg: Any) -> str:
+    """Extract ``phase.qa_prompt`` from a raw dict or an ``ASEMConfig``."""
+    if cfg is None:
+        return "calibrated"
+    phase = getattr(cfg, "phase", None)
+    if phase is not None:
+        return str(getattr(phase, "qa_prompt", "calibrated") or "calibrated")
+    if isinstance(cfg, dict):
+        return str((cfg.get("phase", {}) or {}).get("qa_prompt", "calibrated"))
+    return "calibrated"
+
+
+def _load_qa_prompt(cfg: Any = None) -> str:
+    """Load the QA baseline prompt selected by ``phase.qa_prompt``.
+
+    Accepts a raw config dict (``_load_config`` output) or an ``ASEMConfig``
+    instance. Falls back to the calibrated prompt when the selector is unset or
+    unresolvable, and to ``_RETRIEVAL_PROMPT`` only if the file is missing.
+    """
+    key = _qa_prompt_key(cfg)
+    path = _QA_PROMPT_FILES.get(key)
+    if path is None:
+        cand = key if os.path.isabs(key) else os.path.join("data", "prompts", key)
+        path = cand if os.path.exists(cand) else _QA_PROMPT_FILES["calibrated"]
+    return _load_text(path) if os.path.exists(path) else _RETRIEVAL_PROMPT
+
+
+def answer_budget_from_config(
+    config_path: str,
+) -> Tuple[Optional[int], Optional[int]]:
+    """``(max_tokens, context_window)`` declared in a config's ``answer`` block.
+
+    Every system — ASEM, FastASEM and each baseline — answers with one model
+    call and must respect this budget (``prompt <= window - max_tokens``). The
+    values are read in ONE place so a comparison can never give one arm more
+    room than another; ``None`` means "not declared", which disables trimming.
+    """
+    ans_cfg = (_load_config(config_path).get("answer", {}) or {})
+    max_tokens = int(ans_cfg.get("max_tokens") or 0) or None
+    context_window = int(ans_cfg.get("context_window") or 0) or None
+    return max_tokens, context_window
+
+
+def _ensure_dir(path: str) -> None:
+    os.makedirs(path, exist_ok=True)
+
+
+# The dataset wraps every query as "Conversation between X and Y. Question: ...".
+# Those two character names dominate the query embedding and flood the
+# entity/BM25 channels, so ASEM-THG strips the wrapper before retrieval.
+_QUERY_PREFIX_RE = re.compile(
+    r"^\s*Conversation between\s+[^.]+\.\s*(?:Question:\s*)?", re.IGNORECASE
+)
+
+
+def strip_query_prefix(query: str) -> str:
+    """Drop the dataset's 'Conversation between X and Y. Question:' wrapper."""
+    stripped = _QUERY_PREFIX_RE.sub("", query or "").strip()
+    return stripped or (query or "")
+
+
+def _make_bank(db_dir: str, name: str) -> MemoryBank:
+    """Create a fresh MemoryBank for a single system.
+
+    Removes stale WAL/SHM files from previous crashed runs to avoid
+    SQLite locking issues.
+    """
+    path = os.path.join(db_dir, f"{name}.sqlite")
+    # Only remove WAL/SHM/journal sidecars from a previous crashed run.
+    # Never delete the main database file itself — that would wipe ingested notes.
+    for suffix in ["-wal", "-shm", "-journal"]:
+        full = path + suffix
+        if os.path.exists(full):
+            try:
+                os.remove(full)
+            except PermissionError:
+                import time
+                time.sleep(0.5)
+                try:
+                    os.remove(full)
+                except PermissionError:
+                    pass
+    return MemoryBank(path)
+
+
+# ---------------------------------------------------------------------------
+# Builders
+# ---------------------------------------------------------------------------
+
+def build_asem_system(
+    config_path: str, db_dir: str, backend: Any = None
+) -> ASEMSystem:
+    """Build the full ASEM pipeline wrapped as an eval system.
+
+    ``backend`` accepts an injected backend (tests pass a stub); when omitted the
+    config's own backend is built.
+    """
+    cfg = _load_config(config_path)
+
+    if backend is None:
+        backend = build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
+    )
+    wg_cfg = cfg.get("write_gate", {}) or {}
+    link_evolver = LinkEvolver(
+        backend=backend,
+        link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt,
+        k=hp["k"],
+        link_tau=float(cfg.get("link_tau", 0.35)),
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
+    )
+    retriever = HybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=hp["k2"],
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
+        # Honour the config's answer temperature (previously ignored entirely, so
+        # runs sampled at `inference.temperature` instead).
+        temperature=_opt_float((cfg.get("answer") or {}).get("temperature")),
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend,
+        alpha=hp["alpha"], q0=hp["q0"],
+        summary_prompt_template=summary_prompt,
+        note_constructor=note_constructor,
+    )
+    write_gate = WriteGate(
+        enabled=bool(wg_cfg.get("enabled", True)),
+        tau_high=float(wg_cfg.get("tau_high", 0.45)),
+        tau_redund=float(wg_cfg.get("tau_redund", 0.92)),
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "asem")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+        write_gate=write_gate,
+    )
+
+    return ASEMSystem(pipeline=pipeline)
+
+
+def build_asem_v2_system(
+    config_path: str, db_dir: str, backend: Any = None
+) -> ASEMSystemV2:
+    """Build the two-phase ASEM v2 pipeline with batch ingestion + enhanced retrieval.
+
+    ``backend`` accepts an injected backend (tests pass a stub); when omitted the
+    config's own backend is built.
+    """
+    cfg = _load_config(config_path)
+    if backend is None:
+        backend = build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    extract_prompt = _load_text("data/prompts/P4_batch_note_extraction.txt")
+    mem_ops_prompt = _load_text("data/prompts/P5_batch_memory_ops.txt")
+    batch_link_prompt = _load_text("data/prompts/P6_batch_link_generation.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
+
+    from asem.batch_ingestion import BatchIngestor
+    from asem.enhanced_retriever import EnhancedHybridRetriever
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend,
+        link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt,
+        k=hp["k"],
+        link_tau=float(cfg.get("link_tau", 0.35)),
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
+    )
+    retriever = EnhancedHybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=hp["k2"],
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+        max_hops=2, hop_decay=0.7, multi_hop_topn=5,
+        alpha=0.35, beta=0.25, gamma=0.40,
+        enable_global_semantics=True,
+        enable_intent_q=True,
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
+        # Honour the config's answer temperature (previously ignored entirely, so
+        # runs sampled at `inference.temperature` instead).
+        temperature=_opt_float((cfg.get("answer") or {}).get("temperature")),
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend,
+        alpha=hp["alpha"], q0=hp["q0"],
+        summary_prompt_template=summary_prompt,
+        note_constructor=note_constructor,
+    )
+    batch_ingestor = BatchIngestor(
+        backend=backend,
+        extraction_prompt=extract_prompt,
+        memory_ops_prompt=mem_ops_prompt,
+        link_prompt=batch_link_prompt,
+        q0=hp["q0"],
+        top_k_neighbors=hp.get("k", 5),
+        max_retries=max_retries,
+    )
+    wg_cfg = cfg.get("write_gate", {}) or {}
+    write_gate = WriteGate(
+        enabled=bool(wg_cfg.get("enabled", True)),
+        tau_high=float(wg_cfg.get("tau_high", 0.45)),
+        tau_redund=float(wg_cfg.get("tau_redund", 0.92)),
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "asem_v2")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+        write_gate=write_gate,
+    )
+
+    return ASEMSystemV2(pipeline=pipeline, batch_ingestor=batch_ingestor)
+
+
+@dataclass
+class ASEMTHGSystem:
+    """Temporal Hyper-Graph System (ASEM-THG): 1-pass session ingest + THG + enhanced retrieval."""
+
+    pipeline: ASEMPipeline
+    single_pass_ingestor: object
+
+    # Telemetry populated by ``answer`` (Plan Phase 0.2). Not part of construction.
+    last_used_notes: List[Any] = field(default_factory=list)
+    last_retrieval_stats: Dict[str, Any] = field(default_factory=dict)
+
+    _ingested: bool = False
+
+    def ingest_conversation(
+        self,
+        dialogue_turns: Any,
+        session_date: Optional[str] = None,
+        session_id: Optional[str] = None,
+    ) -> int:
+        if not dialogue_turns:
+            return 0
+        from asem.temporal import parse_session_datetime
+
+        first_item = dialogue_turns[0]
+        total_notes = 0
+
+        if isinstance(first_item, dict):
+            for i, s in enumerate(dialogue_turns):
+                turns = s.get("turns", [])
+                s_date = s.get("date") or s.get("session_date")
+                s_id = s.get("session_id", f"session_{i + 1}")
+                notes = self.single_pass_ingestor.ingest_session(
+                    dialogue_turns=turns,
+                    memory_bank=self.pipeline.memory_bank,
+                    session_date=s_date,
+                    session_id=s_id,
+                )
+                total_notes += len(notes)
+        elif isinstance(first_item, (tuple, list)):
+            for label, turns in dialogue_turns:
+                _dt_obj, date_str = parse_session_datetime(label)
+                notes = self.single_pass_ingestor.ingest_session(
+                    dialogue_turns=turns,
+                    memory_bank=self.pipeline.memory_bank,
+                    session_date=date_str,
+                    session_id=label,
+                )
+                total_notes += len(notes)
+        elif isinstance(first_item, str):
+            notes = self.single_pass_ingestor.ingest_session(
+                dialogue_turns=dialogue_turns,
+                memory_bank=self.pipeline.memory_bank,
+                session_date=session_date,
+                session_id=session_id,
+            )
+            total_notes += len(notes)
+        else:
+            raise TypeError(f"Unsupported dialogue_turns type: {type(first_item)}")
+
+        self._ingested = True
+        return total_notes
+
+    def answer(self, query: str, history: List[str] = None) -> str:
+        if not self._ingested and history:
+            self.ingest_conversation(history)
+        used_notes, answer = self.pipeline.read_path(strip_query_prefix(query))
+        # Telemetry for retrieval-vs-generation attribution (Plan Phase 0.2).
+        self.last_used_notes = [getattr(n, "id", None) for n in used_notes]
+        self.last_retrieval_stats = dict(getattr(self.pipeline.retriever, "stats", {}) or {})
+        return answer
+
+    def reset(self) -> None:
+        self._ingested = False
+        self.pipeline.memory_bank.clear()
+
+
+def build_asem_thg_system(
+    config_path: str,
+    db_dir: str,
+    backend: Any = None,
+) -> ASEMTHGSystem:
+    """Build ASEM-THG: SinglePassSessionIngestor + TemporalHyperGraph + enhanced retrieval."""
+    cfg = _load_config(config_path)
+    backend = backend if backend is not None else build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+    ans_cfg = cfg.get("answer", {}) or {}
+    wg_cfg = cfg.get("write_gate", {}) or {}
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    qa_prompt = _load_qa_prompt(cfg)
+
+    from asem.enhanced_retriever import EnhancedHybridRetriever
+    from asem.single_pass_ingest import SinglePassSessionIngestor
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt, max_retries=max_retries,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend, link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt, k=hp["k"], max_retries=max_retries,
+    )
+    # Retriever hyperparameters are readable from the config's ``retriever``
+    # block; the defaults reproduce the previously hard-coded THG values so an
+    # unchanged config behaves exactly as before (Phase 2d).
+    ret_cfg = cfg.get("retriever", {}) or {}
+
+    def _ret(key: str, default: Any) -> Any:
+        val = ret_cfg.get(key, default)
+        return default if val is None else val
+
+    # ONE hyper-graph instance, shared by ingestion and retrieval. The ingestor
+    # builds the entity/versioning edges into it; the retriever needs the SAME
+    # object to run query-seeded Personalized PageRank over them. Constructing
+    # two graphs would leave PPR walking an empty structure (which is how it
+    # ended up as dead code before).
+    thg_graph = TemporalHyperGraph()
+
+    retriever = EnhancedHybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=_ret("k2", hp["k2"]),
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+        max_hops=_ret("max_hops", 2),
+        hop_decay=float(_ret("hop_decay", 0.7)),
+        multi_hop_topn=int(_ret("multi_hop_topn", 2)),
+        multi_hop_min_sim=float(_ret("multi_hop_min_sim", 0.30)),
+        multi_hop_min_score=float(_ret("multi_hop_min_score", 0.0)),
+        alpha=float(_ret("alpha", 0.35)),
+        beta=float(_ret("beta", 0.25)),
+        gamma=float(_ret("gamma", 0.40)),
+        base_weight=float(_ret("base_weight", 0.60)),
+        community_boost=float(_ret("community_boost", 1.2)),
+        unknown_relation_weight=float(_ret("unknown_relation_weight", 1.0)),
+        enable_global_semantics=bool(_ret("enable_global_semantics", True)),
+        enable_intent_q=bool(_ret("enable_intent_q", True)),
+        # Query-seeded PPR over the shared THG graph (0.0 disables it and
+        # reproduces the pre-W3 ranking exactly).
+        hyper_graph=thg_graph,
+        ppr_weight=float(_ret("ppr_weight", 0.15)),
+        ppr_topk=int(_ret("ppr_topk", 20)),
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=qa_prompt,
+        direct_mode=bool(ans_cfg.get("direct_mode", True)),
+        max_retries=max_retries,
+        max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
+        context_window=int(ans_cfg.get("context_window") or 0) or None,
+        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
+        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
+        # Without this the YAML's `answer.temperature` was read by nothing and
+        # every run silently sampled at `inference.temperature` (0.3).
+        temperature=_opt_float(ans_cfg.get("temperature")),
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend, alpha=hp["alpha"], q0=hp["q0"],
+        summary_prompt_template=summary_prompt, note_constructor=note_constructor,
+    )
+    single_pass_ingestor = SinglePassSessionIngestor(
+        backend=backend, q0=hp["q0"], max_retries=max_retries,
+        # Same instance the retriever holds, so edges created here are visible
+        # to query-seeded Personalized PageRank at read time.
+        hyper_graph=thg_graph,
+        # Deterministic graph building: without this, extraction inherits
+        # `inference.temperature` and the same sessions yield a different graph
+        # (and therefore a different bank) on every ingest. Falls back to the
+        # answer temperature when `ingestion.temperature` is not set.
+        temperature=_opt_float(
+            (cfg.get("ingestion") or {}).get("temperature", ans_cfg.get("temperature"))
+        ),
+    )
+    write_gate = WriteGate(
+        enabled=bool(wg_cfg.get("enabled", True)),
+        tau_high=float(wg_cfg.get("tau_high", 0.45)),
+        tau_redund=float(wg_cfg.get("tau_redund", 0.92)),
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "asem_thg")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+        write_gate=write_gate,
+    )
+
+    return ASEMTHGSystem(pipeline=pipeline, single_pass_ingestor=single_pass_ingestor)
+
+
+def build_baselines(
+    config_path: str,
+    db_dir: str,
+    max_history_turns: int = 150,
+    with_dates: bool = False,
+    backend: Any = None,
+) -> Dict[str, object]:
+    """Build all six baseline systems, each with its own isolated MemoryBank.
+
+    Args:
+        max_history_turns: Truncation limit for FullContext baseline.
+            0 = no truncation. Default 150 for LoCoMo.
+        with_dates: When True, use the date-leveled QA prompts (expects the
+            context/history to carry ``[<session date>]`` prefixes) so the
+            baselines can resolve relative time like FastASEM.
+        backend: Optional pre-built inference backend (shared model instance).
+    """
+    cfg = _load_config(config_path)
+    backend = backend if backend is not None else build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+    ans_cfg = cfg.get("answer", {}) or {}
+    answer_max_tokens, context_window = answer_budget_from_config(config_path)
+
+    retrieval_prompt = _RETRIEVAL_PROMPT_DATED if with_dates else _RETRIEVAL_PROMPT
+    full_context_prompt = _FULL_CONTEXT_PROMPT_DATED if with_dates else _FULL_CONTEXT_PROMPT
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+
+    retry_cfg = cfg.get("llm_retry", {}) or {}
+    max_retries = int(retry_cfg.get("max_retries", 0))
+
+    _ensure_dir(db_dir)
+
+    # Shared components that don't hold mutable state
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp["q0"],
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend,
+        link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt,
+        k=hp["k"],
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
+    )
+    retriever = HybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=hp["k2"],
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=_RETRIEVAL_PROMPT,
+        max_retries=max_retries,
+        # Without these the ValueRetrievalOnly arm would answer with an
+        # unbounded context while ASEM trims to the same nominal budget.
+        max_tokens=answer_max_tokens,
+        context_window=context_window,
+        max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
+        content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
+        # Without this the YAML's `answer.temperature` was read by nothing and
+        # every run silently sampled at `inference.temperature` (0.3).
+        temperature=_opt_float(ans_cfg.get("temperature")),
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend,
+        alpha=hp["alpha"], q0=hp["q0"],
+        summary_prompt_template=summary_prompt,
+        note_constructor=note_constructor,
+    )
+
+    return {
+        "NoMemory": NoMemory(
+            backend=backend,
+            prompt_template=_NO_MEMORY_PROMPT,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
+        ),
+        "FullContext": FullContext(
+            backend=backend,
+            prompt_template=full_context_prompt,
+            max_history_turns=max_history_turns,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
+        ),
+        "SimRetrieval": SimRetrieval(
+            backend=backend,
+            memory_bank=_make_bank(db_dir, "simretrieval"),
+            note_constructor=note_constructor,
+            top_k=hp["k2"],
+            prompt_template=retrieval_prompt,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
+        ),
+        "AtomicLinking": AtomicLinking(
+            backend=backend,
+            memory_bank=_make_bank(db_dir, "atomiclinking"),
+            note_constructor=note_constructor,
+            link_evolver=link_evolver,
+            top_k=hp["k2"],
+            prompt_template=_RETRIEVAL_PROMPT,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
+        ),
+        "RLManagerOnly": RLManagerOnly(
+            backend=backend,
+            memory_bank=_make_bank(db_dir, "rlmanageronly"),
+            note_constructor=note_constructor,
+            memory_manager=memory_manager,
+            top_k=hp["k2"],
+            prompt_template=_RETRIEVAL_PROMPT,
+            max_tokens=answer_max_tokens,
+            context_window=context_window,
+        ),
+        "ValueRetrievalOnly": ValueRetrievalOnly(
+            backend=backend,
+            memory_bank=_make_bank(db_dir, "valueretrievalonly"),
+            note_constructor=note_constructor,
+            retriever=retriever,
+            utility_updater=utility_updater,
+            answer_agent=answer_agent,
+        ),
+    }
+
+
+def build_fast_asem_system(
+    config_path_or_preset: str = "configs/presets/sota_benchmark.yaml",
+    db_dir: str = "data/benchmarks/eval_banks",
+    backend: Any = None,
+) -> FastASEMSystem:
+    """Build the Fast-ASEM (ASEM-v3) pipeline.
+
+    ``backend`` lets a caller inject an already-built backend (the tests pass a
+    deterministic stub). Without it the backend comes from the config, which for an
+    ``huggingface`` config means loading real weights — expensive in tests and
+    network-bound for API configs.
+    """
+    from asem.config import ASEMConfig
+    from asem.fast_ingest import FastSessionIngestor
+
+    asem_cfg = ASEMConfig.load(config_path_or_preset)
+    if backend is None:
+        backend = build_backend(asem_cfg.inference)
+    hp = asem_cfg.hyperparameters
+    rt_cfg = asem_cfg.retriever
+    ans_cfg = asem_cfg.answer
+    wg_cfg = asem_cfg.write_gate
+
+    note_prompt = _load_text("data/prompts/P1_note_construction.txt")
+    link_prompt = _load_text("data/prompts/P2_link_generation.txt")
+    evolve_prompt = _load_text("data/prompts/P3_memory_evolution.txt")
+    mem_manager_prompt = _load_text("data/prompts/P_memory_manager.txt")
+    distil_prompt = _load_text("data/prompts/P_distil.txt")
+    summary_prompt = _load_text("data/prompts/P_summary.txt")
+    batch_extract_prompt = _load_text("data/prompts/P1_batch_note_construction.txt")
+    batch_evolve_prompt = _load_text("data/prompts/P3_batch_evolution.txt")
+    qa_prompt = _load_qa_prompt(asem_cfg)
+
+    max_retries = int(asem_cfg.llm_retry.get("max_retries", 0))
+
+    note_constructor = NoteConstructor(
+        backend=backend, prompt_template=note_prompt, q0=hp.q0,
+        max_retries=max_retries, batch_prompt_template=batch_extract_prompt,
+    )
+    memory_manager = MemoryManager(
+        backend=backend, prompt_template=mem_manager_prompt,
+        max_retries=max_retries,
+    )
+    link_evolver = LinkEvolver(
+        backend=backend,
+        link_prompt_template=link_prompt,
+        evolve_prompt_template=evolve_prompt,
+        k=hp.k,
+        link_tau=asem_cfg.link_tau,
+        max_retries=max_retries,
+        evolve_batch_template=batch_evolve_prompt,
+    )
+    retriever = HybridRetriever(
+        backend=backend,
+        k1=hp.k1, k2=hp.k2,
+        delta=hp.delta, lambda_weight=hp.lambda_weight,
+        use_rrf=True,
+        use_bm25=rt_cfg.use_bm25,
+        use_entity_filter=rt_cfg.use_entity_filter,
+        use_temporal_boost=rt_cfg.use_temporal_boost,
+        dense_weight=rt_cfg.dense_weight,
+        bm25_weight=rt_cfg.bm25_weight,
+        entity_weight=rt_cfg.entity_weight,
+        temporal_weight=rt_cfg.temporal_weight,
+        rrf_k=rt_cfg.rrf_k,
+        max_link_hops=rt_cfg.max_hops,
+        enable_link_traversal=True,
+    )
+    answer_agent = AnswerAgent(
+        backend=backend,
+        prompt_template=distil_prompt,
+        baseline_prompt_template=qa_prompt,
+        direct_mode=ans_cfg.direct_mode,
+        max_retries=max_retries,
+        # `asem_cfg.answer` is an attribute-style object here, not a dict.
+        temperature=_opt_float(getattr(ans_cfg, "temperature", None)),
+    )
+    utility_updater = UtilityUpdater(
+        backend=backend,
+        alpha=hp.alpha, q0=hp.q0,
+        summary_prompt_template=summary_prompt,
+        note_constructor=note_constructor,
+    )
+    fast_ingestor = FastSessionIngestor(
+        backend=backend,
+        q0=hp.q0,
+        tau_novel=wg_cfg.tau_high,
+        tau_redund=wg_cfg.tau_redund,
+        max_retries=max_retries,
+    )
+    write_gate = WriteGate(
+        enabled=wg_cfg.enabled,
+        tau_high=wg_cfg.tau_high,
+        tau_redund=wg_cfg.tau_redund,
+    )
+
+    _ensure_dir(db_dir)
+    bank = _make_bank(db_dir, "fast_asem")
+
+    pipeline = ASEMPipeline(
+        memory_bank=bank,
+        note_constructor=note_constructor,
+        memory_manager=memory_manager,
+        link_evolver=link_evolver,
+        retriever=retriever,
+        answer_agent=answer_agent,
+        utility_updater=utility_updater,
+        write_gate=write_gate,
+    )
+
+    return FastASEMSystem(pipeline=pipeline, fast_ingestor=fast_ingestor, config=asem_cfg)
+
+
+def get_systems(
+    config_path: str = "configs/default.yaml",
+    db_dir: str = "data/benchmarks/eval_banks",
+) -> Dict[str, object]:
+    """Build ASEM, Fast-ASEM, and baseline systems for evaluation runners."""
+    systems = build_baselines(config_path, db_dir)
+    systems["ASEM"] = build_asem_system(config_path, db_dir)
+    systems["ASEMv2"] = build_asem_v2_system(config_path, db_dir)
+    systems["FastASEM"] = build_fast_asem_system(config_path, db_dir)
+    systems["ASEM-THG"] = build_asem_thg_system(config_path, db_dir)
+    return systems
+
+
+# ---------------------------------------------------------------------------
+# System registry (phase-separated ingest / retrieve benchmark)
+# ---------------------------------------------------------------------------
+
+#: Systems backed by a persistent MemoryBank, mapped to the SQLite filename
+#: their builder creates inside ``db_dir``. Used by the phase runner to place
+#: one bank per conversation so ingestion can be done once and reused.
+BANK_FILE_NAMES: Dict[str, str] = {
+    "ASEM-THG": "asem_thg",
+    "ASEM": "asem",
+    "ASEMv2": "asem_v2",
+    "FastASEM": "fast_asem",
+    "SimRetrieval": "simretrieval",
+    "AtomicLinking": "atomiclinking",
+    "RLManagerOnly": "rlmanageronly",
+    "ValueRetrievalOnly": "valueretrievalonly",
+}
+
+#: Systems that need no memory bank (pure prompt/context baselines).
+NO_BANK_SYSTEMS: Tuple[str, ...] = ("NoMemory", "FullContext")
+
+#: Canonical evaluation system order.
+ALL_SYSTEMS: List[str] = [
+    "NoMemory", "FullContext", "ASEM-THG", "SimRetrieval", "AtomicLinking",
+    "RLManagerOnly", "ValueRetrievalOnly", "ASEM", "ASEMv2", "FastASEM",
+]
+
+
+def build_system(
+    name: str,
+    config_path: str = "configs/default.yaml",
+    db_dir: str = "data/benchmarks/eval_banks",
+    backend: Any = None,
+) -> object:
+    """Build a single eval system by name.
+
+    ``backend`` is forwarded to every builder that can accept it, so a caller
+    (notably the tests, which pass a deterministic stub) can avoid constructing a
+    real model. Previously only ASEM-THG honoured it, which meant an injected stub
+    was silently discarded and a 1.5B HuggingFace model was loaded instead.
+    ``db_dir`` may point at an existing bank directory: builders open the SQLite
+    file in place, so the same call works for both the ingest and the retrieval
+    phase.
+    """
+    if name in ("ASEM-THG", "ASEM_THG"):
+        return build_asem_thg_system(config_path, db_dir, backend=backend)
+    if name == "ASEM":
+        return build_asem_system(config_path, db_dir, backend=backend)
+    if name == "ASEMv2":
+        return build_asem_v2_system(config_path, db_dir, backend=backend)
+    if name == "FastASEM":
+        return build_fast_asem_system(config_path, db_dir, backend=backend)
+
+    baselines = build_baselines(config_path, db_dir, backend=backend)
+    if name in baselines:
+        return baselines[name]
+    raise ValueError(f"Unknown system: {name!r}. Known: {ALL_SYSTEMS}")

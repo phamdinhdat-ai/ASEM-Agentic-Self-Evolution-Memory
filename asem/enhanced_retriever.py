@@ -14,7 +14,7 @@ Phase C is upgraded from 1-hop to configurable N-hop with graph-aware scoring.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -102,6 +102,23 @@ class EnhancedHybridRetriever(HybridRetriever):
     _community_map: Dict[str, int] = field(default_factory=dict, init=False, repr=False)
     _pagerank: Dict[str, float] = field(default_factory=dict, init=False, repr=False)
 
+    # ── Query-seeded Personalized PageRank ──────────────────────────────
+    # The graph channel above uses GLOBAL PageRank, which is query-independent:
+    # it rewards notes that are central to the whole bank, not notes that are
+    # reachable from the evidence the query already found. ``ppr_weight`` adds a
+    # QUERY-CONDITIONAL graph signal — PPR seeded on the Phase A+B winners —
+    # which is the mechanism that surfaces the *other half* of a multi-hop fact
+    # (the premise note that shares no query terms with the question).
+    # Set to 0.0 to reproduce the previous behaviour exactly.
+    ppr_weight: float = 0.15
+    ppr_topk: int = 20
+    # The corpus graph lives on ``pipeline.hyper_graph`` for ASEM-THG. It is
+    # optional so plain ASEM / FastASEM runs keep working unchanged.
+    hyper_graph: Optional[Any] = None
+    # note_id -> PPR score from the most recent query. Populated by
+    # ``_ppr_expand`` and consumed by the Phase D blend.
+    ppr_scores: Dict[str, float] = field(default_factory=dict, init=False, repr=False)
+
     # ------------------------------------------------------------------
     # Override: retrieve()
     # ------------------------------------------------------------------
@@ -121,16 +138,28 @@ class EnhancedHybridRetriever(HybridRetriever):
         if self.enable_global_semantics:
             self._refresh_graph(M)
 
+        # Shared dedupe set for both expansion phases below. Initialised here
+        # (not inside the link-traversal branch) so the PPR phase cannot hit an
+        # unbound name when `enable_link_traversal` is off.
+        seen_ids = {n.id for n in base_results}
+
         # ── Phase C-Enhanced: True multi-hop traversal ──────────────
         if self.enable_link_traversal and self.max_hops > 0:
             linked = self._multi_hop_expand(e_q, base_results, M)
-            seen_ids = {n.id for n in base_results}
             for n in linked:
                 if n.id not in seen_ids:
                     base_results.append(n)
                     seen_ids.add(n.id)
             self.stats["multi_hop_added"] = len(linked)
             self.stats["max_hops"] = self.max_hops
+
+        # ── Phase C-PPR: query-seeded Personalized PageRank ─────────
+        # Runs after the link walk so seeds are the best available evidence.
+        if self.ppr_weight > 0.0 and self.hyper_graph is not None:
+            for n in self._ppr_expand(base_results, M):
+                if n.id not in seen_ids:
+                    base_results.append(n)
+                    seen_ids.add(n.id)
 
         # ── Phase D (NEW): Global graph re-ranking ──────────────────
         if self.enable_global_semantics and self._community_map:
@@ -174,9 +203,20 @@ class EnhancedHybridRetriever(HybridRetriever):
             rank_z = self._zscore(base_rank)
             q_z = self._zscore(q_eff) if q_has_signal else np.zeros(n)
 
+            # Query-seeded PPR score per note, 0 for notes the walk did not rank.
+            # A z-score over mostly-zeros is degenerate, so a missing score is
+            # encoded as "below the ranked set" via min-max normalisation instead.
+            if self.ppr_scores:
+                raw_ppr = np.array([self.ppr_scores.get(note.id, 0.0) for note in base_results], dtype=float)
+                hi = float(raw_ppr.max()) if raw_ppr.size else 0.0
+                ppr_z = (raw_ppr / hi) if hi > 0 else np.zeros(n)
+            else:
+                ppr_z = np.zeros(n)
+
             # Renormalize hybrid weights so the base ordering always retains
             # primacy, then distribute the remainder across the graph terms.
-            w_graph = self.alpha + self.beta + (self.gamma if q_has_signal else 0.0)
+            w_ppr = self.ppr_weight if ppr_z.any() else 0.0
+            w_graph = self.alpha + self.beta + (self.gamma if q_has_signal else 0.0) + w_ppr
             w_graph = w_graph if w_graph > 0 else 1.0
             a = self.base_weight
             scale = (1.0 - a) / w_graph
@@ -188,12 +228,14 @@ class EnhancedHybridRetriever(HybridRetriever):
                     + scale * self.alpha * local_z[i]
                     + scale * self.beta * global_z[i]
                     + scale * self.gamma * q_z[i]
+                    + scale * w_ppr * ppr_z[i]
                 )
                 scored.append((float(hybrid), note))
 
             scored.sort(key=lambda x: x[0], reverse=True)
             base_results = [n for _, n in scored]
             self.stats["phase_d_q_has_signal"] = bool(q_has_signal)
+            self.stats["phase_d_ppr_active"] = bool(ppr_z.any())
 
         self.stats["total_retrieved"] = len(base_results)
         return base_results
@@ -277,6 +319,59 @@ class EnhancedHybridRetriever(HybridRetriever):
     # ------------------------------------------------------------------
     # Global graph semantics
     # ------------------------------------------------------------------
+
+    def _ppr_expand(
+        self, base_results: List[Note], M: MemoryBank
+    ) -> List[Note]:
+        """Add notes ranked highly by PPR seeded on the current evidence.
+
+        ``TemporalHyperGraph.personalized_pagerank`` walks the ENTITY-aware graph
+        from a set of seed notes. Seeding it with the Phase A+B winners asks a
+        question the other channels cannot: "what else is connected to what I
+        have already found?" — which is how the second premise of a multi-hop
+        question (linked by entity, not by wording) becomes reachable.
+
+        The method was previously dead code (referenced only by its own unit
+        test), so THG's defining graph carried no weight at query time.
+
+        Candidates are appended in PPR order; Phase D then re-ranks everything on
+        similarity/utility/graph, so this widens recall without forcing rank.
+        """
+        if self.hyper_graph is None or self.ppr_weight <= 0.0:
+            return []
+        self.ppr_scores = {}
+        seeds = [n.id for n in base_results[: self.multi_hop_topn * 2]]
+        if not seeds:
+            return []
+        try:
+            ranked = self.hyper_graph.personalized_pagerank(seeds, top_k=self.ppr_topk)
+        except Exception as exc:  # noqa: BLE001 — never fail retrieval over a graph walk
+            _log.debug("PPR expansion skipped: {}", exc)
+            return []
+
+        # Record the full ranking (seeds included) for the Phase D blend.
+        self.ppr_scores = {nid: float(score) for nid, score in ranked}
+
+        known = {n.id for n in base_results}
+        # Batch-fetch the ranked ids; `get_notes_by_ids` avoids one SQLite round
+        # trip per candidate.
+        wanted = [nid for nid, _ in ranked if nid not in known]
+        if not wanted:
+            return []
+        try:
+            fetched = M.get_notes_by_ids(wanted) if hasattr(M, "get_notes_by_ids") else []
+        except Exception as exc:  # noqa: BLE001
+            _log.debug("PPR fetch failed: {}", exc)
+            return []
+
+        added: List[Note] = []
+        for note in fetched:
+            if note.id in known:
+                continue
+            added.append(note)
+            known.add(note.id)
+        self.stats["ppr_added"] = len(added)
+        return added
 
     def _refresh_graph(self, M: MemoryBank) -> None:
         """Recompute community map and PageRank when the bank has changed."""

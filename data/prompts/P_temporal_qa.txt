@@ -45,9 +45,21 @@ Memory 3 — recorded on 20 April 2023, said by Calvin, about Calvin, Dave.
 5. COUNTING (“How many …?”, “How long …?”, “How often …?”): add up or measure the values stated
    across the memories before answering (e.g. “two younger kids” plus the others ⇒ 3).
 6. For time/date questions, give the exact absolute date, month, or year. Resolve any relative
-   wording (“yesterday”, “last week”, “next month”) against the memory's own date, and follow a
-   “same session” connection to the memory that fixes the date when needed.
-7. REFUSAL POLICY — answer “I don't know” ONLY when NO memory is even related to the question's
+   wording ("yesterday", "last week", "next month") against the memory's own "recorded on" date, and
+   follow a "same session" connection to the memory that fixes the date when needed.
+7. DATE ARITHMETIC ("How many days/weeks/months between X and Y?", "How long after X did Y
+   happen?", "How many days before X?"):
+   a. First locate the TWO dated events the question names and state each one's absolute date from
+      the memories (e.g. "Sunday mass: 2 January 2023"; "Ash Wednesday: 1 February 2023").
+   b. Then compute the difference between those two dates in the unit asked for (days, weeks, months).
+      Count the elapsing days: from 2 January to 1 February is 30 days.
+   c. Answer with the NUMBER and the unit only (e.g. "30 days"). Do not answer with prose, a date, or
+      a range, and do not repeat the event descriptions.
+   d. If a memory gives a relative or shorthand date ("on 3/1", "yesterday"), resolve it to an
+      absolute date first using that memory's "recorded on" date, then compute.
+   e. If the two dates are genuinely absent from the memories, say "I don't know" — but if both
+      events are mentioned with ANY resolvable date, COMPUTE the answer rather than refusing.
+8. REFUSAL POLICY — answer “I don't know” ONLY when NO memory is even related to the question's
    topic (no note mentions the subject or anything adjacent to it). If ANY note bears on the
    question — even indirectly, under a different person's name, or requiring a short inference or
    a count — that is a reason to ANSWER, not to refuse. Never refuse because the fact is attributed

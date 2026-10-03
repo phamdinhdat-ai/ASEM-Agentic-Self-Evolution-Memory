@@ -255,6 +255,9 @@ def main() -> int:
                         help="Truncate the FullContext history to N turns (0 = no truncation)")
     parser.add_argument("--abort-after-consecutive-errors", type=int, default=8,
                         help="Abort a system after N consecutive answer failures (0 = never)")
+    parser.add_argument("--judge-workers", type=int, default=8,
+                        help="Concurrent judge calls (1 = sequential). Each call is "
+                             "independent, so this only affects wall-clock time.")
 
     # Storage
     parser.add_argument("--static-root", default="static/memory_banks")
@@ -373,6 +376,7 @@ def main() -> int:
                 metric_names=args.metrics,
                 judge_config=judge_config,
                 judge_backend=judge_backend,
+                judge_workers=args.judge_workers,
                 preds_dir=preds_dir,
                 scores_dir=scores_dir,
                 out_path=out_path,

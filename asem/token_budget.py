@@ -102,6 +102,11 @@ def clip_block(
     still blow a small window even after every other block was dropped.
     ``keep="tail"`` preserves the most recent half (useful for ``[date] text``
     turns, where the date prefix is at the front), ``keep="head"`` the opening.
+
+    Both branches are **non-growing**: ``len(result) < len(text)`` always, so
+    ``fit_items``' shrink loop is guaranteed to terminate. This property is what
+    makes the final rendering a hard contract rather than a best effort — see
+    ``fit_render_exact``.
     """
     if not text or len(text) <= min_chars:
         return None
@@ -109,6 +114,79 @@ def clip_block(
     if keep == "tail":
         return "… " + text[-keep_len:]
     return text[:keep_len].rstrip() + " …"
+
+
+def fit_render_exact(
+    items: Sequence[T],
+    render: Callable[[Sequence[T]], str],
+    *,
+    budget: Optional[int],
+    fallback: str,
+) -> Tuple[str, List[T]]:
+    """Last-resort guarantee that the returned prompt fits ``budget`` EXACTLY.
+
+    ``fit_items`` trims by *dropping whole items* and then tries a ``shrink``
+    callback. Neither can help when the budget is smaller than the fixed
+    scaffolding the renderer cannot remove — the prompt template alone, or a
+    ``min_keep=1`` item whose block is larger than the whole budget. In that case
+    ``fit_items`` logs a warning and returns an over-budget prompt anyway, and on
+    an OpenAI-compatible endpoint that is a hard HTTP 400.
+
+    This wrapper closes that hole by construction: if the rendered prompt still
+    exceeds ``budget`` it *truncates the rendered string itself* — dropping the
+    highest-ranked items first so the retained text is always a prefix of the
+    full render, and finally falling back to ``fallback`` (the caller's
+    no-context prompt) when even that does not fit. Truncation is a character
+    operation, so it cannot be defeated by how the renderer chose to lay text
+    out.
+
+    The postcondition is therefore unconditional::
+
+        budget is None  or  estimate_tokens(prompt) <= budget
+
+    Returns ``(prompt, kept_items)``; ``kept_items`` is a prefix of ``items``
+    (empty when the caller's own scaffolding had to be truncated).
+    """
+    if budget is None:
+        return render(list(items)), list(items)
+
+    kept = list(items)
+    prompt = render(kept)
+    if fits(prompt, budget):
+        return prompt, kept
+
+    # Step 1: binary search over how MANY items the renderer can afford.
+    lo, hi, best = 0, len(kept), None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        # `mid` items means the FIRST `mid`: relevance order puts the best notes
+        # at the front, so the retained block set is always a prefix.
+        if fits(render(kept[:mid]), budget):
+            best, lo = mid, mid + 1
+        else:
+            hi = mid - 1
+    kept = kept[: best if best is not None else 0]
+    prompt = render(kept)
+    if fits(prompt, budget):
+        return prompt, kept
+
+    # Step 2: the scaffolding itself does not fit. Truncate the rendered string.
+    limit_chars = max(1, int(budget) * CHARS_PER_TOKEN)
+    if len(prompt) > limit_chars:
+        # `rsplit` on whitespace when there is one, so the tail is not a partial
+        # token; a hard cut otherwise (a render with no spaces at all).
+        cut = prompt[:limit_chars].rsplit(" ", 1)[0]
+        prompt = cut or prompt[:limit_chars]
+    # A truncation that still cannot fit (e.g. a non-ASCII render where chars and
+    # tokens disagree) falls back to the caller's minimal prompt.
+    if not fits(prompt, budget) and fits(fallback, budget):
+        _log.warning(
+            "{}: even a truncated render exceeds the {}-token budget; "
+            "falling back to the bare prompt ({} chars).",
+            "fit_render_exact", budget, len(fallback),
+        )
+        return fallback, []
+    return prompt, kept
 
 
 def _select(items: Sequence[T], n: int, *, drop: str, head_keep: int) -> List[T]:
@@ -204,19 +282,39 @@ def fit_items(
     return prompt, kept
 
 
-def generate_with_cap(backend: Any, prompt: str, max_tokens: Optional[int] = None) -> str:
+def generate_with_cap(
+    backend: Any,
+    prompt: str,
+    max_tokens: Optional[int] = None,
+    temperature: Optional[float] = None,
+) -> str:
     """One generation call, passing the completion cap where the backend takes it.
 
     The cap is the other half of the budget: reserving it in the prompt while
     letting the request use a larger client-wide default would still overflow.
     Backends/wrappers without per-call kwargs fall back to their own default.
+
+    ``temperature`` is forwarded the same way when supplied. Without it the
+    backend's config-level value applies, which is how `answer.temperature` in the
+    YAML came to be silently ignored.
     """
-    if not max_tokens:
+    kwargs: Dict[str, Any] = {}
+    if max_tokens:
+        kwargs["max_tokens"] = int(max_tokens)
+    if temperature is not None:
+        kwargs["temperature"] = float(temperature)
+    if not kwargs:
         return backend.generate(prompt)
     try:
-        return backend.generate(prompt, max_tokens=int(max_tokens))
+        return backend.generate(prompt, **kwargs)
     except TypeError as exc:
         if "unexpected keyword" in str(exc) or "positional argument" in str(exc):
-            _log.debug("Backend ignores per-call max_tokens: {}", exc)
+            _log.debug("Backend ignores per-call kwargs: {}", exc)
+            # Retry with only the cap, then bare — backends vary in what they take.
+            if "max_tokens" in kwargs:
+                try:
+                    return backend.generate(prompt, max_tokens=kwargs["max_tokens"])
+                except TypeError:
+                    pass
             return backend.generate(prompt)
         raise

@@ -42,3 +42,44 @@ def test_salvage_truncated_mid_string_returns_none() -> None:
 
 def test_garbage_returns_none() -> None:
     assert _extract_json("sorry, here is my answer", expect_array=True) is None
+
+
+def test_salvage_truncated_array_with_inner_arrays() -> None:
+    """The last complete object must survive when the objects contain arrays.
+
+    Regression: the bracket window (`rfind("]")`) hit the *inner* array of an
+    entry whose own closing brace came after it, chopped the response there and
+    returned None — so a truncated extraction lost every fact instead of only
+    the unfinished one.
+    """
+    raw = (
+        '[{"fact": "a", "entities": ["Caroline", "Hawaii"]}, '
+        '{"fact": "b", "entities": ["Caroline"]}, '
+        '{"fact": "c", "entities": ["Car'
+    )
+    data = _extract_json(raw, expect_array=True)
+    assert isinstance(data, list)
+    assert [item["fact"] for item in data] == ["a", "b"]
+
+
+def test_trailing_comma_is_repaired() -> None:
+    raw = '[{"fact": "a", "tags": ["x"],},]'
+    assert _extract_json(raw, expect_array=True) == [{"fact": "a", "tags": ["x"]}]
+
+
+def test_truncated_object_without_any_complete_entry_returns_none() -> None:
+    raw = '[{"fact": "only one, and it never clo'
+    assert _extract_json(raw, expect_array=True) is None
+
+
+def test_prose_around_a_fenced_truncated_array() -> None:
+    """The fence and the prose must go, and both complete objects must survive."""
+    raw = "Here are the facts:\n```json\n[{\"fact\": \"a\"}, {\"fact\": \"b\"}"
+    data = _extract_json(raw, expect_array=True)
+    assert isinstance(data, list)
+    assert [item["fact"] for item in data] == ["a", "b"]
+
+
+def test_object_extraction_still_works() -> None:
+    raw = 'Sure!\n```json\n{"op": "ADD", "target_id": null}\n```'
+    assert _extract_json(raw, expect_array=False) == {"op": "ADD", "target_id": None}

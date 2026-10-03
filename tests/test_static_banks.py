@@ -30,7 +30,11 @@ try:  # pytest inserts the repo root (tests/ is a package), so either form works
 except ImportError:  # pragma: no cover
     from test_phase_benchmark import StubBackend, _load_groups, _write_dataset
 
-CONFIG = "configs/models/qwen2.5_1.5b_hf.yaml"
+# See the note in tests/test_phase_benchmark.py. The stub backend is injected and
+# honoured, so this needs no network access; the config still supplies the embedder.
+CONFIG = os.environ.get(
+    "ASEM_TEST_CONFIG", "configs/models/qwen2.5_1.5b_hf.yaml"
+)
 SYSTEMS = ["FastASEM", "SimRetrieval"]
 
 

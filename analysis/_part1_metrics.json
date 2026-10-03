@@ -1,0 +1,41 @@
+{
+  "gb_smoke :: data\\benchmarks\\longmemeval_banks\\asem_thg.sqlite": {
+    "n_notes": 27,
+    "n_link_records": 237,
+    "n_unique_undirected_pairs": 123,
+    "relation_histogram": {
+      "same-entity": 174,
+      "temporal": 48,
+      "semantic": 15
+    },
+    "entity_fanout": {
+      "mean": 11.333333333333334,
+      "median": 17,
+      "p90": 17.0,
+      "max": 17,
+      "zero_share": 0.3333333333333333
+    },
+    "n_distinct_entities": 5,
+    "implied_same_entity_pairs": 160,
+    "n_notes_with_superseded_by": 0,
+    "share_notes_with_superseded_by": 0.0,
+    "n_supersession_pairs": 0,
+    "supersession_examples": [],
+    "n_notes_timestamp_iso_present": 27,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 27,
+    "session_id_kinds": {
+      "ordinal": 27
+    },
+    "session_id_samples": [
+      "s1",
+      "s1",
+      "s1",
+      "s1",
+      "s1"
+    ],
+    "n_notes_entities_empty": 8,
+    "bank_path": "data/benchmarks/longmemeval_banks/asem_thg.sqlite"
+  }
+}

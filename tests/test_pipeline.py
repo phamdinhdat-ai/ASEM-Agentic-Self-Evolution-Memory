@@ -365,7 +365,7 @@ def test_answer_prompt_fits_the_context_window() -> None:
     est = len(prompt) // 4
     assert est <= 2000 - 512, f"prompt ~{est} tokens exceeds the budget"
     # It still sent a usable prompt (trimmed, not emptied).
-    assert "[1]" in prompt
+    assert "Memory 1" in prompt
     assert "said by" in prompt
 
 
@@ -398,7 +398,7 @@ def test_answer_without_budget_keeps_every_note() -> None:
     # Context is rendered as numbered blocks: every note keeps a rank and no JSON
     # `id` field is printed (the model selects by rank).
     assert '"id"' not in prompt
-    assert all(f"[{i + 1}]" in prompt for i in range(len(notes)))
+    assert all(f"Memory {i + 1}" in prompt for i in range(len(notes)))
 
 
 # ---------------------------------------------------------------------------
@@ -507,8 +507,8 @@ def test_max_context_notes_caps_the_prompt() -> None:
     agent.distil_and_answer("what happened?", notes)
 
     prompt = backend.prompts[0]
-    assert "[1]" in prompt and "[2]" in prompt
-    assert "[3]" not in prompt, "the cap must drop the lowest-ranked notes"
+    assert "Memory 1" in prompt and "Memory 2" in prompt
+    assert "Memory 3" not in prompt, "the cap must drop the lowest-ranked notes"
 
 
 def test_no_cap_keeps_every_note_reachable() -> None:
@@ -525,7 +525,7 @@ def test_no_cap_keeps_every_note_reachable() -> None:
 
     prompt = backend.prompts[0]
     assert '"id"' not in prompt
-    assert all(f"[{i + 1}]" in prompt for i in range(len(notes)))
+    assert all(f"Memory {i + 1}" in prompt for i in range(len(notes)))
 
 
 def test_max_tokens_reaches_the_retry_path() -> None:
@@ -607,7 +607,7 @@ def test_render_notes_block_numbers_notes_and_hides_ids() -> None:
     """A UUID is a 36-char copy target for a small model; ranks are not."""
     block = _render_notes_block([_plain_note(_UID, x="Calvin got advice from a producer.")])
 
-    assert block.startswith("[1] ")
+    assert block.startswith("Memory 1 —")
     assert _UID not in block, "ids must never reach the prompt"
     assert "Calvin got advice from a producer." in block
 
@@ -623,7 +623,7 @@ def test_render_notes_block_shows_speaker_date_and_topics() -> None:
 
     assert "20 April 2023" in block, "ISO timestamps must be humanised"
     assert "said by Caroline" in block
-    assert "about: Caroline, Sweden" in block
+    assert "about Caroline, Sweden" in block
     assert block.count("kw") <= 8, "keyword list is capped"
 
 
@@ -633,7 +633,7 @@ def test_relation_targets_render_as_rank_numbers() -> None:
 
     block = _render_notes_block([a, b])
 
-    assert "links: [2] contradicts" in block
+    assert "contradicts Memory 2" in block
     assert "node-beta" not in block, "the neighbour is referred to by rank, not by id"
 
 
@@ -643,7 +643,7 @@ def test_edges_outside_the_block_collapse_to_counts() -> None:
     block = _render_notes_block([a])
 
     assert "not-here" not in block
-    assert "same-topic:1" in block and "not in this list" in block
+    assert "linked by 'same-topic'" in block and "not shown here" in block
 
 
 def test_long_description_becomes_capped_bullets() -> None:
@@ -690,7 +690,7 @@ def test_numeric_selected_ids_map_back_to_the_ranked_notes() -> None:
 
     assert answer == "Sweden"
     assert [n.id for n in kept] == ["second"]
-    assert "[2]" in backend.prompts[0], "the rank the model selected is printed in the context"
+    assert "Memory 2" in backend.prompts[0], "the rank the model selected is printed in the context"
 
 
 def test_id_shaped_selected_ids_still_work() -> None:

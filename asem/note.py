@@ -91,13 +91,50 @@ class LinkRecord:
     ``target_id`` is the ID of the linked note; ``relation`` is one of
     ``contradicts / extends / causal / same-topic / temporal / semantic``
     (or ``linked`` for legacy links migrated from the old flat-ID format).
+
+    Bi-temporal validity (``valid_from`` / ``valid_to``)
+    ---------------------------------------------------
+    A link may carry the interval during which the RELATIONSHIP held, in
+    addition to the note's own record time. This follows the bi-temporal model
+    used by Zep/Graphiti (arXiv:2501.13956 §2.2.3), which stores
+    ``t_valid``/``t_invalid`` on edges so the system can answer "what was true
+    when" rather than only "when was this written down".
+
+    Why it is needed: ``Note.t`` records when a fact was *stated*, which is not
+    the same as when it was *true*. LongMemEval's ``knowledge-update`` questions
+    and LoCoMo's contradiction resolution both ask for the latter. Without an
+    interval, a retriever that sees "user lives in Boston" superseded by "user
+    lives in Seattle" cannot tell whether the first is obsolete or was simply
+    an earlier state.
+
+    Both fields are ``None`` by default and are OMITTED from ``to_dict`` when
+    unset, so:
+      * notes written before this change serialise byte-identically,
+      * frozen banks (e.g. the LoCoMo ``ds_fixed`` banks) load unchanged, and
+      * the answer renderer falls back to exactly the previous format.
     """
 
     target_id: str
     relation: str = LEGACY_LINK_RELATION
+    # ISO-8601 string when the relationship became true, else None.
+    valid_from: Optional[str] = None
+    # ISO-8601 string when it stopped being true, else None (= still open).
+    valid_to: Optional[str] = None
+
+    @property
+    def has_interval(self) -> bool:
+        """True when this link carries any validity information."""
+        return bool(self.valid_from or self.valid_to)
 
     def to_dict(self) -> Dict[str, str]:
-        return {"target_id": self.target_id, "relation": self.relation}
+        data: Dict[str, str] = {"target_id": self.target_id, "relation": self.relation}
+        # Emitted only when present, so legacy notes stay byte-identical and a
+        # bank round-trips without gaining null fields.
+        if self.valid_from:
+            data["valid_from"] = self.valid_from
+        if self.valid_to:
+            data["valid_to"] = self.valid_to
+        return data
 
     @classmethod
     def from_dict(cls, data: Any) -> "LinkRecord":
@@ -109,8 +146,80 @@ class LinkRecord:
             return cls(
                 target_id=str(data.get("target_id", data.get("id", ""))),
                 relation=str(data.get("relation", LEGACY_LINK_RELATION)),
+                valid_from=(str(data["valid_from"]) if data.get("valid_from") else None),
+                valid_to=(str(data["valid_to"]) if data.get("valid_to") else None),
             )
         return cls(target_id=str(data), relation=LEGACY_LINK_RELATION)
+
+
+@dataclass(frozen=True)
+class TripletRecord:
+    """The (subject, predicate, object) fact a note was extracted from.
+
+    Why this is persisted on the note
+    ---------------------------------
+    ``TemporalHyperGraph`` decides supersession ("this fact changed") from two
+    indices keyed on the extracted triplet. Those indices live only in memory
+    and were built only in ``add_note``; ``hydrate`` -- which loads the notes a
+    bank already holds -- deliberately did NOT rebuild them, because the triplet
+    was never stored anywhere. The graph object is constructed per system
+    instance while the bank lives on disk, so every resumed or pre-existing bank
+    contributed ZERO versioning knowledge: a fact ingested in session 5 could
+    never supersede one ingested in session 1.
+
+    Measured on the LongMemEval bank build: **0 ``superseded_by`` edges** over 27
+    notes, against a corpus where ``knowledge-update`` is 78/500 of the oracle
+    questions.
+
+    Persisting the triplet on the note makes the ``(subject, predicate, object)``
+    and ``(subject, predicate)`` indices rebuildable by ``hydrate()``, which is
+    what turns versioning into a property of the BANK rather than of one process
+    lifetime.
+
+    Serialisation follows the ``LinkRecord.valid_from``/``valid_to`` precedent:
+    the field is omitted from ``to_dict`` when the note carries no triplets, so
+    legacy notes round-trip byte-identically and frozen banks (e.g. the LoCoMo
+    ``ds_fixed`` banks) load unchanged.
+    """
+
+    subject: str = ""
+    predicate: str = ""
+    object: str = ""
+    # ISO-8601 string when the fact was recorded, else None.
+    recorded_at: Optional[str] = None
+
+    @property
+    def is_usable(self) -> bool:
+        """True when the triplet can drive versioning (needs subject+predicate).
+
+        Mirrors the guard in ``TemporalHyperGraph.add_note``: an empty
+        subject/predicate must not claim a version-chain slot.
+        """
+        return bool(str(self.subject or "").strip() and str(self.predicate or "").strip())
+
+    def to_dict(self) -> Dict[str, str]:
+        data: Dict[str, str] = {
+            "subject": self.subject,
+            "predicate": self.predicate,
+            "object": self.object,
+        }
+        if self.recorded_at:
+            data["recorded_at"] = self.recorded_at
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Any) -> "TripletRecord":
+        """Build from a dict, or an already-constructed TripletRecord (idempotent)."""
+        if isinstance(data, TripletRecord):
+            return data
+        if not isinstance(data, dict):
+            return cls()
+        return cls(
+            subject=str(data.get("subject") or ""),
+            predicate=str(data.get("predicate") or ""),
+            object=str(data.get("object") or ""),
+            recorded_at=(str(data["recorded_at"]) if data.get("recorded_at") else None),
+        )
 
 
 # A malformed response is repaired by regex; never spend more than this on it.
@@ -248,9 +357,15 @@ class Note:
     timestamp_iso: Optional[str] = None
     entities: List[str] = field(default_factory=list)
     speaker: Optional[str] = None
+    # The extracted (subject, predicate, object) facts this note came from.
+    # Persisted so ``TemporalHyperGraph.hydrate`` can rebuild the versioning
+    # indices from a bank on disk — without this, a note that pre-dates the
+    # current process can never be superseded by a newly ingested one. Omitted
+    # from ``to_dict`` when empty, so legacy notes are byte-identical.
+    triplets: List[TripletRecord] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data: Dict[str, Any] = {
             "id": self.id,
             "c": self.c,
             "t": self.t.isoformat(),
@@ -269,6 +384,12 @@ class Note:
             "entities": list(self.entities or []),
             "speaker": self.speaker,
         }
+        # Emitted only when present (same contract as LinkRecord.valid_from),
+        # so a note with no triplet serialises byte-identically to before and
+        # the frozen banks gain no new key.
+        if self.triplets:
+            data["triplets"] = [t.to_dict() for t in self.triplets]
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Note":
@@ -289,6 +410,10 @@ class Note:
             # `or []` tolerates `"entities": null` payloads written by older code.
             entities=list(data.get("entities") or []),
             speaker=data.get("speaker"),
+            # `or []` also tolerates an explicit `"triplets": null`. Notes from a
+            # frozen pre-GB1 bank simply carry no triplets and hydrate() then
+            # rebuilds no versioning index for them — same as before the change.
+            triplets=[TripletRecord.from_dict(t) for t in (data.get("triplets") or [])],
         )
 
     def to_json(self) -> str:

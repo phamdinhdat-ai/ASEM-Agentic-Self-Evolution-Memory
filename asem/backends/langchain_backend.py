@@ -151,13 +151,38 @@ def _build_llm(provider: str, model_name: str, temperature: float, cfg: Dict[str
 
 
 def _build_embedder(cfg: Dict[str, Any]) -> Any:
+    """Build the embedder declared by an ``inference`` block.
+
+    Providers: ``openai`` (any OpenAI-compatible /embeddings route),
+    ``huggingface`` / ``huggingface_hub`` (local sentence-transformers),
+    ``ollama``.
+
+    IMPORTANT — the memory bank stores this model's output vectors, so the
+    embedder must be identical across ingest and retrieval and across systems that
+    share a bank. Changing this silently invalidates every frozen bank. That is why
+    the provider is read from config rather than guessed, and why the default is
+    the local MiniLM model: it needs no external entitlement.
+    """
     provider = cfg.get("embedder_provider", cfg.get("provider", "openai"))
     model_name = cfg.get("embedder_name") or cfg.get("embedder_model")
 
     if provider == "openai":
         from langchain_openai import OpenAIEmbeddings
 
-        return OpenAIEmbeddings(model=model_name)
+        # Pass base_url/api_key explicitly: without them OpenAIEmbeddings reads
+        # OPENAI_BASE_URL/OPENAI_API_KEY itself, which may point somewhere other
+        # than the endpoint the config declared. Extras are forwarded so a
+        # gateway needing dimensions/encoding_format can be configured.
+        embedder_kwargs: Dict[str, Any] = {"model": model_name}
+        base_url = cfg.get("base_url") or cfg.get("embedder_base_url")
+        api_key = cfg.get("api_key") or cfg.get("embedder_api_key")
+        if base_url:
+            embedder_kwargs["base_url"] = base_url
+        if api_key:
+            embedder_kwargs["api_key"] = api_key
+        if cfg.get("embedder_dimensions"):
+            embedder_kwargs["dimensions"] = int(cfg["embedder_dimensions"])
+        return OpenAIEmbeddings(**embedder_kwargs)
     if provider in {"huggingface_hub", "huggingface"}:
         try:
             from langchain_huggingface import HuggingFaceEmbeddings

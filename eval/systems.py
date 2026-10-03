@@ -16,6 +16,7 @@ import yaml
 
 from asem.answer_agent import AnswerAgent
 from asem.backends import build_backend
+from asem.hyper_graph import TemporalHyperGraph
 from asem.link_evolver import LinkEvolver
 from asem.logging_utils import get_logger
 from asem.memory_bank import MemoryBank
@@ -308,6 +309,16 @@ _RETRIEVAL_PROMPT_DATED = (
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _opt_float(value: Any) -> Optional[float]:
+    """Parse an optional float from config, treating blanks/None as 'unset'."""
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
@@ -421,11 +432,18 @@ def _make_bank(db_dir: str, name: str) -> MemoryBank:
 # Builders
 # ---------------------------------------------------------------------------
 
-def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
-    """Build the full ASEM pipeline wrapped as an eval system."""
+def build_asem_system(
+    config_path: str, db_dir: str, backend: Any = None
+) -> ASEMSystem:
+    """Build the full ASEM pipeline wrapped as an eval system.
+
+    ``backend`` accepts an injected backend (tests pass a stub); when omitted the
+    config's own backend is built.
+    """
     cfg = _load_config(config_path)
 
-    backend = build_backend(cfg["inference"])
+    if backend is None:
+        backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
@@ -468,6 +486,9 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
         prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
+        # Honour the config's answer temperature (previously ignored entirely, so
+        # runs sampled at `inference.temperature` instead).
+        temperature=_opt_float((cfg.get("answer") or {}).get("temperature")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -498,10 +519,17 @@ def build_asem_system(config_path: str, db_dir: str) -> ASEMSystem:
     return ASEMSystem(pipeline=pipeline)
 
 
-def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
-    """Build the two-phase ASEM v2 pipeline with batch ingestion + enhanced retrieval."""
+def build_asem_v2_system(
+    config_path: str, db_dir: str, backend: Any = None
+) -> ASEMSystemV2:
+    """Build the two-phase ASEM v2 pipeline with batch ingestion + enhanced retrieval.
+
+    ``backend`` accepts an injected backend (tests pass a stub); when omitted the
+    config's own backend is built.
+    """
     cfg = _load_config(config_path)
-    backend = build_backend(cfg["inference"])
+    if backend is None:
+        backend = build_backend(cfg["inference"])
     hp = cfg["hyperparameters"]
 
     note_prompt = _load_text("data/prompts/P1_note_construction.txt")
@@ -553,6 +581,9 @@ def build_asem_v2_system(config_path: str, db_dir: str) -> ASEMSystemV2:
         prompt_template=distil_prompt,
         baseline_prompt_template=_RETRIEVAL_PROMPT,
         max_retries=max_retries,
+        # Honour the config's answer temperature (previously ignored entirely, so
+        # runs sampled at `inference.temperature` instead).
+        temperature=_opt_float((cfg.get("answer") or {}).get("temperature")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -714,6 +745,13 @@ def build_asem_thg_system(
         val = ret_cfg.get(key, default)
         return default if val is None else val
 
+    # ONE hyper-graph instance, shared by ingestion and retrieval. The ingestor
+    # builds the entity/versioning edges into it; the retriever needs the SAME
+    # object to run query-seeded Personalized PageRank over them. Constructing
+    # two graphs would leave PPR walking an empty structure (which is how it
+    # ended up as dead code before).
+    thg_graph = TemporalHyperGraph()
+
     retriever = EnhancedHybridRetriever(
         backend=backend,
         k1=hp["k1"], k2=_ret("k2", hp["k2"]),
@@ -731,6 +769,11 @@ def build_asem_thg_system(
         unknown_relation_weight=float(_ret("unknown_relation_weight", 1.0)),
         enable_global_semantics=bool(_ret("enable_global_semantics", True)),
         enable_intent_q=bool(_ret("enable_intent_q", True)),
+        # Query-seeded PPR over the shared THG graph (0.0 disables it and
+        # reproduces the pre-W3 ranking exactly).
+        hyper_graph=thg_graph,
+        ppr_weight=float(_ret("ppr_weight", 0.15)),
+        ppr_topk=int(_ret("ppr_topk", 20)),
     )
     answer_agent = AnswerAgent(
         backend=backend,
@@ -742,6 +785,9 @@ def build_asem_thg_system(
         context_window=int(ans_cfg.get("context_window") or 0) or None,
         max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
         content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
+        # Without this the YAML's `answer.temperature` was read by nothing and
+        # every run silently sampled at `inference.temperature` (0.3).
+        temperature=_opt_float(ans_cfg.get("temperature")),
     )
     utility_updater = UtilityUpdater(
         backend=backend, alpha=hp["alpha"], q0=hp["q0"],
@@ -749,6 +795,16 @@ def build_asem_thg_system(
     )
     single_pass_ingestor = SinglePassSessionIngestor(
         backend=backend, q0=hp["q0"], max_retries=max_retries,
+        # Same instance the retriever holds, so edges created here are visible
+        # to query-seeded Personalized PageRank at read time.
+        hyper_graph=thg_graph,
+        # Deterministic graph building: without this, extraction inherits
+        # `inference.temperature` and the same sessions yield a different graph
+        # (and therefore a different bank) on every ingest. Falls back to the
+        # answer temperature when `ingestion.temperature` is not set.
+        temperature=_opt_float(
+            (cfg.get("ingestion") or {}).get("temperature", ans_cfg.get("temperature"))
+        ),
     )
     write_gate = WriteGate(
         enabled=bool(wg_cfg.get("enabled", True)),
@@ -846,6 +902,9 @@ def build_baselines(
         context_window=context_window,
         max_context_notes=int(ans_cfg.get("max_context_notes") or 0) or None,
         content_char_limit=int(ans_cfg.get("content_char_limit", 200)),
+        # Without this the YAML's `answer.temperature` was read by nothing and
+        # every run silently sampled at `inference.temperature` (0.3).
+        temperature=_opt_float(ans_cfg.get("temperature")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -911,13 +970,21 @@ def build_baselines(
 def build_fast_asem_system(
     config_path_or_preset: str = "configs/presets/sota_benchmark.yaml",
     db_dir: str = "data/benchmarks/eval_banks",
+    backend: Any = None,
 ) -> FastASEMSystem:
-    """Build the Fast-ASEM (ASEM-v3) pipeline."""
+    """Build the Fast-ASEM (ASEM-v3) pipeline.
+
+    ``backend`` lets a caller inject an already-built backend (the tests pass a
+    deterministic stub). Without it the backend comes from the config, which for an
+    ``huggingface`` config means loading real weights — expensive in tests and
+    network-bound for API configs.
+    """
     from asem.config import ASEMConfig
     from asem.fast_ingest import FastSessionIngestor
 
     asem_cfg = ASEMConfig.load(config_path_or_preset)
-    backend = build_backend(asem_cfg.inference)
+    if backend is None:
+        backend = build_backend(asem_cfg.inference)
     hp = asem_cfg.hyperparameters
     rt_cfg = asem_cfg.retriever
     ans_cfg = asem_cfg.answer
@@ -974,6 +1041,8 @@ def build_fast_asem_system(
         baseline_prompt_template=qa_prompt,
         direct_mode=ans_cfg.direct_mode,
         max_retries=max_retries,
+        # `asem_cfg.answer` is an attribute-style object here, not a dict.
+        temperature=_opt_float(getattr(ans_cfg, "temperature", None)),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -1060,20 +1129,22 @@ def build_system(
 ) -> object:
     """Build a single eval system by name.
 
-    ``backend`` is accepted for API compatibility with ``phase_runner``; it is
-    only forwarded to the ASEM-THG builder (the other builders construct their
-    own backend internally). ``db_dir`` may point at an existing bank directory:
-    builders open the SQLite file in place, so the same call works for both the
-    ingest and the retrieval phase.
+    ``backend`` is forwarded to every builder that can accept it, so a caller
+    (notably the tests, which pass a deterministic stub) can avoid constructing a
+    real model. Previously only ASEM-THG honoured it, which meant an injected stub
+    was silently discarded and a 1.5B HuggingFace model was loaded instead.
+    ``db_dir`` may point at an existing bank directory: builders open the SQLite
+    file in place, so the same call works for both the ingest and the retrieval
+    phase.
     """
     if name in ("ASEM-THG", "ASEM_THG"):
         return build_asem_thg_system(config_path, db_dir, backend=backend)
     if name == "ASEM":
-        return build_asem_system(config_path, db_dir)
+        return build_asem_system(config_path, db_dir, backend=backend)
     if name == "ASEMv2":
-        return build_asem_v2_system(config_path, db_dir)
+        return build_asem_v2_system(config_path, db_dir, backend=backend)
     if name == "FastASEM":
-        return build_fast_asem_system(config_path, db_dir)
+        return build_fast_asem_system(config_path, db_dir, backend=backend)
 
     baselines = build_baselines(config_path, db_dir, backend=backend)
     if name in baselines:

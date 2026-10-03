@@ -68,20 +68,41 @@ class TemporalHyperGraph:
         semantic_tau: float = 0.70,
         max_entity_links: int = 5,
         max_semantic_links: int = 5,
+        entity_idf_floor: float = 0.0,
     ) -> None:
         self.semantic_tau = semantic_tau
         # Fan-out caps. A dominant entity (the conversation's own speaker name,
         # "Caroline") is shared by most notes, so an uncapped entity channel
         # would link every note to every other note and collapse the graph into
-        # a clique. Peers are ranked by embedding similarity before the cut.
+        # a clique. Peers are ranked by weighted co-occurrence + similarity
+        # before the cut.
         self.max_entity_links = max_entity_links
         self.max_semantic_links = max_semantic_links
+        # Hub suppression threshold (GB5). A shared entity contributes
+        # `log(N / df)` to the peer score; entities at or below this weight are
+        # ignored entirely. The default 0.0 means "only a hub on EVERY note of
+        # the graph is worthless" (log(N/N) == 0), which is the conservative
+        # setting that changes nothing unless a genuine global hub exists.
+        self.entity_idf_floor = entity_idf_floor
 
         self._graph = nx.Graph() if nx is not None else None
         self._fact_nodes: Dict[str, Note] = {}
         self._entity_nodes: Set[str] = set()
         self._entity_index: Dict[str, Set[str]] = {}  # note_id -> normalised entity keys
-        self._subj_pred_index: Dict[Tuple[str, str], str] = {}  # (subj, pred) -> latest note id
+        # INVERSE index: entity key -> note ids that carry it. This is what makes
+        # `_entity_peers` O(matching peers) instead of O(N): before it existed,
+        # every add_note scanned every note in the bank and tested set
+        # intersection inline (O(N) per note, O(N^2) per build), which is
+        # measurable at bank scale. Maintained by add_note / hydrate / invalidate
+        # / clear.
+        self._entity_to_notes: Dict[str, Set[str]] = {}
+        # (subject, predicate, object) -> latest note id. Exact-triplet index for
+        # restatements: the same fact asserted again.
+        self._subj_pred_index: Dict[Tuple[str, str, str], str] = {}
+        # (subject, predicate) -> latest note id, consulted ONLY for predicates
+        # that denote a single-valued attribute ("lives in"), where a new object
+        # replaces the old value. See `_is_single_valued_predicate`.
+        self._subj_pred_index_slot: Dict[Tuple[str, str], str] = {}
         # Ids of notes whose ``L`` was extended as the *peer* of a link, so the
         # caller can re-persist them (they may pre-date this ingest call).
         self._touched: Set[str] = set()
@@ -101,6 +122,11 @@ class TemporalHyperGraph:
         self._fact_nodes[note.id] = note
         entity_keys = self._entity_keys(note)
         self._entity_index[note.id] = entity_keys
+        # Maintain the inverse index. `setdefault` + add keeps this idempotent,
+        # so re-adding a note id (e.g. an UPDATE that re-inserts) cannot leave a
+        # stale note id behind in an entity's bucket.
+        for key in entity_keys:
+            self._entity_to_notes.setdefault(key, set()).add(note.id)
 
         created_links: List[LinkRecord] = []
 
@@ -119,18 +145,79 @@ class TemporalHyperGraph:
                 self._graph.add_edge(note.id, peer_id, relation=_REL_ENTITY, weight=1.0)
 
         # 2. Deterministic temporal versioning
+        #
+        # Versioning answers "this fact changed" — the signal behind
+        # knowledge-update questions and contradiction resolution. TWO keys are
+        # needed, because there are two distinct ways a fact is superseded:
+        #
+        #   (a) RESTATEMENT — the same (subject, predicate, object) seen again
+        #       later. "Caroline lives in Boston" then "Caroline lives in
+        #       Boston now" is a re-assertion of one slot.
+        #   (b) REPLACEMENT — a SINGLE-VALUED predicate whose object changed.
+        #       "lives in Brighton" -> "lives in Seattle": the subject can only
+        #       live in one place, so the new value invalidates the old one.
+        #
+        # Keying on (subject, predicate) alone conflates (b) with unrelated
+        # facts that merely share a verb — "bought a car" and "bought a house"
+        # are not versions of each other — so the object must discriminate.
+        # Keying on (subject, predicate, object) alone misses (b) entirely and
+        # versioning stops firing (measured: zero superseded_by edges once the
+        # object was added naively).
+        #
+        # So: an exact key for (a), and a predicate-slot key for (b) restricted
+        # to predicates that actually denote a single-valued attribute.
         if triplet and triplet.subject and triplet.predicate:
-            sp_key = (self._norm(triplet.subject), self._norm(triplet.predicate))
-            old_id = self._subj_pred_index.get(sp_key)
-            if old_id and old_id != note.id and old_id in self._fact_nodes:
-                created_links.append(LinkRecord(target_id=old_id, relation=_REL_SUPERSEDED))
-                self._link_back(old_id, note.id, _REL_SUPERSEDED)
+            subj_key = self._norm(triplet.subject)
+            pred_key = self._norm(triplet.predicate)
+            obj_key = self._norm(triplet.object)
+            exact_key = (subj_key, pred_key, obj_key)
+            slot_key = (subj_key, pred_key)
+
+            old_id = self._subj_pred_index.get(exact_key)
+            if old_id is None and self._is_single_valued_predicate(pred_key):
+                old_id = self._subj_pred_index_slot.get(slot_key)
+            # A fact must not supersede itself, and an already-known id must
+            # still exist in this graph.
+            if old_id == note.id:
+                old_id = None
+
+            if old_id and old_id in self._fact_nodes:
+                old_note = self._fact_nodes[old_id]
+                # Close the OLD fact's validity at the new fact's timestamp:
+                # "this was true from when it was stated until it was replaced".
+                # The new fact opens an interval from its own date. Without this
+                # the pair is only 'superseded', which loses WHEN the change
+                # happened — the question `knowledge-update` items ask.
+                new_from = note.timestamp_iso or (
+                    note.t.strftime("%Y-%m-%dT%H:%M:%SZ") if note.t else None
+                )
+                old_from = old_note.timestamp_iso or (
+                    old_note.t.strftime("%Y-%m-%dT%H:%M:%SZ") if old_note.t else None
+                )
+
+                created_links.append(
+                    LinkRecord(
+                        target_id=old_id,
+                        relation=_REL_SUPERSEDED,
+                        valid_from=new_from,
+                        valid_to=None,
+                    )
+                )
+                # Mirror edge on the older note, recording where it ENDED.
+                self._set_interval_link(
+                    old_id, note.id, _REL_SUPERSEDED,
+                    valid_from=old_from, valid_to=new_from,
+                )
                 if self._graph is not None:
                     self._graph.add_edge(
                         note.id, old_id, relation=_REL_SUPERSEDED, weight=1.5
                     )
                 _log.debug("THG versioning | {} supersedes {}", note.id[:8], old_id[:8])
-            self._subj_pred_index[sp_key] = note.id
+            # Record the new note as the latest for BOTH keys, so the next
+            # restatement or replacement resolves against it.
+            self._subj_pred_index[exact_key] = note.id
+            if self._is_single_valued_predicate(pred_key):
+                self._subj_pred_index_slot[slot_key] = note.id
 
         # 3. Semantic similarity (top matches above tau, capped)
         for other_id, sim in self._semantic_peers(note):
@@ -201,6 +288,7 @@ class TemporalHyperGraph:
         self._entity_nodes = set()
         self._entity_index = {}
         self._subj_pred_index = {}
+        self._subj_pred_index_slot = {}
         self._touched = set()
 
     def __len__(self) -> int:
@@ -209,6 +297,163 @@ class TemporalHyperGraph:
     # ------------------------------------------------------------------
     # Ranking helpers
     # ------------------------------------------------------------------
+
+    # HEADS of predicates whose object is a single-valued attribute: a new value
+    # REPLACES the old one rather than adding a separate fact.
+    #
+    # Matching is on the normalised HEAD VERB of the predicate, not on the full
+    # phrase. The previous revision stored literal multi-word phrases ("lives in",
+    # "is reading") while the extractor prompt asks for a bare
+    # `"predicate": "verb / status / relationship"` and the per-turn fallback
+    # emits `predicate: ""` — so a corpus that says "lives"/"works"/"owns" never
+    # matched anything, and the documented W3 case
+    # (`lives in Boston` -> `lives in Seattle`) fired ~never. Measured on the
+    # LongMemEval bank build: **0 superseded_by edges**.
+    #
+    # This is a deliberately conservative allow-list. The cost of a false
+    # positive is a fact wrongly marked obsolete (silently removing evidence);
+    # the cost of a false negative is a missed versioning edge. Being
+    # conservative is the safer direction, so only verbs that denote a
+    # single-valued slot are listed — a verb is NOT listed merely because it
+    # appeared in a superseding sentence.
+    _SINGLE_VALUED_PREDICATES = frozenset({
+        # ── residence / location (one place at a time) ──────────────────
+        "live", "lives", "lived", "living", "reside", "resides", "resided",
+        "residing", "stay", "stays", "stayed", "move", "moves", "moved",
+        "moving", "relocate", "relocates", "relocated",
+        # ── employment / role (one job at a time) ───────────────────────
+        "work", "works", "worked", "working", "employed", "employ",
+        "hire", "hired",
+        # ── relationship status (one status at a time) ──────────────────
+        "married", "marry", "marries", "dating", "date", "dates",
+        "engaged", "engage", "divorced", "divorce", "widowed",
+        # ── health / body state ─────────────────────────────────────────
+        "allergic", "diagnosed", "pregnant",
+        # ── possession / current tooling (the user's ONE of a kind slot) ─
+        "own", "owns", "owned", "owning",
+        "has", "have", "had", "having",
+        "use", "uses", "used", "using",
+        "drive", "drives", "drove", "driven",
+        # ── ongoing consumption / study (one current item) ──────────────
+        "read", "reads", "reading",
+        "watch", "watches", "watching",
+        "learn", "learns", "learning",
+        "study", "studies", "studying",
+        # NOT listed on purpose: "attend"/"attended", "visit"/"visited",
+        # "graduate"/"graduated", "buy"/"bought". These are MULTI-valued — a
+        # person attends many events, visits many places and graduates from
+        # more than one programme — so a changed object is a new fact, not a
+        # new value of one slot. Listing them would mark real evidence obsolete.
+        # ── plans / intent for a single slot ────────────────────────────
+        "plan", "plans", "planned", "planning",
+        "want", "wants", "wanted", "hoping", "hope", "hopes",
+        # ── state-of-being ──────────────────────────────────────────────
+        "is", "was", "were", "feels", "feel", "felt", "seems", "seem",
+        # ── explicit currency markers ───────────────────────────────────
+        "current", "currently", "now",
+        # ── legacy multi-word phrases, kept for backward compatibility ──
+        # These can no longer be produced by head-extraction, but an existing
+        # caller (or a hand-built Triplet) may still pass them verbatim.
+        "lives in", "live in", "lived in", "living in", "resides in",
+        "moved to", "works at", "works for", "worked at", "worked for",
+        "employed by", "is married to", "married to", "is dating",
+        "is engaged to", "is allergic to", "is reading", "is watching",
+        "is learning", "is studying",
+    })
+
+    # Words that carry no slot information and are dropped while looking for
+    # the head verb: articles, possessives, and the infinitive marker.
+    #
+    # NOTE the copulas are deliberately ABSENT from this set. "is"/"was" are
+    # HEADS, not helpers: the state-adjective form ("is happy", "was tired")
+    # derives its meaning from the copula plus the adjective, so stripping the
+    # copula would reduce "was happy" to the bare adjective "happy" — which is
+    # not a slot the allow-list can match, silently disabling state
+    # supersession. Helper-dropping is only correct for genuine auxiliaries
+    # ("has been reading" -> "reading").
+    _PREDICATE_HELPERS = frozenset({
+        "a", "an", "the", "to", "of", "in", "at", "on", "for", "with",
+        "my", "his", "her", "their", "our", "its", "your",
+        "been", "being", "having",
+        "do", "does", "did", "will", "would", "shall", "should",
+        "can", "could", "may", "might", "must", "going",
+        "currently", "now", "just", "still", "really",
+    })
+
+    @classmethod
+    def _predicate_head(cls, predicate: str) -> str:
+        """Reduce a predicate phrase to the single canonical slot verb.
+
+        The allow-list has to be reachable from what the extractor ACTUALLY
+        emits, which is terse and inconsistent — ``lives``, ``lives in``,
+        ``is reading``, ``reading``, ``has been reading``, ``works at`` are all
+        the same slot. Matching a literal phrase list therefore fails on any
+        phrasing the corpus happens to use (the defect this replaces).
+
+        Reduction rules, in order:
+
+        1. lowercase / strip / collapse whitespace;
+        2. drop leading HELPER tokens only (auxiliaries, articles, the
+           infinitive marker): ``has been reading`` -> ``reading``;
+        3. return the first remaining token as the head. A copula ("is", "was")
+           is retained as the head on purpose, so the state-adjective form
+           keeps its slot meaning.
+
+        An object glued onto the predicate by the extractor (``"bought a car"``,
+        ``"lives in Boston"``) is dropped by rule 3, which is what makes the
+        light-verb + noun form reduce to ``bought`` / ``lives``.
+
+        The returned head is looked up in :attr:`_SINGLE_VALUED_PREDICATES`; an
+        unknown head is treated as MULTI-valued, so an unrecognised verb never
+        invalidates an existing fact.
+        """
+        text = " ".join(str(predicate or "").strip().lower().split())
+        if not text:
+            return ""
+        tokens = [t for t in text.split(" ") if t]
+        i = 0
+        while i < len(tokens) and tokens[i] in cls._PREDICATE_HELPERS:
+            i += 1
+        if i >= len(tokens):
+            # Every token was a helper word; fall back to the first token so an
+            # all-helper predicate is at least stable (and unmatched).
+            return tokens[0] if tokens else ""
+        return tokens[i]
+
+    # Copulas whose presence signals the state-adjective form ("is happy").
+    _STATE_COPULAS = frozenset({"is", "was", "were", "feels", "feel", "felt"})
+
+    @classmethod
+    def _is_single_valued_predicate(cls, predicate: str) -> bool:
+        """True when `predicate` denotes an attribute with only one value.
+
+        Used to decide whether a changed OBJECT should invalidate the previous
+        fact. Multi-valued verbs ("bought", "attended", "visited") are excluded
+        so that "bought a car" and "bought a house" remain two facts — and so
+        that "attended X" is not superseded by "attended Y", since one can
+        attend many events.
+
+        Matching is on the HEAD VERB of the predicate (see
+        :meth:`_predicate_head`) so ``lives`` / ``lives in`` / ``is living`` all
+        resolve to the same slot, and the state-adjective form ("is happy" /
+        "was tired") is recognised from the same head.
+        """
+        pred = cls._norm(predicate)
+        if not pred:
+            return False
+        # Legacy exact-phrase match first, so a caller passing a historical
+        # multi-word entry verbatim keeps working.
+        if pred in cls._SINGLE_VALUED_PREDICATES:
+            return True
+        head = cls._predicate_head(pred)
+        if not head:
+            return False
+        if head in cls._SINGLE_VALUED_PREDICATES:
+            return True
+        # "is <adj>" / "was <adj>" / "feels <adj>" — a state a later state
+        # replaces. Requires MORE than the bare copula: a predicate that is
+        # just "is" is matched by the allow-list above instead.
+        return head in cls._STATE_COPULAS and len(pred.split(" ")) > 1
 
     def _entity_peers(self, note: Note, entity_keys: Set[str]) -> List[Tuple[str, float]]:
         """Existing notes sharing >= 1 entity, best embedding match first."""
@@ -253,6 +498,39 @@ class TemporalHyperGraph:
             peer.L.append(LinkRecord(target_id=src_id, relation=relation))
         self._touched.add(peer_id)
 
+    def _set_interval_link(
+        self,
+        peer_id: str,
+        src_id: str,
+        relation: str,
+        valid_from: Optional[str] = None,
+        valid_to: Optional[str] = None,
+    ) -> None:
+        """Add/refresh a mirror edge carrying a validity interval.
+
+        Like :meth:`_link_back`, but the edge is interval-bearing. An existing
+        edge with the same ``(target, relation)`` is REPLACED so a later
+        supersession can extend/close the interval rather than being ignored on
+        the "already linked" check.
+        """
+        peer = self._fact_nodes.get(peer_id)
+        if peer is None:
+            return
+        peer.L = [
+            link
+            for link in peer.L
+            if not (link.target_id == src_id and link.relation == relation)
+        ]
+        peer.L.append(
+            LinkRecord(
+                target_id=src_id,
+                relation=relation,
+                valid_from=valid_from,
+                valid_to=valid_to,
+            )
+        )
+        self._touched.add(peer_id)
+
     def _link_both(self, a_id: str, b_id: str, relation: str) -> None:
         """Symmetric edge between two notes already known to the graph."""
         a = self._fact_nodes.get(a_id)
@@ -271,8 +549,23 @@ class TemporalHyperGraph:
 
     @staticmethod
     def _entity_keys(note: Note) -> Set[str]:
+        """Identifiers for the ENTITY channel: named things, not topic keywords.
+
+        Only ``entities`` feeds this channel. It used to also union ``K``
+        (keywords), which conflated two different signals: a shared *entity*
+        ("Caroline", "Hawaii") is evidence that two notes are about the same
+        thing, whereas a shared *keyword* ("shopping", "travel", "tired") only
+        means they are on a similar topic — which the semantic channel already
+        measures with embeddings, and which the BM25 channel already measures
+        lexically.
+
+        Folding keywords in inflated the entity fan-out badly: with
+        ``max_entity_links=5`` every note grabbed the 5 highest-similarity peers
+        *among any note sharing any keyword*, so the entity graph drifted toward
+        a clique and ``same-entity`` stopped discriminating. Keywords remain
+        available to retrieval through the keyword/BM25 channel.
+        """
         keys = {TemporalHyperGraph._norm(e) for e in (note.entities or [])}
-        keys |= {TemporalHyperGraph._norm(k) for k in (note.K or [])}
         keys.discard("")
         return keys
 

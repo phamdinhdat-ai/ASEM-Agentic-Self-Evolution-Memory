@@ -23,7 +23,12 @@ from eval.phase_runner import (
     working_copy,
 )
 
-CONFIG = "configs/models/qwen2.5_1.5b_hf.yaml"
+# The injected StubBackend is now honoured by every builder (see
+# `eval/systems.py::build_system`), so the config supplies hyperparameters and the
+# embedder only. Override with ASEM_TEST_CONFIG to exercise a different config.
+CONFIG = os.environ.get(
+    "ASEM_TEST_CONFIG", "configs/models/qwen2.5_1.5b_hf.yaml"
+)
 
 
 class StubBackend(InferenceBackend):
