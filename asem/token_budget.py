@@ -150,6 +150,13 @@ def fit_render_exact(
     if budget is None:
         return render(list(items)), list(items)
 
+    # `budget <= 0` is a real (if degenerate) budget: `estimate_tokens` floors at
+    # 1, so no non-empty prompt can satisfy it. Handle it explicitly rather than
+    # letting the arithmetic below fall through, and never return an over-budget
+    # string — the caller's fallback is the only correct answer.
+    if int(budget) <= 0:
+        return fallback, []
+
     kept = list(items)
     prompt = render(kept)
     if fits(prompt, budget):

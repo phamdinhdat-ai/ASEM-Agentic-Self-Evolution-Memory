@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import numpy as np
 
-from .note import LinkRecord, Note
+from .note import LinkRecord, Note, TripletRecord
 
 try:
     import faiss
@@ -360,7 +360,8 @@ class MemoryBank:
                 session_date TEXT,
                 timestamp_iso TEXT,
                 entities TEXT,
-                speaker TEXT
+                speaker TEXT,
+                triplets TEXT
             )
             """
         )
@@ -376,7 +377,8 @@ class MemoryBank:
         existing_cols = {
             row[1] for row in self._conn.execute("PRAGMA table_info(notes)").fetchall()
         }
-        for col in ["session_id", "session_date", "timestamp_iso", "entities", "speaker"]:
+        for col in ["session_id", "session_date", "timestamp_iso", "entities", "speaker",
+                    "triplets"]:
             if col not in existing_cols:
                 try:
                     self._conn.execute(f"ALTER TABLE notes ADD COLUMN {col} TEXT")
@@ -477,6 +479,15 @@ class MemoryBank:
             "timestamp_iso": note.timestamp_iso,
             "entities": json.dumps(note.entities or []),
             "speaker": note.speaker,
+            # Written only when the note actually carries a triplet. NULL for
+            # every legacy row and for notes whose extraction produced no
+            # subject/predicate, so GB1 is additive: a bank written before this
+            # change loads with `triplets == []` and behaves exactly as it did.
+            "triplets": (
+                json.dumps([t.to_dict() for t in note.triplets])
+                if note.triplets
+                else None
+            ),
         }
 
     def _get_note(self, note_id: str) -> Optional[Note]:
@@ -515,6 +526,14 @@ class MemoryBank:
             timestamp_iso=row["timestamp_iso"] if "timestamp_iso" in keys else None,
             entities=self._decode_entities(row["entities"]) if "entities" in keys else [],
             speaker=row["speaker"] if "speaker" in keys else None,
+            # Guarded on the column AND on a non-null value: a pre-GB1 bank has
+            # no column (or all-NULL values), and both must yield [] rather than
+            # raising or producing a `[TripletRecord()]` placeholder.
+            triplets=(
+                [TripletRecord.from_dict(t) for t in json.loads(row["triplets"])]
+                if "triplets" in keys and row["triplets"]
+                else []
+            ),
         )
 
     @staticmethod

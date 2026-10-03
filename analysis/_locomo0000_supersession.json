@@ -1,0 +1,287 @@
+{
+  "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG/locomo_0000/asem_thg.sqlite",
+  "n_notes": 365,
+  "n_superseded_by_link_records": 10,
+  "n_unique_pairs": 5,
+  "n_same_session": 1,
+  "n_cross_session": 4,
+  "n_pairs_sharing_entity": 5,
+  "pairs": [
+    {
+      "pair": [
+        "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+        "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7"
+      ],
+      "same_session": false,
+      "a_session_id": "s1",
+      "b_session_id": "s4",
+      "a_session_date": "1:56 pm on 8 May, 2023",
+      "b_session_date": "10:37 am on 27 June, 2023",
+      "a_t": "2023-05-08T13:56:00+00:00",
+      "b_t": "2023-06-27T10:37:00+00:00",
+      "older_id": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+      "newer_id": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
+      "older_session": "s1",
+      "newer_session": "s4",
+      "older_date": "1:56 pm on 8 May, 2023",
+      "newer_date": "10:37 am on 27 June, 2023",
+      "older_sentence": "Melanie reacted to Caroline's necklace, saying it was gorgeous and that such items can mean so much; Melanie's own grandmother gave her a necklace from Sweden.",
+      "newer_sentence": "Melanie reacted to Caroline's necklace, saying it is gorgeous and that items can mean a lot to us.",
+      "older_entities": [
+        "Melanie",
+        "Caroline",
+        "Sweden"
+      ],
+      "newer_entities": [
+        "Melanie",
+        "Caroline"
+      ],
+      "older_K": [
+        "necklace",
+        "grandmother",
+        "Sweden",
+        "sentiment"
+      ],
+      "newer_K": [
+        "necklace",
+        "gorgeous",
+        "items",
+        "meaning"
+      ],
+      "older_X": "Melanie reacted to Caroline's necklace, saying it was gorgeous and that such items can mean so much; Melanie's own grandmother gave her a necklace from Sweden.",
+      "newer_X": "Melanie reacted to Caroline's necklace, saying it is gorgeous and that items can mean a lot to us.",
+      "intervals": [
+        {
+          "from": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+          "to": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
+          "valid_from": "2023-05-08T13:56:00Z",
+          "valid_to": "2023-06-27T10:37:00Z"
+        },
+        {
+          "from": "9cfb0e3f-d59e-4d82-aae7-71abd33f29a7",
+          "to": "00cb74d3-4af9-47d1-8c3e-3d315f5c5f23",
+          "valid_from": "2023-06-27T10:37:00Z",
+          "valid_to": null
+        }
+      ]
+    },
+    {
+      "pair": [
+        "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+        "a9c6eafb-f81f-4baa-90b1-131f4150688f"
+      ],
+      "same_session": false,
+      "a_session_id": "s12",
+      "b_session_id": "s8",
+      "a_session_date": "1:50 pm on 17 August, 2023",
+      "b_session_date": "1:51 pm on 15 July, 2023",
+      "a_t": "2023-08-17T13:50:00+00:00",
+      "b_t": "2023-07-15T13:51:00+00:00",
+      "older_id": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
+      "newer_id": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+      "older_session": "s8",
+      "newer_session": "s12",
+      "older_date": "1:51 pm on 15 July, 2023",
+      "newer_date": "1:50 pm on 17 August, 2023",
+      "older_sentence": "Melanie appreciates Caroline's friendship and says it is great to have a supporter.",
+      "newer_sentence": "Melanie said she appreciates her friendship with Caroline and that Caroline has always been there for her.",
+      "older_entities": [
+        "Melanie",
+        "Caroline"
+      ],
+      "newer_entities": [
+        "Melanie",
+        "Caroline"
+      ],
+      "older_K": [
+        "friendship",
+        "support",
+        "appreciation"
+      ],
+      "newer_K": [
+        "friendship",
+        "appreciation",
+        "support"
+      ],
+      "older_X": "Melanie appreciates Caroline's friendship and says it is great to have a supporter.",
+      "newer_X": "Melanie said she appreciates her friendship with Caroline and that Caroline has always been there for her.",
+      "intervals": [
+        {
+          "from": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
+          "to": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+          "valid_from": "2023-07-15T13:51:00Z",
+          "valid_to": "2023-08-17T13:50:00Z"
+        },
+        {
+          "from": "3683f17f-e3cb-4f93-ba4a-0534695adc10",
+          "to": "a9c6eafb-f81f-4baa-90b1-131f4150688f",
+          "valid_from": "2023-08-17T13:50:00Z",
+          "valid_to": null
+        }
+      ]
+    },
+    {
+      "pair": [
+        "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+        "e0e77d59-ee47-4738-abff-ec09bc0ebb12"
+      ],
+      "same_session": false,
+      "a_session_id": "s7",
+      "b_session_id": "s13",
+      "a_session_date": "4:33 pm on 12 July, 2023",
+      "b_session_date": "3:31 pm on 23 August, 2023",
+      "a_t": "2023-07-12T16:33:00+00:00",
+      "b_t": "2023-08-23T15:31:00+00:00",
+      "older_id": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+      "newer_id": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+      "older_session": "s7",
+      "newer_session": "s13",
+      "older_date": "4:33 pm on 12 July, 2023",
+      "newer_date": "3:31 pm on 23 August, 2023",
+      "older_sentence": "Melanie has a dog and a cat, which brighten up her day and always make her smile.",
+      "newer_sentence": "Melanie's pets are doing well and she recently got another cat named Bailey.",
+      "older_entities": [
+        "Melanie"
+      ],
+      "newer_entities": [
+        "Melanie",
+        "Bailey"
+      ],
+      "older_K": [
+        "dog",
+        "cat",
+        "pets"
+      ],
+      "newer_K": [
+        "Bailey",
+        "cat",
+        "pet"
+      ],
+      "older_X": "Melanie has a dog and a cat, which brighten up her day and always make her smile.",
+      "newer_X": "Melanie's pets are doing well and she recently got another cat named Bailey.",
+      "intervals": [
+        {
+          "from": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+          "to": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+          "valid_from": "2023-08-23T15:31:00Z",
+          "valid_to": null
+        },
+        {
+          "from": "63ba2eb3-0818-45b2-bc6d-bb9de582b90d",
+          "to": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+          "valid_from": "2023-07-12T16:33:00Z",
+          "valid_to": "2023-08-23T15:31:00Z"
+        }
+      ]
+    },
+    {
+      "pair": [
+        "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+        "e0e77d59-ee47-4738-abff-ec09bc0ebb12"
+      ],
+      "same_session": true,
+      "a_session_id": "s13",
+      "b_session_id": "s13",
+      "a_session_date": "3:31 pm on 23 August, 2023",
+      "b_session_date": "3:31 pm on 23 August, 2023",
+      "a_t": "2023-08-23T15:31:00+00:00",
+      "b_t": "2023-08-23T15:31:00+00:00",
+      "older_id": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+      "newer_id": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+      "older_session": "s13",
+      "newer_session": "s13",
+      "older_date": "3:31 pm on 23 August, 2023",
+      "newer_date": "3:31 pm on 23 August, 2023",
+      "older_sentence": "Melanie's pets are doing well and she recently got another cat named Bailey.",
+      "newer_sentence": "Melanie has a pet named Oliver.",
+      "older_entities": [
+        "Melanie",
+        "Bailey"
+      ],
+      "newer_entities": [
+        "Melanie",
+        "Oliver"
+      ],
+      "older_K": [
+        "Bailey",
+        "cat",
+        "pet"
+      ],
+      "newer_K": [
+        "Oliver",
+        "pet"
+      ],
+      "older_X": "Melanie's pets are doing well and she recently got another cat named Bailey.",
+      "newer_X": "Melanie has a pet named Oliver.",
+      "intervals": [
+        {
+          "from": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+          "to": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+          "valid_from": "2023-08-23T15:31:00Z",
+          "valid_to": "2023-08-23T15:31:00Z"
+        },
+        {
+          "from": "bfa7f428-748f-47ab-8a55-bbf1cbd5dfeb",
+          "to": "e0e77d59-ee47-4738-abff-ec09bc0ebb12",
+          "valid_from": "2023-08-23T15:31:00Z",
+          "valid_to": null
+        }
+      ]
+    },
+    {
+      "pair": [
+        "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+        "c47a1be6-6029-4475-910d-5a1239924a1c"
+      ],
+      "same_session": false,
+      "a_session_id": "s18",
+      "b_session_id": "s10",
+      "a_session_date": "6:55 pm on 20 October, 2023",
+      "b_session_date": "8:56 pm on 20 July, 2023",
+      "a_t": "2023-10-20T18:55:00+00:00",
+      "b_t": "2023-07-20T20:56:00+00:00",
+      "older_id": "c47a1be6-6029-4475-910d-5a1239924a1c",
+      "newer_id": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+      "older_session": "s10",
+      "newer_session": "s18",
+      "older_date": "8:56 pm on 20 July, 2023",
+      "newer_date": "6:55 pm on 20 October, 2023",
+      "older_sentence": "Melanie says she is really lucky to have her family, who bring her so much joy and love.",
+      "newer_sentence": "After the accident, Melanie reflected on how much she needs her family, saying they mean the world to her.",
+      "older_entities": [
+        "Melanie"
+      ],
+      "newer_entities": [
+        "Melanie"
+      ],
+      "older_K": [
+        "family",
+        "joy",
+        "love",
+        "gratitude"
+      ],
+      "newer_K": [
+        "family",
+        "values",
+        "accident",
+        "thankful"
+      ],
+      "older_X": "Melanie says she is really lucky to have her family, who bring her so much joy and love.",
+      "newer_X": "After the accident, Melanie reflected on how much she needs her family, saying they mean the world to her.",
+      "intervals": [
+        {
+          "from": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+          "to": "c47a1be6-6029-4475-910d-5a1239924a1c",
+          "valid_from": "2023-10-20T18:55:00Z",
+          "valid_to": null
+        },
+        {
+          "from": "c47a1be6-6029-4475-910d-5a1239924a1c",
+          "to": "09f44432-e8c0-4a9e-8ea1-d5343d039f29",
+          "valid_from": "2023-07-20T20:56:00Z",
+          "valid_to": "2023-10-20T18:55:00Z"
+        }
+      ]
+    }
+  ]
+}

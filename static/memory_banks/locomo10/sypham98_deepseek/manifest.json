@@ -1,0 +1,54 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "sypham98_deepseek",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/sypham98_deepseek.yaml",
+  "config_sha256": "f3cd37ebc78cdf14a0e9b958f25773e6dc8051126b76f661b68f0ace74700658",
+  "model": "sypham98/deepseek-v4-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "ASEM-THG"
+  ],
+  "created_at": "2026-09-29T11:30:11",
+  "updated_at": "2026-09-29T11:34:27",
+  "elapsed_sec": 256.2,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {}
+    }
+  ],
+  "totals": {
+    "conversations": 1,
+    "banks_ok": 0,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {}
+  },
+  "run": {
+    "built": 0,
+    "skipped": 0,
+    "errors": 0,
+    "notes": 0,
+    "discarded_partial": 0,
+    "interrupted": true
+  },
+  "config_history": [
+    {
+      "config_sha256": "f3cd37ebc78cdf14a0e9b958f25773e6dc8051126b76f661b68f0ace74700658",
+      "ingest_config": "configs/models/sypham98_deepseek.yaml",
+      "model": "sypham98/deepseek-v4-flash",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      },
+      "first_used": "2026-09-29T11:30:11"
+    }
+  ]
+}

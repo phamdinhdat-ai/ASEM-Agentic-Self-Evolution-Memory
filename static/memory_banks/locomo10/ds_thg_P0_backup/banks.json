@@ -1,0 +1,144 @@
+{
+  "ASEM-THG": {
+    "locomo_0000": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0000\\asem_thg.sqlite",
+      "notes": 0,
+      "link_edges": 0,
+      "new_edges": 0,
+      "status": "error",
+      "bytes": 0,
+      "config_sha256": "d9208139731fcee230af20a9ecaa5a363ee68401c8ed1e6f33c21dd033fc032b",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0001": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0001\\asem_thg.sqlite",
+      "notes": 303,
+      "link_edges": 5378,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 6037504,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0002": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0002\\asem_thg.sqlite",
+      "notes": 478,
+      "link_edges": 7280,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 9408512,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0003": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0003\\asem_thg.sqlite",
+      "notes": 480,
+      "link_edges": 8562,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 9572352,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0004": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0004\\asem_thg.sqlite",
+      "notes": 465,
+      "link_edges": 6958,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 9158656,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0005": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+      "notes": 463,
+      "link_edges": 8384,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 9248768,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0006": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+      "notes": 525,
+      "link_edges": 7842,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 10326016,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0007": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+      "notes": 481,
+      "link_edges": 7800,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 9588736,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0008": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0008\\asem_thg.sqlite",
+      "notes": 376,
+      "link_edges": 6216,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 7491584,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "locomo_0009": {
+      "path": "static/memory_banks\\locomo10\\ds_thg\\ASEM-THG\\locomo_0009\\asem_thg.sqlite",
+      "notes": 406,
+      "link_edges": 6652,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 8048640,
+      "config_sha256": "49c2fe0206bb33750bbe1813190d622bd2e3d0b08c5bd463b0dfacfcf5bee646",
+      "thinking": {
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    }
+  }
+}

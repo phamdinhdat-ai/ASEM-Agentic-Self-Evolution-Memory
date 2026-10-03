@@ -1,0 +1,94 @@
+{
+  "root": "static/memory_banks/locomo10/thg_v2/ASEM-THG",
+  "n_conversations": 6,
+  "total_same_entity_edges": 10960,
+  "total_hub_only": 10671,
+  "total_discriminative": 289,
+  "aggregate_hub_only_edge_fraction": 0.9736313868613139,
+  "per_conversation": [
+    {
+      "n_notes": 365,
+      "hubs": [
+        "caroline",
+        "melanie"
+      ],
+      "n_same_entity_edges": 1792,
+      "n_hub_only": 1779,
+      "n_discriminative": 13,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9927455357142857,
+      "conversation": "locomo_0000",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0000\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 347,
+      "hubs": [
+        "gina",
+        "jon"
+      ],
+      "n_same_entity_edges": 1708,
+      "n_hub_only": 1693,
+      "n_discriminative": 15,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9912177985948478,
+      "conversation": "locomo_0001",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0001\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 493,
+      "hubs": [
+        "john",
+        "maria"
+      ],
+      "n_same_entity_edges": 2429,
+      "n_hub_only": 2318,
+      "n_discriminative": 111,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9543021819678881,
+      "conversation": "locomo_0002",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0002\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 492,
+      "hubs": [
+        "joanna",
+        "nate"
+      ],
+      "n_same_entity_edges": 2432,
+      "n_hub_only": 2395,
+      "n_discriminative": 37,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9847861842105263,
+      "conversation": "locomo_0003",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0003\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 482,
+      "hubs": [
+        "john",
+        "tim"
+      ],
+      "n_same_entity_edges": 2380,
+      "n_hub_only": 2281,
+      "n_discriminative": 99,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9584033613445379,
+      "conversation": "locomo_0004",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0004\\asem_thg.sqlite"
+    },
+    {
+      "n_notes": 50,
+      "hubs": [
+        "andrew",
+        "audrey"
+      ],
+      "n_same_entity_edges": 219,
+      "n_hub_only": 205,
+      "n_discriminative": 14,
+      "n_no_intersection": 0,
+      "hub_only_edge_fraction": 0.9360730593607306,
+      "conversation": "locomo_0005",
+      "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG\\locomo_0005\\asem_thg.sqlite"
+    }
+  ]
+}

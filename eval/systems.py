@@ -489,6 +489,8 @@ def build_asem_system(
         # Honour the config's answer temperature (previously ignored entirely, so
         # runs sampled at `inference.temperature` instead).
         temperature=_opt_float((cfg.get("answer") or {}).get("temperature")),
+        # WS3 (context-dev): defaults to "legacy" = today's exact bytes.
+        context_style=str((cfg.get("answer") or {}).get("context_style", "legacy")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -584,6 +586,8 @@ def build_asem_v2_system(
         # Honour the config's answer temperature (previously ignored entirely, so
         # runs sampled at `inference.temperature` instead).
         temperature=_opt_float((cfg.get("answer") or {}).get("temperature")),
+        # WS3 (context-dev): defaults to "legacy" = today's exact bytes.
+        context_style=str((cfg.get("answer") or {}).get("context_style", "legacy")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -740,6 +744,7 @@ def build_asem_thg_system(
     # block; the defaults reproduce the previously hard-coded THG values so an
     # unchanged config behaves exactly as before (Phase 2d).
     ret_cfg = cfg.get("retriever", {}) or {}
+    hg_cfg = cfg.get("hyper_graph", {}) or {}
 
     def _ret(key: str, default: Any) -> Any:
         val = ret_cfg.get(key, default)
@@ -750,7 +755,18 @@ def build_asem_thg_system(
     # object to run query-seeded Personalized PageRank over them. Constructing
     # two graphs would leave PPR walking an empty structure (which is how it
     # ended up as dead code before).
-    thg_graph = TemporalHyperGraph()
+    #
+    # `supersession` defaults OFF (GB2e). Auditing every supersession in the
+    # frozen 365-note LoCoMo bank found 0 of 5 pairs correct — each marked a
+    # still-true fact obsolete, one replacing a richer note with a lossier
+    # paraphrase — while `enhanced_retriever.relation_weights` promotes
+    # `superseded_by` at the highest weight in its table. Set
+    # `hyper_graph.supersession: true` to restore the relation as an ablation;
+    # the W4 interval machinery is unaffected either way.
+    thg_graph = TemporalHyperGraph(
+        enable_supersession=bool(hg_cfg.get("supersession", False)),
+        entity_idf_floor=float(hg_cfg.get("entity_idf_floor", float("-inf"))),
+    )
 
     retriever = EnhancedHybridRetriever(
         backend=backend,
@@ -774,12 +790,19 @@ def build_asem_thg_system(
         hyper_graph=thg_graph,
         ppr_weight=float(_ret("ppr_weight", 0.15)),
         ppr_topk=int(_ret("ppr_topk", 20)),
+        # GB4: bidirectional personalization. Defaults (False / 0.5) preserve
+        # today's outward-only ranking exactly.
+        ppr_reverse=bool(_ret("ppr_reverse", False)),
+        ppr_reverse_weight=float(_ret("ppr_reverse_weight", 0.5)),
     )
     answer_agent = AnswerAgent(
         backend=backend,
         prompt_template=distil_prompt,
         baseline_prompt_template=qa_prompt,
         direct_mode=bool(ans_cfg.get("direct_mode", True)),
+        # WS3 (context-dev): context-block rendering style. Defaults to
+        # "legacy" = today's exact bytes, so no existing frozen-bank run changes.
+        context_style=str(ans_cfg.get("context_style", "legacy")),
         max_retries=max_retries,
         max_tokens=int(ans_cfg.get("max_tokens") or 0) or None,
         context_window=int(ans_cfg.get("context_window") or 0) or None,
@@ -905,6 +928,8 @@ def build_baselines(
         # Without this the YAML's `answer.temperature` was read by nothing and
         # every run silently sampled at `inference.temperature` (0.3).
         temperature=_opt_float(ans_cfg.get("temperature")),
+        # WS3 (context-dev): defaults to "legacy" = today's exact bytes.
+        context_style=str(ans_cfg.get("context_style", "legacy")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,
@@ -1043,6 +1068,8 @@ def build_fast_asem_system(
         max_retries=max_retries,
         # `asem_cfg.answer` is an attribute-style object here, not a dict.
         temperature=_opt_float(getattr(ans_cfg, "temperature", None)),
+        # WS3 (context-dev): attribute-style access, so `getattr` not `.get`.
+        context_style=str(getattr(ans_cfg, "context_style", "legacy")),
     )
     utility_updater = UtilityUpdater(
         backend=backend,

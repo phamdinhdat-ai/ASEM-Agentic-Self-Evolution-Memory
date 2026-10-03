@@ -1,0 +1,186 @@
+{
+  "tool": "analysis/snapshot_hook.py",
+  "note": "One row per LongMemEval question, captured in-process at MemoryBank.clear().",
+  "n_questions": 2,
+  "per_question": [
+    {
+      "captured_at": "2026-10-03T13:23:56",
+      "n_notes": 39,
+      "n_edges": 148,
+      "n_unique_undirected_pairs": 59,
+      "edge_histogram": {
+        "temporal": 72,
+        "semantic": 40,
+        "same-entity": 28,
+        "superseded_by": 8
+      },
+      "entity_fanout_mean": 2.4103,
+      "entity_fanout_median": 0.0,
+      "entity_fanout_p90": 8.0,
+      "entity_fanout_max": 9,
+      "n_distinct_entities": 7,
+      "n_notes_with_empty_entities": 21,
+      "n_superseded_by_edges": 8,
+      "n_notes_with_supersession": 6,
+      "n_supersession_pairs": 4,
+      "n_supersession_pairs_same_session": 2,
+      "n_supersession_pairs_cross_session": 2,
+      "supersession_pairs": [
+        {
+          "a": "c32299c0-35f8-43b7-841a-f4da354ed79f",
+          "b": "deed5815-54d9-494d-9d0f-69dddbe33d54",
+          "same_session": true,
+          "a_session": "s1",
+          "b_session": "s1",
+          "a_date": "2023-04-10T17:50:00+00:00",
+          "b_date": "2023-04-10T17:50:00+00:00",
+          "a_sentence": "The user plans to check out review websites and ask around for referrals to find a good detailer.",
+          "b_sentence": "The user is thinking of getting their car detailed soon.",
+          "a_entities": [],
+          "b_entities": []
+        },
+        {
+          "a": "c32299c0-35f8-43b7-841a-f4da354ed79f",
+          "b": "d4316816-b89a-4a06-9a8d-ee130067d493",
+          "same_session": true,
+          "a_session": "s1",
+          "b_session": "s1",
+          "a_date": "2023-04-10T17:50:00+00:00",
+          "b_date": "2023-04-10T17:50:00+00:00",
+          "a_sentence": "The user plans to check out review websites and ask around for referrals to find a good detailer.",
+          "b_sentence": "The user has been thinking about getting a car wax and detailing done soon and wants help finding a good detailer in their area.",
+          "a_entities": [],
+          "b_entities": []
+        },
+        {
+          "a": "4e86a8c0-d428-4021-9241-a770c503d09d",
+          "b": "9a31d7b8-2927-4b73-a83d-bc497043960c",
+          "same_session": false,
+          "a_session": "s3",
+          "b_session": "s1",
+          "a_date": "2023-04-10T17:15:00+00:00",
+          "b_date": "2023-04-10T17:50:00+00:00",
+          "a_sentence": "The user has been using the Shell gas station near their office to fill up and earning points through Shell's rewards program.",
+          "b_sentence": "The user has been using the rewards program at the Shell gas station near their office to earn points.",
+          "a_entities": [
+            "shell",
+            "user"
+          ],
+          "b_entities": [
+            "shell"
+          ]
+        },
+        {
+          "a": "d4316816-b89a-4a06-9a8d-ee130067d493",
+          "b": "931a42b8-4e14-40e1-b556-5b453d9d6887",
+          "same_session": false,
+          "a_session": "s1",
+          "b_session": "s2",
+          "a_date": "2023-04-10T17:50:00+00:00",
+          "b_date": "2023-04-10T14:47:00+00:00",
+          "a_sentence": "The user has been thinking about getting a car wax and detailing done soon and wants help finding a good detailer in their area.",
+          "b_sentence": "The user is considering getting a car wax and detailing done soon.",
+          "a_entities": [],
+          "b_entities": []
+        }
+      ],
+      "n_notes_timestamp_iso_null": 0,
+      "n_notes_timestamp_today": 0,
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "top10_entities_by_df": [
+        {
+          "entity": "user",
+          "df": 9,
+          "df_over_n": 0.2308
+        },
+        {
+          "entity": "emily",
+          "df": 4,
+          "df_over_n": 0.1026
+        },
+        {
+          "entity": "honda",
+          "df": 3,
+          "df_over_n": 0.0769
+        },
+        {
+          "entity": "shell",
+          "df": 3,
+          "df_over_n": 0.0769
+        },
+        {
+          "entity": "dealership",
+          "df": 2,
+          "df_over_n": 0.0513
+        },
+        {
+          "entity": "yellowstone national park",
+          "df": 2,
+          "df_over_n": 0.0513
+        },
+        {
+          "entity": "bank",
+          "df": 1,
+          "df_over_n": 0.0256
+        }
+      ]
+    },
+    {
+      "captured_at": "2026-10-03T13:24:08",
+      "n_notes": 17,
+      "n_edges": 40,
+      "n_unique_undirected_pairs": 16,
+      "edge_histogram": {
+        "temporal": 30,
+        "semantic": 8,
+        "same-entity": 2
+      },
+      "entity_fanout_mean": 16.0,
+      "entity_fanout_median": 16.0,
+      "entity_fanout_p90": 16.0,
+      "entity_fanout_max": 16,
+      "n_distinct_entities": 4,
+      "n_notes_with_empty_entities": 0,
+      "n_superseded_by_edges": 0,
+      "n_notes_with_supersession": 0,
+      "n_supersession_pairs": 0,
+      "n_supersession_pairs_same_session": 0,
+      "n_supersession_pairs_cross_session": 0,
+      "supersession_pairs": [],
+      "n_notes_timestamp_iso_null": 0,
+      "n_notes_timestamp_today": 0,
+      "n_notes_date_unknown": 0,
+      "session_ids": [
+        "s1",
+        "s2"
+      ],
+      "top10_entities_by_df": [
+        {
+          "entity": "user",
+          "df": 17,
+          "df_over_n": 1.0
+        },
+        {
+          "entity": "tableau",
+          "df": 2,
+          "df_over_n": 0.1176
+        },
+        {
+          "entity": "power bi",
+          "df": 2,
+          "df_over_n": 0.1176
+        },
+        {
+          "entity": "local community center",
+          "df": 1,
+          "df_over_n": 0.0588
+        }
+      ]
+    }
+  ]
+}

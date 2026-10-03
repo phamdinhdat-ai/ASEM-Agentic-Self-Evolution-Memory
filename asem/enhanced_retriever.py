@@ -112,12 +112,27 @@ class EnhancedHybridRetriever(HybridRetriever):
     # Set to 0.0 to reproduce the previous behaviour exactly.
     ppr_weight: float = 0.15
     ppr_topk: int = 20
+    # GB4: bidirectional personalization. `personalized_pagerank` walks OUTWARD
+    # from the seeds, so a note that merely POINTS AT the seed set — a premise
+    # the seed depends on — could never be surfaced at any rank, however strong
+    # the dependency. `ppr_reverse` adds the reversed walk as a second channel,
+    # which is what makes "what does this evidence rest on?" reachable.
+    #
+    # Defaults preserve today's behaviour exactly: `ppr_reverse=False` means the
+    # reverse channel contributes nothing, and `ppr_weight=0.0` still reproduces
+    # the pre-W3 ranking byte-for-byte.
+    ppr_reverse: bool = False
+    ppr_reverse_weight: float = 0.5
     # The corpus graph lives on ``pipeline.hyper_graph`` for ASEM-THG. It is
     # optional so plain ASEM / FastASEM runs keep working unchanged.
     hyper_graph: Optional[Any] = None
     # note_id -> PPR score from the most recent query. Populated by
     # ``_ppr_expand`` and consumed by the Phase D blend.
     ppr_scores: Dict[str, float] = field(default_factory=dict, init=False, repr=False)
+    # GB4: note_id -> score from the REVERSED walk, kept as a SEPARATE dict (not
+    # merged into `ppr_scores`) so an ablation can tell the two channels apart
+    # and `ppr_scores` keeps its existing meaning for any existing consumer.
+    ppr_scores_reverse: Dict[str, float] = field(default_factory=dict, init=False, repr=False)
 
     # ------------------------------------------------------------------
     # Override: retrieve()
@@ -212,6 +227,27 @@ class EnhancedHybridRetriever(HybridRetriever):
                 ppr_z = (raw_ppr / hi) if hi > 0 else np.zeros(n)
             else:
                 ppr_z = np.zeros(n)
+
+            # GB4: fold the REVERSED walk into the SAME term, combined by
+            # `max`. Taking the max rather than a sum is deliberate: the two
+            # walks answer different questions ("what follows from the
+            # evidence" vs "what the evidence rests on") and a note strong in
+            # exactly one of them should be promoted, not diluted by being
+            # absent from the other. `ppr_reverse_weight` scales the reverse
+            # channel so a run can trust it less than the forward walk.
+            if self.ppr_reverse and self.ppr_scores_reverse:
+                raw_rev = np.array(
+                    [self.ppr_scores_reverse.get(note.id, 0.0) for note in base_results],
+                    dtype=float,
+                )
+                hi_rev = float(raw_rev.max()) if raw_rev.size else 0.0
+                ppr_rev_z = (
+                    (raw_rev / hi_rev) * float(self.ppr_reverse_weight)
+                    if hi_rev > 0
+                    else np.zeros(n)
+                )
+                ppr_z = np.maximum(ppr_z, ppr_rev_z)
+                self.stats["phase_d_ppr_reverse_active"] = bool(ppr_rev_z.any())
 
             # Renormalize hybrid weights so the base ordering always retains
             # primacy, then distribute the remainder across the graph terms.
@@ -340,6 +376,7 @@ class EnhancedHybridRetriever(HybridRetriever):
         if self.hyper_graph is None or self.ppr_weight <= 0.0:
             return []
         self.ppr_scores = {}
+        self.ppr_scores_reverse = {}
         seeds = [n.id for n in base_results[: self.multi_hop_topn * 2]]
         if not seeds:
             return []
@@ -352,10 +389,32 @@ class EnhancedHybridRetriever(HybridRetriever):
         # Record the full ranking (seeds included) for the Phase D blend.
         self.ppr_scores = {nid: float(score) for nid, score in ranked}
 
+        # GB4: the reversed walk. Kept in its own dict so Phase D can decide how
+        # much to trust it and so `ppr_scores` retains its existing meaning.
+        reverse_added: List[str] = []
+        if self.ppr_reverse:
+            try:
+                reverse_ranked = self.hyper_graph.personalized_pagerank(
+                    seeds, top_k=self.ppr_topk, reverse=True
+                )
+                self.ppr_scores_reverse = {
+                    nid: float(score) for nid, score in reverse_ranked
+                }
+                reverse_added = [nid for nid, _ in reverse_ranked]
+            except Exception as exc:  # noqa: BLE001
+                _log.debug("Reverse PPR expansion skipped: {}", exc)
+                self.ppr_scores_reverse = {}
+
         known = {n.id for n in base_results}
         # Batch-fetch the ranked ids; `get_notes_by_ids` avoids one SQLite round
-        # trip per candidate.
-        wanted = [nid for nid, _ in ranked if nid not in known]
+        # trip per candidate. The reverse ranking is concatenated so its
+        # candidates are reachable too — a premise note must actually enter the
+        # pool before Phase D can rank it.
+        wanted = [
+            nid for nid in ([nid for nid, _ in ranked] + reverse_added)
+            if nid not in known
+        ]
+        wanted = list(dict.fromkeys(wanted))
         if not wanted:
             return []
         try:

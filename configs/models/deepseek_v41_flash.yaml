@@ -77,6 +77,16 @@ answer:
   max_tokens: 512
   temperature: 0.0
   context_window: 32768
+  # W10 retrieval-context style.
+  #   "legacy" (default) = the historical rendering, byte-for-byte. Every frozen
+  #            bank result and published number stays reproducible.
+  #   "thg_v1"           = session provenance in each block header, an
+  #            "Evidence chains" section for multi-hop bridges, question-aware
+  #            structure (Date anchors / chronological positions / current-fact
+  #            first with a `superseded` marker) and render drop counters.
+  # The two arms differ in exactly this one flag, so an ablation is a one-line
+  # config change and no other code path moves.
+  context_style: "legacy"
 
 ingestion:
   mode: "session_batch"

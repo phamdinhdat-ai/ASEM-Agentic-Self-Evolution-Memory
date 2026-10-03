@@ -1,0 +1,59 @@
+============================================================================================
+A. FOUR-WAY COST SPLIT (mean chars, and share of the legacy baseline)
+============================================================================================
+
+  Each component is measured by REMOVING it: cost = full - (full without it).
+  Components can overlap in the header, so label+chain+anchors+positions may
+  differ slightly from full-legacy; both numbers are reported.
+
+  dataset        legacy   thg_v1      label     chains    anchors   position
+  ------------------------------------------------------------------------------
+  locomo           4001     4284      +168       +111         +3         +0
+    as % of legacy            7.07%    +4.20%     +2.78%     +0.09%     +0.00%
+
+  longmemeval      7153     7582      +168       +184         +0        +77
+    as % of legacy            6.00%    +2.35%     +2.58%     +0.00%     +1.07%
+
+  Conditional (only questions where the component fires):
+    locomo       anchors: n=  2 mean   +104 chars | positions: n=  0 mean     +0 chars
+    longmemeval  anchors: n= 23 mean     +0 chars | positions: n= 32 mean   +144 chars
+
+============================================================================================
+B. CHAIN BASE RATE AND SILENT DEGRADATION
+============================================================================================
+
+  locomo (N=60)
+    chains rendered (>=1)          :  43/60 = 0.717
+    chains == 0 BECAUSE note.L empty:   0/60 = 0.000  <- silent degradation
+    chains == 0 DESPITE note.L set  :  17/60 = 0.283  <- no in-block bridge
+    mean chains per question        : 2.10
+    questions where NO note had L   : 0/60
+
+  longmemeval (N=60)
+    chains rendered (>=1)          :  59/60 = 0.983
+    chains == 0 BECAUSE note.L empty:   0/60 = 0.000  <- silent degradation
+    chains == 0 DESPITE note.L set  :   1/60 = 0.017  <- no in-block bridge
+    mean chains per question        : 3.22
+    questions where NO note had L   : 0/60
+
+  INTERPRETATION: a chains==0 row is NOT a dropped bridge in this corpus.
+  It is either (a) note.L genuinely empty (no graph object at load), or
+  (b) no link whose TARGET is inside the 8-note block. Both are reported
+  above so the two causes are not conflated.
+
+============================================================================================
+C. DROPPED-CONTENT DISTRIBUTION (W10.2 accounting, from the 120-row report)
+============================================================================================
+
+  locomo (N=60)
+    dropped_sentences min/med/p90/max: (1, 2, 5, 8) (total 170)
+    dropped_chars     min/med/p90/max: (24, 133, 364, 629) (total 11413)
+    notes rendered    min/med/p90/max: (8, 8, 8, 8)  (cap=8)
+    questions where content was dropped: 60/60 = 1.000
+
+  longmemeval (N=60)
+    dropped_sentences min/med/p90/max: (16, 40, 57, 76) (total 2471)
+    dropped_chars     min/med/p90/max: (3261, 8807, 13373, 16448) (total 552529)
+    notes rendered    min/med/p90/max: (8, 8, 8, 8)  (cap=8)
+    questions where content was dropped: 60/60 = 1.000
+

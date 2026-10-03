@@ -1,0 +1,42 @@
+{
+  "locomo_0000 :: static\\memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0000\\asem_thg.sqlite": {
+    "n_notes": 365,
+    "n_link_records": 6252,
+    "n_unique_undirected_pairs": 2002,
+    "relation_histogram": {
+      "same-entity": 3584,
+      "semantic": 1966,
+      "temporal": 692,
+      "superseded_by": 10
+    },
+    "entity_fanout": {
+      "mean": 252.5150684931507,
+      "median": 237,
+      "p90": 362.0,
+      "max": 363,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 28,
+    "implied_same_entity_pairs": 49346,
+    "n_notes_with_superseded_by": 9,
+    "share_notes_with_superseded_by": 0.024657534246575342,
+    "n_supersession_pairs": 5,
+    "supersession_examples": [],
+    "n_notes_timestamp_iso_present": 365,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 365,
+    "session_id_kinds": {
+      "ordinal": 365
+    },
+    "session_id_samples": [
+      "s2",
+      "s4",
+      "s4",
+      "s5",
+      "s4"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2/ASEM-THG/locomo_0000/asem_thg.sqlite"
+  }
+}

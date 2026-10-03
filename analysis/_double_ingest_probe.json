@@ -1,0 +1,63 @@
+{
+  "idx": 0,
+  "question_id": "gpt4_2655b836",
+  "n_sessions": 3,
+  "n_turns": 36,
+  "history_len": 39,
+  "history_first_item": "[Session 1 \u2014 2023/04/10 (Mon) 17:50]",
+  "history_is_flat_str_list": true,
+  "stages": [
+    {
+      "tag": "T0_after_reset",
+      "n": 0,
+      "n_null_timestamp_iso": 0,
+      "n_timestamp_today": 0,
+      "n_with_session_id": 0,
+      "session_ids": [],
+      "n_with_session_date": 0,
+      "distinct_session_dates": []
+    },
+    {
+      "tag": "T1_after_explicit_ingest_question",
+      "n": 34,
+      "n_null_timestamp_iso": 0,
+      "n_timestamp_today": 0,
+      "n_with_session_id": 34,
+      "session_ids": [
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "n_with_session_date": 34,
+      "distinct_session_dates": [
+        "2023/04/10 (Mon) 14:47",
+        "2023/04/10 (Mon) 17:15",
+        "2023/04/10 (Mon) 17:50"
+      ]
+    },
+    {
+      "tag": "T2_after_answer_lazy_path",
+      "n": 34,
+      "n_null_timestamp_iso": 0,
+      "n_timestamp_today": 0,
+      "n_with_session_id": 34,
+      "session_ids": [
+        "s1",
+        "s2",
+        "s3"
+      ],
+      "n_with_session_date": 34,
+      "distinct_session_dates": [
+        "2023/04/10 (Mon) 14:47",
+        "2023/04/10 (Mon) 17:15",
+        "2023/04/10 (Mon) 17:50"
+      ]
+    }
+  ],
+  "_ingested_flag_after_explicit": true,
+  "answer_seconds": 1.81,
+  "answer": "GPS system issue",
+  "_ingested_flag_after_answer": true,
+  "ratio_after_answer_over_after_explicit": 1.0,
+  "verdict": "REPLACE (dated notes discarded)"
+}

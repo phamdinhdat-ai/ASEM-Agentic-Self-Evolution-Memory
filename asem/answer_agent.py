@@ -165,6 +165,9 @@ _ORDERING_RE = re.compile(
 # The fact CHANGED: "current", "now", "used to", "before that", "update".
 _KNOWLEDGE_UPDATE_RE = re.compile(
     r"\b(?:current(?:ly)?|nowadays|now\b|at\s+present|these\s+days|"
+    # "used to" / "did she use to" / "she doesn't use to": allow the auxiliary
+    # and a pronoun to sit between, which is how the question is actually asked.
+    r"(?:did|do|does|didn'?t|doesn'?t)\s+(?:\w+\s+){0,2}use\s+to|"
     r"used\s+to|no\s+longer|formerly|previously|"
     r"(?:did|do|does|has|have|had)\s+\w+\s+(?:change|update|switch)|"
     r"still\b|anymore|any\s+more|"
@@ -187,6 +190,15 @@ _MULTI_HOP_RE = re.compile(
     r"both|each\s+other|together|"
     r"connect(?:ed|ion)?|related\s+to|linked\s+to|"
     r"who\s+else|what\s+else)\b",
+    re.IGNORECASE,
+)
+# A CAUSAL why/how question about a change: it needs the chain of events, so it
+# is a multi-hop question even though it contains an update cue. Checked BEFORE
+# the knowledge-update rule.
+_MULTI_HOP_CAUSAL_RE = re.compile(
+    r"\b(?:why\s+(?:did|does|was|is|has|have)|"
+    r"what\s+(?:led|caused|made|prompted)\b|"
+    r"how\s+did\s+\w+\s+(?:come\s+to|end\s+up|start|begin))\b",
     re.IGNORECASE,
 )
 
@@ -217,6 +229,12 @@ def detect_question_kind(query: str) -> str:
         return "arithmetic"
     if _ORDERING_RE.search(text):
         return "ordering"
+    # A question asking WHY/HOW a change came about needs the CHAIN, even though
+    # its wording contains an update cue ("switch careers"). Checked before
+    # knowledge_update so the bridge is available; a plain "what is X now?" still
+    # lands on knowledge_update.
+    if _MULTI_HOP_CAUSAL_RE.search(text):
+        return "multi_hop"
     if _KNOWLEDGE_UPDATE_RE.search(text):
         return "knowledge_update"
     if _COUNT_RE.search(text):
@@ -406,7 +424,9 @@ def _iso_to_day(value: str) -> str:
 # id when it is short and reduces it to its ordinal when it is long, so
 # provenance costs a few chars per block instead of blowing the budget.
 _MAX_SESSION_LABEL_CHARS = 32
-_SESSION_ORDINAL_RE = re.compile(r"(\d+)\s*$")
+# Any run of digits in the id is candidate ordinal material (`locomo_0042`,
+# `conv-26/session_7`). Anchoring on `$` would miss every id that ends in a word.
+_SESSION_ORDINAL_RE = re.compile(r"(\d+)")
 
 
 def _session_label(note: Note) -> str:
@@ -426,10 +446,11 @@ def _session_label(note: Note) -> str:
         return ""
     if len(raw) <= _MAX_SESSION_LABEL_CHARS:
         return raw
-    # A long id: keep only its ordinal, which is what the model can compare.
-    match = _SESSION_ORDINAL_RE.search(raw)
-    if match:
-        return f"session {int(match.group(1))}"
+    # A long id: keep only its LAST digit run, which is the ordinal part for
+    # every id shape the loaders produce (`locomo_0042`, `conv-26_session_7`).
+    runs = _SESSION_ORDINAL_RE.findall(raw)
+    if runs:
+        return f"session {int(runs[-1])}"
     return ""
 
 

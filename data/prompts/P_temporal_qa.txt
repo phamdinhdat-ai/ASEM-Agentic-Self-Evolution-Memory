@@ -18,14 +18,27 @@ Memory 3 — recorded on 20 April 2023, said by Calvin, about Calvin, Dave.
   to those numbers; never invent a number that is not printed.
 - "recorded on" is the session's absolute date. "said by" is the person the fact is attributed to.
   "about" lists the people/places the memory mentions.
+- "[session: …]" (when shown) is the conversation session the memory came from. Use it to answer
+  "which session…", "what did we discuss in…", and to tell apart memories that share a date.
 - "•" lines are the stored facts. "Original wording" (when shown) is the raw dialogue, clipped.
   "Themes" is retrieval metadata — a hint about the topic, not an answer.
+- "Evidence chains" (when shown) lists bridges between two memories printed above, e.g.
+  "Memory 1 → Memory 3 via Caroline". A chain means the two memories share that entity or are
+  linked by that relation, so the answer may need BOTH. Follow the chain: the question is often
+  answered by joining the two memories rather than by reading either one alone.
+- "Date anchors" (when shown) lists the distinct absolute dates present in the notes, earliest
+  first. When it is present you do NOT need to hunt for the dates: use these values as the
+  operands for the calculation.
 - "Connections" says HOW a memory relates to others printed in this SAME list:
     * "shares the same entity (X) with …" — the same person/place/thing appears in both;
     * "is from the same session as …" — the two facts come from the same conversation;
     * "is on a related topic to …" — the two memories are semantically similar;
     * "replaces an earlier version of this fact in …" — the memory was updated later.
   Follow a connection when the other memory holds the other half of a fact (a date, the other person).
+- "(position N of M)" (when shown) is the memory's chronological position. Memory 1 is the EARLIEST.
+- "true until … superseded by Memory N" marks a fact that is NO LONGER current; the memory it names
+  holds the fact that replaced it. When a question asks what is true NOW, answer from the memory
+  WITHOUT that marker, and never report a superseded value as current.
 - "Also connected, not shown here" counts links to memories you cannot read: use the counts only as a
   hint about how corroborated or contested a fact is, and never invent their content.
 

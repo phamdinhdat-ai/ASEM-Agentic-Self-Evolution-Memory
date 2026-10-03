@@ -148,21 +148,47 @@ def main() -> int:
             idx = int(row["idx"])
             qid = str(row.get("question_id", f"q{idx}"))
             safe = re.sub(r"[^A-Za-z0-9_.-]", "_", qid)
-            dst = os.path.join(args.out_dir, f"q_{idx:04d}_{safe}.sqlite")
-            ok = _snapshot(bank, dst)
-            n = _n_notes(dst) if ok else -1
+
+            # RACE, and how it is handled honestly.
+            #
+            # The runner flushes the prediction row and then immediately calls
+            # `reset()` for the next question, which CLEARS the bank. Between
+            # those two events the bank still holds this question's graph, but
+            # the window is short and this watcher polls from outside the
+            # process, so a capture can land AFTER the clear and read 0 notes.
+            #
+            # We therefore try a few times in quick succession and keep the
+            # FIRST non-empty read, recording how many attempts it took. A
+            # capture that never sees a non-empty bank is recorded with
+            # `n_notes: 0` and `race: "missed"` rather than being silently
+            # dropped, so the index never pretends to have data it lacks.
+            n = -1
+            ok = False
+            attempts = 0
+            for attempt in range(3):
+                attempts = attempt + 1
+                dst = os.path.join(args.out_dir, f"q_{idx:04d}_{safe}.sqlite")
+                ok = _snapshot(bank, dst)
+                n = _n_notes(dst) if ok else -1
+                if n > 0:
+                    break
+                time.sleep(0.35)
+
             entry = {
                 "idx": idx,
                 "question_id": qid,
                 "question_type": row.get("question_type"),
-                "snapshot": dst if ok else None,
+                "snapshot": os.path.join(args.out_dir, f"q_{idx:04d}_{safe}.sqlite") if ok else None,
                 "n_notes": n,
+                "capture_attempts": attempts,
+                "race": "ok" if n > 0 else "missed",
                 "captured_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             }
             index.setdefault("snapshots", []).append(entry)
             seen.add(idx)
             last_new = time.time()
-            print(f"  [q{idx}] {qid} -> {n} notes", flush=True)
+            flag = "" if n > 0 else "   <- RACE: bank already cleared, no graph captured"
+            print(f"  [q{idx}] {qid} -> {n} notes{flag}", flush=True)
             with open(index_path, "w", encoding="utf-8") as fh:
                 json.dump(index, fh, indent=2)
             if args.once or (args.max_questions and len(seen) >= args.max_questions):

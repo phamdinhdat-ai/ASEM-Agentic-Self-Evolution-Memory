@@ -176,9 +176,30 @@ def test_shared_real_entity_still_links() -> None:
 # Single-valued predicate allow-list
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("predicate", ["lives in", "works at", "is married to", "is", "was happy"])
+@pytest.mark.parametrize("predicate", ["lives in", "works at", "is married to", "was happy"])
 def test_single_valued_predicates_recognised(predicate: str) -> None:
     assert TemporalHyperGraph._is_single_valued_predicate(predicate)
+
+
+def test_bare_copula_is_not_single_valued() -> None:
+    """A bare `is`/`was` must NOT qualify: it was the unbounded wildcard.
+
+    The previous implementation matched ANY multi-word predicate beginning
+    `is`/`was` (``head in {"is", "was"} and len(split) > 1``), which admitted
+    every descriptive clause in the corpus. Auditing the real LoCoMo bank traced
+    4 of its 5 (all incorrect) `superseded_by` pairs to that rule and to bare
+    copulas. The state-adjective form is now a CLOSED list
+    (``_SINGLE_VALUED_STATES``), so "is happy" still qualifies while bare "is"
+    and unlisted descriptors ("is gorgeous", "is doing well") do not.
+    """
+    assert not TemporalHyperGraph._is_single_valued_predicate("is")
+    assert not TemporalHyperGraph._is_single_valued_predicate("was")
+    # The closed-list form still works...
+    assert TemporalHyperGraph._is_single_valued_predicate("is happy")
+    assert TemporalHyperGraph._is_single_valued_predicate("was tired")
+    # ...but an unlisted adjective does not (no wildcard).
+    assert not TemporalHyperGraph._is_single_valued_predicate("is gorgeous")
+    assert not TemporalHyperGraph._is_single_valued_predicate("is doing well")
 
 
 @pytest.mark.parametrize("predicate", ["bought", "attended", "visited", "studied", ""])

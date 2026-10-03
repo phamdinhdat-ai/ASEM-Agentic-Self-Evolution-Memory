@@ -1,0 +1,52 @@
+================================================================================================
+PROVENANCE AND MARKER COST — thg_v1 vs legacy on the SAME note list
+================================================================================================
+
+TOTAL N = 80 questions (40 per dataset)
+
+  dataset      N   legacy tok  thg_v1 tok   delta tok   delta %%
+  --------------------------------------------------------------
+  locomo       40        1019        1089         70     6.89%
+  longmemeval  40        1814        1918        104     5.72%
+  COMBINED     80        1416        1504         87     6.14%
+
+Threshold check (task-2: fall back to a short ordinal if provenance >8%%):
+  worst per-question delta: +12.74%
+  => OVER 8% -> would need the ordinal fallback
+
+================================================================================================
+MARKER FIRING on real questions (thg_v1 only)
+================================================================================================
+
+  kind                  n  structural marker expected
+  --------------------------------------------------------------
+  single_fact          40  (none - generic)
+  ordering             20  (position N of M)
+  arithmetic           19  Date anchors:
+  knowledge_update      1  superseded + current-first
+
+Provenance coverage:
+  blocks labelled / blocks rendered = 640 / 640 = 1.000
+  questions with >=1 chain        = 67 / 80 = 0.838
+  total chains rendered           = 204
+
+================================================================================================
+DISTRIBUTION CHECK (lead's request) — thg_v1 vs FullContext, per question
+================================================================================================
+
+  locomo (N=60)
+                   thg_v1 FullContext    ratio
+    min               887      17764    0.050
+    median           1077      17769    0.061
+    p90              1231      17774    0.069
+    max              1360      17783    0.076
+    p90 thg_v1 EXCEEDS p90 FullContext: False
+
+  longmemeval (N=60)
+                   thg_v1 FullContext    ratio
+    min              1713       5122    0.334
+    median           1927       7782    0.248
+    p90              2019       9510    0.212
+    max              2077      22057    0.094
+    p90 thg_v1 EXCEEDS p90 FullContext: False
+

@@ -1,0 +1,135 @@
+{
+  "bank": "static/memory_banks/locomo10/thg_v2/ASEM-THG/locomo_0000/asem_thg.sqlite",
+  "n_notes": 365,
+  "hubs": [
+    "caroline",
+    "melanie"
+  ],
+  "hub_df_threshold": 0.5,
+  "topn": 2,
+  "n_same_entity_edges": 1792,
+  "n_hub_only": 1779,
+  "n_discriminative": 13,
+  "n_no_intersection": 0,
+  "hub_only_edge_fraction": 0.9927455357142857,
+  "top10_df": [
+    {
+      "entity": "caroline",
+      "df": 238,
+      "df_over_n": 0.6520547945205479
+    },
+    {
+      "entity": "melanie",
+      "df": 206,
+      "df_over_n": 0.5643835616438356
+    },
+    {
+      "entity": "melanie's kids",
+      "df": 5,
+      "df_over_n": 0.0136986301369863
+    },
+    {
+      "entity": "melanie's son",
+      "df": 4,
+      "df_over_n": 0.010958904109589041
+    },
+    {
+      "entity": "oliver",
+      "df": 3,
+      "df_over_n": 0.00821917808219178
+    },
+    {
+      "entity": "connected lgbtq activists",
+      "df": 3,
+      "df_over_n": 0.00821917808219178
+    },
+    {
+      "entity": "sweden",
+      "df": 2,
+      "df_over_n": 0.005479452054794521
+    },
+    {
+      "entity": "museum",
+      "df": 2,
+      "df_over_n": 0.005479452054794521
+    },
+    {
+      "entity": "amy ellis nutt",
+      "df": 2,
+      "df_over_n": 0.005479452054794521
+    },
+    {
+      "entity": "sara bareilles",
+      "df": 2,
+      "df_over_n": 0.005479452054794521
+    }
+  ],
+  "examples": [
+    {
+      "a": "3c0d6f88-b346-4cfb-be50-bb51748f2be1",
+      "b": "43237227-c1ad-4e8d-8a62-841b136a9358",
+      "shared": [
+        "caroline"
+      ],
+      "a_entities": [
+        "caroline"
+      ],
+      "b_entities": [
+        "caroline"
+      ]
+    },
+    {
+      "a": "3c0d6f88-b346-4cfb-be50-bb51748f2be1",
+      "b": "d9db8a01-f65c-429e-a478-1275e2de6a05",
+      "shared": [
+        "caroline"
+      ],
+      "a_entities": [
+        "caroline"
+      ],
+      "b_entities": [
+        "caroline"
+      ]
+    },
+    {
+      "a": "3c0d6f88-b346-4cfb-be50-bb51748f2be1",
+      "b": "809e9e6e-ff6b-469d-a4ea-e1798a57eca3",
+      "shared": [
+        "caroline"
+      ],
+      "a_entities": [
+        "caroline"
+      ],
+      "b_entities": [
+        "caroline",
+        "melanie"
+      ]
+    },
+    {
+      "a": "3c0d6f88-b346-4cfb-be50-bb51748f2be1",
+      "b": "84264162-4eec-44f1-ac78-b3a029a38bb0",
+      "shared": [
+        "caroline"
+      ],
+      "a_entities": [
+        "caroline"
+      ],
+      "b_entities": [
+        "caroline"
+      ]
+    },
+    {
+      "a": "2c064a08-3977-4c02-8cf7-815addd11a4f",
+      "b": "3c0d6f88-b346-4cfb-be50-bb51748f2be1",
+      "shared": [
+        "caroline"
+      ],
+      "a_entities": [
+        "caroline"
+      ],
+      "b_entities": [
+        "caroline"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "thg_v2",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+  "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+  "model": "chib/deepseek-v4.1-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "ASEM-THG"
+  ],
+  "created_at": "2026-10-03T13:19:16",
+  "updated_at": "2026-10-03T13:36:25",
+  "elapsed_sec": 0.0,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 365,
+          "link_edges": 6252,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0000\\asem_thg.sqlite",
+          "bytes": 7237632,
+          "elapsed_sec": 162.56
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0001",
+      "sessions": 19,
+      "turns": 369,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 347,
+          "link_edges": 6290,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0001\\asem_thg.sqlite",
+          "bytes": 6934528,
+          "elapsed_sec": 165.56
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0002",
+      "sessions": 32,
+      "turns": 663,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 493,
+          "link_edges": 7544,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0002\\asem_thg.sqlite",
+          "bytes": 9740288,
+          "elapsed_sec": 235.78
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0003",
+      "sessions": 29,
+      "turns": 629,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 492,
+          "link_edges": 8424,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0003\\asem_thg.sqlite",
+          "bytes": 9785344,
+          "elapsed_sec": 231.52
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0004",
+      "sessions": 29,
+      "turns": 680,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 482,
+          "link_edges": 6890,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2\\ASEM-THG\\locomo_0004\\asem_thg.sqlite",
+          "bytes": 9482240,
+          "elapsed_sec": 233.53
+        }
+      }
+    }
+  ],
+  "totals": {
+    "conversations": 5,
+    "banks_ok": 5,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "ASEM-THG": 2179
+    }
+  },
+  "run": {},
+  "config_history": [
+    {
+      "config_sha256": "b8f688320dd8a1337e7864e759c1ccaf8eda3a2b9030b4f9a12c0e951648b79d",
+      "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+      "model": "chib/deepseek-v4.1-flash",
+      "thinking": null,
+      "first_used": "2026-10-03T13:19:16"
+    }
+  ]
+}

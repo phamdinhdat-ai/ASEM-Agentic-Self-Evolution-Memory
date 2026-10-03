@@ -1,0 +1,188 @@
+{
+  "phase": "eval",
+  "dataset": "locomo10",
+  "tag": "gpt56_luna",
+  "model_tag": "qwen_qwen3_4b_instruct_2507",
+  "config": "/kaggle/working/ASEM-Agentic-Self-Evolution-Memory/configs/models/qwen35_4B_api.yaml",
+  "judge_config": "/kaggle/working/ASEM-Agentic-Self-Evolution-Memory/configs/models/qwen35_4B_api.yaml",
+  "metrics": [
+    "em",
+    "f1",
+    "rougeL",
+    "bertscore_f1",
+    "judge"
+  ],
+  "bank_root": "static/memory_banks/locomo10",
+  "work_copy": true,
+  "n_qa": 1986,
+  "conversations": [
+    "locomo_0000",
+    "locomo_0001",
+    "locomo_0002",
+    "locomo_0003",
+    "locomo_0004",
+    "locomo_0005",
+    "locomo_0006",
+    "locomo_0007",
+    "locomo_0008",
+    "locomo_0009"
+  ],
+  "elapsed_sec": 17632.96,
+  "systems": {
+    "ASEM-THG": {
+      "n": 1986,
+      "missing_conversations": 0,
+      "n_answer_errors": 0,
+      "aborted": null,
+      "overall": {
+        "n": 1986.0,
+        "em": 0.19234642497482377,
+        "f1": 0.37277158369754504,
+        "rougeL": 0.35832346953971317,
+        "bertscore_f1": 0.8501252099526493,
+        "judge": 0.6812688821752266,
+        "judge_coverage": 1.0
+      },
+      "per_category": {
+        "adversarial": {
+          "n": 446.0,
+          "em": 0.695067264573991,
+          "f1": 0.703628263505754,
+          "rougeL": 0.703628263505754,
+          "bertscore_f1": 0.8147488827128047,
+          "judge": 0.7847533632286996,
+          "judge_coverage": 1.0
+        },
+        "multi_hop": {
+          "n": 282.0,
+          "em": 0.0035460992907801418,
+          "f1": 0.1810297306490057,
+          "rougeL": 0.15604371145882254,
+          "bertscore_f1": 0.8441331874816975,
+          "judge": 0.5212765957446809,
+          "judge_coverage": 1.0
+        },
+        "open_domain": {
+          "n": 96.0,
+          "em": 0.010416666666666666,
+          "f1": 0.10893146873734634,
+          "rougeL": 0.09877197720573756,
+          "bertscore_f1": 0.8315719564755758,
+          "judge": 0.4375,
+          "judge_coverage": 1.0
+        },
+        "single_hop": {
+          "n": 841.0,
+          "em": 0.03329369797859691,
+          "f1": 0.2577088022001039,
+          "rougeL": 0.24452058952175817,
+          "bertscore_f1": 0.8637222968724054,
+          "judge": 0.7063020214030915,
+          "judge_coverage": 1.0
+        },
+        "temporal": {
+          "n": 321.0,
+          "em": 0.1308411214953271,
+          "f1": 0.4618855202731024,
+          "rougeL": 0.4320372359855658,
+          "bertscore_f1": 0.8744665012924099,
+          "judge": 0.6853582554517134,
+          "judge_coverage": 1.0
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 199.0,
+          "em": 0.1658291457286432,
+          "f1": 0.3585297999032365,
+          "rougeL": 0.34827586329648313,
+          "bertscore_f1": 0.8604152948413063,
+          "judge": 0.7185929648241206,
+          "judge_coverage": 1.0
+        },
+        "locomo_0001": {
+          "n": 105.0,
+          "em": 0.2571428571428571,
+          "f1": 0.4524308141159371,
+          "rougeL": 0.4457410018235314,
+          "bertscore_f1": 0.8611831755865188,
+          "judge": 0.7238095238095238,
+          "judge_coverage": 1.0
+        },
+        "locomo_0002": {
+          "n": 193.0,
+          "em": 0.18134715025906736,
+          "f1": 0.38006136848037103,
+          "rougeL": 0.35978824541702625,
+          "bertscore_f1": 0.8580889967439088,
+          "judge": 0.6787564766839378,
+          "judge_coverage": 1.0
+        },
+        "locomo_0003": {
+          "n": 260.0,
+          "em": 0.19230769230769232,
+          "f1": 0.3337045289037813,
+          "rougeL": 0.3249683276856506,
+          "bertscore_f1": 0.8404957519127773,
+          "judge": 0.6384615384615384,
+          "judge_coverage": 1.0
+        },
+        "locomo_0004": {
+          "n": 242.0,
+          "em": 0.2066115702479339,
+          "f1": 0.38317570785902366,
+          "rougeL": 0.37235106286797154,
+          "bertscore_f1": 0.8531422639681288,
+          "judge": 0.6942148760330579,
+          "judge_coverage": 1.0
+        },
+        "locomo_0005": {
+          "n": 158.0,
+          "em": 0.17721518987341772,
+          "f1": 0.35257983414456634,
+          "rougeL": 0.3427500801479334,
+          "bertscore_f1": 0.844832175517384,
+          "judge": 0.6582278481012658,
+          "judge_coverage": 1.0
+        },
+        "locomo_0006": {
+          "n": 190.0,
+          "em": 0.17894736842105263,
+          "f1": 0.38887614852644414,
+          "rougeL": 0.3552437184023959,
+          "bertscore_f1": 0.8454817448791705,
+          "judge": 0.6842105263157895,
+          "judge_coverage": 1.0
+        },
+        "locomo_0007": {
+          "n": 239.0,
+          "em": 0.200836820083682,
+          "f1": 0.3746044556158846,
+          "rougeL": 0.3682076920163152,
+          "bertscore_f1": 0.8466449873716761,
+          "judge": 0.6694560669456067,
+          "judge_coverage": 1.0
+        },
+        "locomo_0008": {
+          "n": 196.0,
+          "em": 0.17346938775510204,
+          "f1": 0.3640913958493876,
+          "rougeL": 0.3435667652071292,
+          "bertscore_f1": 0.8497404413563865,
+          "judge": 0.673469387755102,
+          "judge_coverage": 1.0
+        },
+        "locomo_0009": {
+          "n": 204.0,
+          "em": 0.2107843137254902,
+          "f1": 0.38304753006512865,
+          "rougeL": 0.3651436823934791,
+          "bertscore_f1": 0.8484264527465782,
+          "judge": 0.7009803921568627,
+          "judge_coverage": 1.0
+        }
+      }
+    }
+  },
+  "resumed_from": 0
+}
