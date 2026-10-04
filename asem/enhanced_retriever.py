@@ -186,6 +186,20 @@ class EnhancedHybridRetriever(HybridRetriever):
     # the "crowded out" failure the mechanism probe measured.
     planner_fuse_weight: float = 1.0
 
+    # ── G3b: session-diverse answer window ──────────────────────────────
+    # A multi-hop question names evidence in two sessions, but the answer window
+    # is the TOP `answer.max_context_notes` of the returned pool. Ranking by
+    # similarity alone fills that window with the one session the question's
+    # words match best, so the second premise never reaches the model — even when
+    # retrieval DID find it. The probe measured this directly: on LoCoMo cat-1,
+    # widening the pool alone made all_sessions WORSE (0.4074 -> 0.3704), while
+    # widening + taking the best-ranked note per session reached 0.7037 against
+    # an oracle ceiling of 0.8148, at ZERO LLM cost. The LLM query planner, by
+    # contrast, moved nothing (0.4074). So the fix is selection, not a new query.
+    #
+    # `false` (default) reproduces the pre-G3b ranking byte-for-byte.
+    session_diversity: bool = False
+
     # The corpus graph lives on ``pipeline.hyper_graph`` for ASEM-THG. It is
     # optional so plain ASEM / FastASEM runs keep working unchanged.
     hyper_graph: Optional[Any] = None
@@ -209,24 +223,81 @@ class EnhancedHybridRetriever(HybridRetriever):
         their pools fused here, before the graph walk and Phase D. The fusion is
         what lets a sub-question's evidence reach the answer window even when
         the original query's own results already filled it.
+
+        G3b: the returned pool is then optionally reordered so its FRONT spans
+        sessions (`session_diversity`). Applied here, at the single exit, so both
+        the planner and the plain path get it, and so it acts on the pool the
+        answer window actually reads.
         """
+        notes = self._retrieve_dispatch(query, M)
+        if self.session_diversity and notes:
+            notes = self._diversify_sessions(notes)
+        return notes
+
+    def _retrieve_dispatch(self, query: str, M: MemoryBank) -> List[Note]:
+        """Route to the planner path or the plain core path."""
         # ── G3: multi-hop decomposition (optional) ──────────────────────
         # Each sub-question is retrieved with the planner switched OFF, so a
         # sub-question cannot recurse into further planning.
-        subs = self.query_planner.plan(query) if self.query_planner is not None else []
-        if len(subs) > 1:
-            pools = []
-            for sq in subs:
-                pools.append(self._retrieve_core(sq, M))
-            fused = self._fuse_subquestions(pools, subs)
-            self.stats["planner_fired"] = True
-            self.stats["planner_subquestions"] = len(subs)
-            self.stats["planner_pool_sizes"] = [len(p) for p in pools]
-            self.stats.update(self.query_planner.stats)
-            self.stats["total_retrieved"] = len(fused)
-            return fused
+        planner = self.query_planner
+        if planner is None:
+            return self._retrieve_core(query, M)
 
-        return self._retrieve_core(query, M)
+        subs = planner.plan(query)
+        if len(subs) <= 1:
+            return self._retrieve_core(query, M)
+
+        pools = [self._retrieve_core(sq, M) for sq in subs]
+        fused = self._fuse_subquestions(pools, subs)
+        self.stats["planner_fired"] = True
+        self.stats["planner_subquestions"] = len(subs)
+        self.stats["planner_pool_sizes"] = [len(p) for p in pools]
+        self.stats.update(planner.stats)
+        self.stats["total_retrieved"] = len(fused)
+        return fused
+
+    def _diversify_sessions(self, notes: List[Note]) -> List[Note]:
+        """Reorder so the FRONT of the pool spans sessions, keeping rank order.
+
+        The answer window is the top ``answer.max_context_notes`` of this list.
+        A multi-hop question's evidence lives in two sessions; ranking by
+        similarity alone fills the window with the one session the question's
+        words match best and the second premise never reaches the model. This
+        walks the ranked list once, emitting the best-ranked note of each session
+        the first time that session appears, then appends the remainder in rank
+        order.
+
+        Order is preserved WITHIN the emitted set (a session's first appearance
+        is its best note, and sessions are emitted in the order their best note
+        ranks), so this is a stable reordering, not a re-scoring: the top note is
+        unchanged and no note's relative order among same-session peers is
+        disturbed. Notes with no ``session_id`` are treated as their own
+        singleton groups and keep their rank position.
+
+        Only the FRONT is spread; the tail is unchanged, so a caller that reads
+        the whole pool sees the same notes in a session-aware order.
+        """
+        seen: Set[str] = set()
+        head: List[Note] = []
+        tail: List[Note] = []
+        for i, note in enumerate(notes):
+            sid = getattr(note, "session_id", None)
+            # A note without a session id cannot crowd another session out, so
+            # it never claims a slot: it stays in the tail at its rank.
+            if sid is None:
+                tail.append(note)
+                continue
+            key = str(sid)
+            if key in seen:
+                tail.append(note)
+            else:
+                seen.add(key)
+                head.append(note)
+        out = head + tail
+        self.stats["session_diversity"] = True
+        self.stats["session_diversity_sessions"] = len(seen)
+        self.stats["session_diversity_head"] = len(head)
+        return out
 
     def _retrieve_core(self, query: str, M: MemoryBank) -> List[Note]:
         """The pre-G3 retrieval path, unchanged. Planner-free by construction."""

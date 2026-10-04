@@ -84,12 +84,53 @@ retriever:
   # off       = no planner (byte-for-byte the pre-G3 behaviour)
   # heuristic = split on "and"/"or"/";" when the classifier reads reasoning/mixed
   # llm       = one backbone call for the sub-questions, heuristic on failure
-  # The G3 probes showed the missing hop's evidence is usually ABSENT from the
-  # pool for the original query (13 of 16 incomplete cat-1 questions), so no
-  # re-ranking recovers it; a different query does (oracle: 16/16).
+  # MEASURED NULL. The LLM planner moves nothing on LoCoMo cat-1 multi-gold
+  # (`_g3_llm_probe.py`, real backbone: llm all_sessions=0.4074 == off). The
+  # model paraphrases rather than decomposes, because the category is defined by
+  # the gold evidence spanning sessions, not by the question's surface form.
+  # Retained OFF; the fix is G3b below.
   query_planner: "off"
   max_subquestions: 3
   planner_fuse_weight: 1.0
+  # ── G3b: session-diverse answer window ───────────────────────────────
+  # Reorder the returned pool so its FRONT spans sessions — the slice the answer
+  # window (`answer.max_context_notes: 8`) actually reads. The reachability probe
+  # showed the missing session is topically NEAR (cosine 0.673 vs 0.758 for what
+  # was found), so the second premise is CROWDED OUT, not unguessable; the fix is
+  # selection, not a new query.
+  #
+  # `_g3_div_probe.py`, all categories, K=8, wide pool k1=200/k2=40 (cell =
+  # session_recall / all_sessions):
+  #     cat   n     off        wide      wide+div   wide+randdiv
+  #      1   32  0.875/0.469  0.906/0.438  1.000/0.750  0.875/0.344
+  #      2   37  0.946/0.946  0.973/0.973  1.000/1.000  0.730/0.730
+  #      3   11  0.818/0.727  0.909/0.636  0.909/0.818  0.727/0.455
+  #      4   70  0.971/0.971  0.971/0.971  1.000/1.000  0.814/0.814
+  #      5   47  0.894/0.894  0.851/0.851  0.915/0.915  0.809/0.809
+  # Three controls: `wide` alone is WORSE than off on cat 1 (width displaces good
+  # notes); `wide+randdiv` (spread at RANDOM) is worse than off everywhere, so the
+  # win is the RANKING inside the spread, not mere coverage; `wide+div` improves
+  # or holds EVERY category, single-hop cat 4 included (0.971 -> 1.000).
+  #
+  # `_g3b_shipped_probe.py` runs the SAME arms through the real
+  # `EnhancedHybridRetriever.retrieve` (not a probe-local copy) over all 197
+  # questions and reproduces the table exactly (cat 1 wide+div 1.000/0.750, cat 4
+  # 1.000/1.000). It also splits diversity-only from diversity+wide:
+  #     ALL 197   off 0.853   div_only 0.893   shipped 0.929   (+0.076)
+  # Diversity at the default pool already gives +0.040; widening adds +0.036,
+  # concentrated in cat 1 (+0.188) and cat 3 (+0.091) and nothing in cat 2/4. So
+  # widening earns its keep only on the multi-hop categories.
+  #
+  # Needs a pool wide enough to CONTAIN the second session, so it moves with k2;
+  # widening without it is strictly worse. Answer tokens are unaffected — the
+  # answer agent caps the window at `max_context_notes` before rendering.
+  session_diversity: false
+  #
+  # It needs a pool wide enough to CONTAIN the second session: at the default
+  # k2=10 the pool is often one session, and there is nothing to spread. Pair it
+  # with a larger k2 (the probe used k1=200, k2=40). Widening without this is
+  # strictly worse, so the two are meant to move together.
+  session_diversity: false
   # Phase D blend: base ordering keeps primacy; graph/utility refine it.
   alpha: 0.35
   beta: 0.25

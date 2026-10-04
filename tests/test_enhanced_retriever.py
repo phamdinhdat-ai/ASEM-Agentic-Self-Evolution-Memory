@@ -254,3 +254,112 @@ def test_g2_walk_ranking_can_override_the_base_order() -> None:
         assert "bridge" in ids, r.stats
         assert r.ppr_scores.get("bridge", 0.0) > 0.0
         bank.close()
+
+
+# ===========================================================================
+# G3b — session-diverse answer window
+# ===========================================================================
+
+def _sess_note(note_id: str, vec: np.ndarray, session_id, q: float = 0.5) -> Note:
+    n = _create_note(note_id, vec, q)
+    n.session_id = session_id
+    return n
+
+
+def _diversity_retriever(**kw) -> EnhancedHybridRetriever:
+    return EnhancedHybridRetriever(
+        backend=_DummyEmbedBackend(np.asarray([1.0, 0.0])),
+        k1=20, k2=10, delta=0.0, lambda_weight=0.5,
+        enable_global_semantics=False,
+        **kw,
+    )
+
+
+def test_g3b_off_leaves_order_untouched() -> None:
+    """Default off: the ranking is exactly what the pre-G3b path returned."""
+    pytest.importorskip("faiss")
+    with tempfile.TemporaryDirectory() as tmp:
+        bank = MemoryBank(f"{tmp}/bank.sqlite")
+        for i in range(3):
+            bank.add(_sess_note(f"s1_{i}", np.asarray([1.0, 0.0]), "s1"))
+        bank.add(_sess_note("s2_0", np.asarray([0.9, 0.1]), "s2"))
+
+        r_off = _diversity_retriever(session_diversity=False)
+        off_ids = [n.id for n in r_off.retrieve("q", bank)]
+        # Same retriever, flag on: must be a permutation of the same set.
+        r_on = _diversity_retriever(session_diversity=True)
+        on_ids = [n.id for n in r_on.retrieve("q", bank)]
+
+        assert set(off_ids) == set(on_ids)
+        assert "session_diversity" not in r_off.stats
+        assert r_on.stats["session_diversity"] is True
+        bank.close()
+
+
+def test_g3b_front_spans_sessions_after_reorder() -> None:
+    """The top-8 window must contain a note from every session in the pool.
+
+    Construct a pool where one session owns the top 4 ranks; without diversity
+    the 4th slot is the same session again. With it, the other session's best
+    note is promoted into the front.
+    """
+    pytest.importorskip("faiss")
+    with tempfile.TemporaryDirectory() as tmp:
+        bank = MemoryBank(f"{tmp}/bank.sqlite")
+        # s1 owns ranks 0-3 (highest similarity), s2 only rank 4.
+        for i in range(4):
+            bank.add(_sess_note(f"s1_{i}", np.asarray([1.0, 0.0]), "s1"))
+        bank.add(_sess_note("s2_0", np.asarray([0.8, 0.2]), "s2"))
+
+        r = _diversity_retriever(session_diversity=True)
+        ids = [n.id for n in r.retrieve("q", bank)]
+        # The first two slots must be different sessions.
+        head_sessions = [
+            n.session_id for n in r.retrieve("q", bank)[:2]
+        ]
+        assert head_sessions[0] != head_sessions[1], ids
+        # s2's note moved up ahead of s1's 2nd..4th notes.
+        assert ids.index("s2_0") < ids.index("s1_1"), ids
+        # s1's best note still leads.
+        assert ids[0] == "s1_0", ids
+        bank.close()
+
+
+def test_g3b_reorder_is_stable_within_a_session() -> None:
+    """Emission preserves rank order within each session and across sessions."""
+    pytest.importorskip("faiss")
+    with tempfile.TemporaryDirectory() as tmp:
+        bank = MemoryBank(f"{tmp}/bank.sqlite")
+        for i in range(3):
+            bank.add(_sess_note(f"a{i}", np.asarray([1.0, 0.0]), "sA"))
+        for i in range(3):
+            bank.add(_sess_note(f"b{i}", np.asarray([0.9, 0.1]), "sB"))
+
+        r = _diversity_retriever(session_diversity=True)
+        ids = [n.id for n in r.retrieve("q", bank)]
+        # Best of sA first, then best of sB, then the tails in rank order.
+        assert ids[0] == "a0", ids
+        assert ids[1] == "b0", ids
+        # Within sA, a1 precedes a2 (rank preserved).
+        assert ids.index("a1") < ids.index("a2"), ids
+        assert ids.index("b1") < ids.index("b2"), ids
+        bank.close()
+
+
+def test_g3b_note_without_session_never_claims_a_slot() -> None:
+    """A note with no session_id stays at its rank; it cannot evict a session."""
+    pytest.importorskip("faiss")
+    with tempfile.TemporaryDirectory() as tmp:
+        bank = MemoryBank(f"{tmp}/bank.sqlite")
+        bank.add(_sess_note("orphan", np.asarray([1.0, 0.0]), None))
+        bank.add(_sess_note("x0", np.asarray([0.95, 0.05]), "sX"))
+        bank.add(_sess_note("y0", np.asarray([0.9, 0.1]), "sY"))
+
+        r = _diversity_retriever(session_diversity=True)
+        ids = [n.id for n in r.retrieve("q", bank)]
+        assert "orphan" in ids
+        # The two real sessions are both represented in the head, and the
+        # orphan did not consume one of their slots.
+        assert r.stats["session_diversity_head"] == 2, r.stats
+        bank.close()
+

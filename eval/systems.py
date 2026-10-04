@@ -857,6 +857,10 @@ def build_asem_thg_system(
         # sub-questions, falling back to the heuristic on any parse failure.
         query_planner=_build_query_planner(backend, _ret),
         planner_fuse_weight=float(_ret("planner_fuse_weight", 1.0)),
+        # G3b: spread the front of the returned pool across sessions so the
+        # answer window can carry a second session's evidence. `false` (default)
+        # reproduces the pre-G3b ranking byte-for-byte.
+        session_diversity=bool(_ret("session_diversity", False)),
     )
     answer_agent = AnswerAgent(
         backend=backend,
