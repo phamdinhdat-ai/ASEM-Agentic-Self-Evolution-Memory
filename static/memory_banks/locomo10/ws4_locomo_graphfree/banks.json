@@ -1,0 +1,14 @@
+{
+  "SimRetrieval": {
+    "locomo_0000": {
+      "path": "static/memory_banks\\locomo10\\ws4_locomo_graphfree\\SimRetrieval\\locomo_0000\\simretrieval.sqlite",
+      "notes": 419,
+      "link_edges": 0,
+      "new_edges": 0,
+      "status": "ok",
+      "bytes": 7438336,
+      "config_sha256": "24e0063645cbdba1e326e90178b83da934acc7cd3f4a69a08f88f36962aa4b80",
+      "thinking": null
+    }
+  }
+}

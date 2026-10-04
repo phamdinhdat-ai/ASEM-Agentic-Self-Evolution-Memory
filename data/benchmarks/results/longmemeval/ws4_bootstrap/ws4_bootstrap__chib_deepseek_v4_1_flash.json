@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "tag": "ws4_bootstrap",
+    "model": "chib_deepseek_v4_1_flash",
+    "config": "configs/models/deepseek_v41_flash_thg_v1.yaml",
+    "input": "datasets/longmemeval/longmemeval_oracle.json",
+    "questions": 3,
+    "metrics": [
+      "em",
+      "f1",
+      "rougeL",
+      "judge"
+    ],
+    "created": "2026-10-03T14:05:35"
+  },
+  "systems": {
+    "ASEM-THG": {
+      "overall": {
+        "n": 3.0,
+        "em": 0.0,
+        "f1": 0.3776455026455026,
+        "rougeL": 0.3776455026455026,
+        "judge": 0.0,
+        "judge_coverage": 0.0
+      },
+      "per_category": {
+        "temporal-reasoning": {
+          "n": 3.0,
+          "em": 0.0,
+          "f1": 0.3776455026455026,
+          "rougeL": 0.3776455026455026,
+          "judge": 0.0,
+          "judge_coverage": 0.0
+        }
+      },
+      "recall": {
+        "session_recall": null,
+        "session_hit": null,
+        "turn_recall": null
+      },
+      "recall_by_category": {
+        "temporal-reasoning": {
+          "n": 3.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.0
+        }
+      },
+      "abstention": {
+        "n_abstention_questions": 0.0,
+        "refusal_rate": 0.0,
+        "abstention_accuracy": 1.0
+      },
+      "n": 3.0
+    }
+  }
+}

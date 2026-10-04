@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "tag": "gb_full",
+    "model": "chib_deepseek_v4_1_flash",
+    "config": "configs/models/deepseek_v41_flash_thg_v1.yaml",
+    "input": "datasets/longmemeval/longmemeval_oracle.json",
+    "questions": 500,
+    "metrics": [
+      "em",
+      "f1",
+      "rougeL",
+      "bertscore_f1",
+      "judge"
+    ],
+    "created": "2026-10-03T17:29:03"
+  },
+  "systems": {
+    "ASEM-THG": {
+      "overall": {
+        "n": 500.0,
+        "em": 0.274,
+        "f1": 0.416575874460987,
+        "rougeL": 0.4092113493541111,
+        "bertscore_f1": 0.8833411020040512,
+        "judge": 0.588,
+        "judge_coverage": 1.0
+      },
+      "per_category": {
+        "knowledge-update": {
+          "n": 78.0,
+          "em": 0.3333333333333333,
+          "f1": 0.48857209938111795,
+          "rougeL": 0.47901114751247376,
+          "bertscore_f1": 0.8995580054246463,
+          "judge": 0.7051282051282052,
+          "judge_coverage": 1.0
+        },
+        "multi-session": {
+          "n": 133.0,
+          "em": 0.17293233082706766,
+          "f1": 0.2913237918836834,
+          "rougeL": 0.284042931905455,
+          "bertscore_f1": 0.8679034727856629,
+          "judge": 0.45864661654135336,
+          "judge_coverage": 1.0
+        },
+        "single-session-assistant": {
+          "n": 56.0,
+          "em": 0.4107142857142857,
+          "f1": 0.5224073455761548,
+          "rougeL": 0.5136204975035923,
+          "bertscore_f1": 0.8849779250366347,
+          "judge": 0.6071428571428571,
+          "judge_coverage": 1.0
+        },
+        "single-session-preference": {
+          "n": 30.0,
+          "em": 0.0,
+          "f1": 0.129657901063011,
+          "rougeL": 0.10818880052426796,
+          "bertscore_f1": 0.843602838118871,
+          "judge": 0.4,
+          "judge_coverage": 1.0
+        },
+        "single-session-user": {
+          "n": 70.0,
+          "em": 0.6714285714285714,
+          "f1": 0.8184471399282324,
+          "rougeL": 0.8162362555744909,
+          "bertscore_f1": 0.9505491614341736,
+          "judge": 0.9571428571428572,
+          "judge_coverage": 1.0
+        },
+        "temporal-reasoning": {
+          "n": 133.0,
+          "em": 0.13533834586466165,
+          "f1": 0.3082511351812417,
+          "rougeL": 0.3031589884324323,
+          "bertscore_f1": 0.8621697327248136,
+          "judge": 0.48872180451127817,
+          "judge_coverage": 1.0
+        }
+      },
+      "recall": {
+        "session_recall": null,
+        "session_hit": null,
+        "turn_recall": null
+      },
+      "recall_by_category": {
+        "temporal-reasoning": {
+          "n": 133.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.10526315789473684
+        },
+        "multi-session": {
+          "n": 133.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.13533834586466165
+        },
+        "knowledge-update": {
+          "n": 78.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.07692307692307693
+        },
+        "single-session-preference": {
+          "n": 30.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.23333333333333334
+        },
+        "single-session-assistant": {
+          "n": 56.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.3392857142857143
+        },
+        "single-session-user": {
+          "n": 70.0,
+          "session_recall": null,
+          "turn_recall": null,
+          "abstain_rate": 0.05714285714285714
+        }
+      },
+      "abstention": {
+        "n_abstention_questions": 30.0,
+        "refusal_rate": 0.136,
+        "abstention_accuracy": 0.884
+      },
+      "n": 500.0
+    }
+  }
+}

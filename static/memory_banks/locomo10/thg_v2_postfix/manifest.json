@@ -1,0 +1,246 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "thg_v2_postfix",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+  "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+  "model": "chib/deepseek-v4.1-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "ASEM-THG"
+  ],
+  "created_at": "2026-10-03T14:15:54",
+  "updated_at": "2026-10-03T14:50:01",
+  "elapsed_sec": 2047.53,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 406,
+          "link_edges": 7128,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0000\\asem_thg.sqlite",
+          "bytes": 8138752,
+          "elapsed_sec": 203.54
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0001",
+      "sessions": 19,
+      "turns": 369,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 348,
+          "link_edges": 6200,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0001\\asem_thg.sqlite",
+          "bytes": 6975488,
+          "elapsed_sec": 220.25
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0002",
+      "sessions": 32,
+      "turns": 663,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 458,
+          "link_edges": 6960,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0002\\asem_thg.sqlite",
+          "bytes": 9097216,
+          "elapsed_sec": 268.25
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0003",
+      "sessions": 29,
+      "turns": 629,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 500,
+          "link_edges": 8626,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0003\\asem_thg.sqlite",
+          "bytes": 10027008,
+          "elapsed_sec": 245.65
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0004",
+      "sessions": 29,
+      "turns": 680,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 511,
+          "link_edges": 7388,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0004\\asem_thg.sqlite",
+          "bytes": 10113024,
+          "elapsed_sec": 217.2
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0005",
+      "sessions": 28,
+      "turns": 675,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 498,
+          "link_edges": 8826,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0005\\asem_thg.sqlite",
+          "bytes": 10006528,
+          "elapsed_sec": 197.61
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0006",
+      "sessions": 31,
+      "turns": 689,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 527,
+          "link_edges": 7582,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0006\\asem_thg.sqlite",
+          "bytes": 10416128,
+          "elapsed_sec": 166.46
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0007",
+      "sessions": 30,
+      "turns": 681,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 508,
+          "link_edges": 8148,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0007\\asem_thg.sqlite",
+          "bytes": 10162176,
+          "elapsed_sec": 209.89
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0008",
+      "sessions": 25,
+      "turns": 509,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 425,
+          "link_edges": 6870,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0008\\asem_thg.sqlite",
+          "bytes": 8499200,
+          "elapsed_sec": 148.66
+        }
+      }
+    },
+    {
+      "conversation_id": "locomo_0009",
+      "sessions": 30,
+      "turns": 568,
+      "systems": {
+        "ASEM-THG": {
+          "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+          "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 483,
+          "link_edges": 7920,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0009\\asem_thg.sqlite",
+          "bytes": 9662464,
+          "elapsed_sec": 169.93
+        }
+      }
+    }
+  ],
+  "totals": {
+    "conversations": 10,
+    "banks_ok": 10,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "ASEM-THG": 4664
+    }
+  },
+  "run": {
+    "built": 10,
+    "skipped": 0,
+    "errors": 0,
+    "notes": 4664,
+    "discarded_partial": 0,
+    "interrupted": false
+  },
+  "config_history": [
+    {
+      "config_sha256": "4a60fdb471223d22bfb28dc06879e82004e70f948af97e81f576c3f3fc77a684",
+      "ingest_config": "configs/models/thg_v2_postfix_off.yaml",
+      "model": "chib/deepseek-v4.1-flash",
+      "thinking": null,
+      "first_used": "2026-10-03T14:15:54"
+    }
+  ]
+}

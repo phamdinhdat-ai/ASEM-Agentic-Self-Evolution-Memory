@@ -1,0 +1,211 @@
+conv=locomo_0000  bank notes=206
+
+==============================================================================
+### idx 7 [single_hop]  pred="I don't know"
+    Q       : What is Caroline's relationship status?
+    ref     : 'Single'
+    gold in : ['a7002045-f47b-45ae-8009-ae1c8b2752d3']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 38, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=False []
+          1. [2023-09-13T00:09:00Z] "[Melanie] Wow, Caro, that painting is amazing! You've made so much progress. I'm super proud of"
+          2. [2023-06-27T10:37:00Z] "[Melanie] Wow, Caroline! You've gained so much from your own experience. Your passion and hard "
+          3. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          4. [2023-05-08T13:56:00Z] '[Caroline] Hey Mel! Good to see you! How have you been?'
+          5. [2023-08-17T13:50:00Z] "[Melanie] Yeah, same here Caroline. You make life's struggles more bearable."
+          6. [2023-06-27T10:37:00Z] "[Caroline] Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at thi"
+          7. [2023-08-17T13:50:00Z] "[Melanie] I appreciate our friendship too, Caroline. You've always been there for me."
+          8. [2023-05-25T13:14:00Z] "[Melanie] No doubts, Caroline. You have such a caring heart - they'll get all the love and stab"
+
+    --- bare question ---
+        stats={'phase_a_hits': 37, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['a7002045-f47b-45ae-8009-ae1c8b2752d3']
+          1. [2023-10-13T10:31:00Z] "[Caroline] Hey Mel, what's up? Long time no see! I just contacted my mentor for adoption advice"
+          2. [2023-09-13T00:09:00Z] "[Melanie] Wow, Caro, that painting is amazing! You've made so much progress. I'm super proud of"
+          3. [2023-06-27T10:37:00Z] "[Melanie] Wow, Caroline! You've gained so much from your own experience. Your passion and hard "
+          4. [2023-09-13T00:09:00Z] "[Caroline] Thanks, Melanie. It's definitely changed them. Some close friends kept supporting me"
+          5. [2023-05-25T13:14:00Z] "[Melanie] No doubts, Caroline. You have such a caring heart - they'll get all the love and stab"
+          6. [2023-05-25T13:14:00Z] "[Caroline] I'm thrilled to make a family for kids who need one. It'll be tough as a single pare" <== GOLD
+          7. [2023-08-17T13:50:00Z] "[Melanie] Yeah, same here Caroline. You make life's struggles more bearable."
+          8. [2023-06-09T19:55:00Z] "[Caroline] Yeah Mel, let's spread love and understanding! Thanks for the support and encouragem"
+
+==============================================================================
+### idx 29 [temporal]  pred="I don't know"
+    Q       : When did Melanie go to the pottery workshop?
+    ref     : 'The Friday before 15 July 2023'
+    gold in : ['2a31d7f4-bf76-4d1c-abf6-e760a51beb2f', '374920b6-8c9e-4604-bfe4-ae5f5df0e21d', 'a7002045-f47b-45ae-8009-ae1c8b2752d3']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 33, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=False []
+          1. [2023-08-17T13:50:00Z] '[Melanie] Hey Caroline, sorry about the hike. It sucks when people are so closed-minded. Strong'
+          2. [2023-07-03T13:36:00Z] '[Caroline] That bowl is gorgeous! The black and white design looks so fancy. Did you make it?'
+          3. [2023-09-13T00:09:00Z] "[Melanie] Thanks, Caroline! It has really helped me out. I love how it's both a creative outlet"
+          4. [2023-09-13T00:09:00Z] "[Melanie] Seven years now, and I've finally found my real muses: painting and pottery. It's so "
+          5. [2023-07-03T13:36:00Z] '[Caroline] Nice job! You really put in the work and it definitely shows. Your creativity looks '
+          6. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          7. [2023-09-13T00:09:00Z] "[Caroline] I haven't done pottery yet, but I'm game for trying new art. I might try it sometime"
+          8. [2023-05-08T13:56:00Z] '[Caroline] Wow, Melanie! The colors really blend nicely. Painting looks like a great outlet for'
+
+    --- bare question ---
+        stats={'phase_a_hits': 31, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=False []
+          1. [2023-08-17T13:50:00Z] '[Melanie] Hey Caroline, sorry about the hike. It sucks when people are so closed-minded. Strong'
+          2. [2023-09-13T00:09:00Z] "[Melanie] Seven years now, and I've finally found my real muses: painting and pottery. It's so "
+          3. [2023-10-13T10:31:00Z] '[Melanie] Thanks for the tip, Caroline. Doing research and readying myself emotionally makes se'
+          4. [2023-09-13T00:09:00Z] "[Melanie] Thanks, Caroline! It has really helped me out. I love how it's both a creative outlet"
+          5. [2023-08-17T13:50:00Z] "[Melanie] Thanks, Caroline! I'm obsessed with those, so I made something to catch the eye and m"
+          6. [2023-09-13T00:09:00Z] "[Caroline] I haven't done pottery yet, but I'm game for trying new art. I might try it sometime"
+          7. [2023-07-15T13:51:00Z] '[Melanie] The kids loved it! They were so excited to get their hands dirty and make something w'
+          8. [2023-07-15T13:51:00Z] '[Melanie] Flowers bring joy. They represent growth, beauty and reminding us to appreciate the s'
+
+==============================================================================
+### idx 105 [conversational]  pred="I don't know"
+    Q       : What did Caroline take away from the book "Becoming Nicole"?
+    ref     : 'Lessons on self-acceptance and finding support'
+    gold in : ['763e4032-6718-494f-89d0-b988ab9ce68f', 'f2b98f98-d5e2-47fe-845f-095121a3d1a0', '0961dc61-5e7c-435f-83b8-fd2d57101ed9', 'cc386323-3bb6-488a-aa30-6978991fe767', 'c2e068be-0f49-423f-92b5-a763477d8ddf', 'a4ede966-4514-4408-a549-d1754c3f4287', '258ccb92-7032-410b-bc22-97f5bf7c349a', '0fc9e613-8c2b-439d-8d71-cdc43092ce45', '14990d65-d1a0-4e30-8523-c20ac1c23acc']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 34, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['c2e068be-0f49-423f-92b5-a763477d8ddf']
+          1. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          2. [2023-05-25T13:14:00Z] "[Melanie] No doubts, Caroline. You have such a caring heart - they'll get all the love and stab"
+          3. [2023-06-27T10:37:00Z] '[Melanie] Congrats Caroline! Good on you for going after what you really care about. (image: a '
+          4. [2023-08-23T15:31:00Z] "[Melanie] Bye Caroline. I'm here for you. Take care of yourself."
+          5. [2023-06-27T10:37:00Z] '[Melanie] Hey, Caroline! Nice to hear from you! Love the necklace, any special meaning to it?'
+          6. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi" <== GOLD
+          7. [2023-08-17T13:50:00Z] "[Melanie] I appreciate our friendship too, Caroline. You've always been there for me."
+          8. [2023-08-25T13:33:00Z] "[Melanie] Wow, Caroline! Sorry that happened to you. It's tough when those things happen, but i"
+
+    --- bare question ---
+        stats={'phase_a_hits': 36, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['0961dc61-5e7c-435f-83b8-fd2d57101ed9', 'a4ede966-4514-4408-a549-d1754c3f4287']
+          1. [2023-07-12T16:33:00Z] '[Caroline] I loved "Becoming Nicole" by Amy Ellis Nutt. It\'s a real inspiring true story about '
+          2. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          3. [2023-07-12T16:33:00Z] '[Melanie] Caroline, so glad you got the support! Your experience really brought you to where yo'
+          4. [2023-07-12T16:33:00Z] '[Caroline] Thanks so much, Mel! Seeing this pic just made me appreciate my love of reading even' <== GOLD
+          5. [2023-10-13T10:31:00Z] '[Caroline] It was a transgender poetry reading where transgender people shared their stories th'
+          6. [2023-07-12T16:33:00Z] '[Caroline] It taught me self-acceptance and how to find support. It also showed me that tough t' <== GOLD
+          7. [2023-09-13T00:09:00Z] "[Caroline] Thanks, Melanie. It's definitely changed them. Some close friends kept supporting me"
+          8. [2023-07-15T13:51:00Z] '[Caroline] Realizing I can be me without fear and having the courage to transition was the best'
+
+==============================================================================
+### idx 128 [conversational]  pred="I don't know"
+    Q       : What did Caroline find in her neighborhood during her walk?
+    ref     : 'a rainbow sidewalk'
+    gold in : ['a258c3a8-569c-43cf-b8a7-bdbc8f1484ba', 'dcdfbcbf-80b6-4d8c-a79f-7f06ad680174']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 36, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=False []
+          1. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          2. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          3. [2023-05-25T13:14:00Z] '[Melanie] Wow, that agency looks great! What made you pick it?'
+          4. [2023-10-20T18:55:00Z] "[Caroline] Glad you've got people to lean on, Melanie. It helps during tougher times."
+          5. [2023-05-08T13:56:00Z] '[Caroline] Hey Mel! Good to see you! How have you been?'
+          6. [2023-06-27T10:37:00Z] "[Caroline] Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at thi"
+          7. [2023-08-17T13:50:00Z] "[Melanie] I appreciate our friendship too, Caroline. You've always been there for me."
+          8. [2023-08-25T13:33:00Z] "[Melanie] Caroline, glad you found a supportive community! Can you tell me more about why it's "
+
+    --- bare question ---
+        stats={'phase_a_hits': 36, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['a258c3a8-569c-43cf-b8a7-bdbc8f1484ba']
+          1. [2023-08-25T13:33:00Z] '[Caroline] I was out walking in my neighborhood when I came across this cool rainbow sidewalk f' <== GOLD
+          2. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          3. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          4. [2023-07-15T13:51:00Z] "[Melanie] Wow, that sounds awesome! Your friends and community really have your back. What's be"
+          5. [2023-08-25T13:33:00Z] "[Caroline] Hey, Mel! How's it going? There's something I want to tell you. I went hiking last w"
+          6. [2023-08-17T13:50:00Z] '[Caroline] Right, it was so much fun! We could do a family outting, or wanna plan something spe'
+          7. [2023-09-13T00:09:00Z] '[Caroline] Hey Mel, long time no chat! I had a wicked day out with the gang last weekend - we w'
+          8. [2023-07-15T13:51:00Z] '[Caroline] It was awesome, Melanie! Being around people who embrace and back me up is beyond wo'
+
+==============================================================================
+### idx 135 [conversational]  pred="I don't know"
+    Q       : What setback did Melanie face in October 2023?
+    ref     : 'She got hurt and had to take a break from pottery.'
+    gold in : ['66ecafa7-f0ba-4b4a-af51-0ae09c6c819e', 'd59a500b-83de-41bf-a0f6-5dcdb671e82d']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 38, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=False []
+          1. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          2. [2023-05-25T13:14:00Z] '[Melanie] Wow, that agency looks great! What made you pick it?'
+          3. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          4. [2023-06-27T10:37:00Z] "[Caroline] Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at thi"
+          5. [2023-07-15T13:51:00Z] '[Caroline] It must have been special at your wedding. I wish I had known you back then!'
+          6. [2023-05-25T13:14:00Z] "[Melanie] No doubts, Caroline. You have such a caring heart - they'll get all the love and stab"
+          7. [2023-05-08T13:56:00Z] '[Caroline] Hey Mel! Good to see you! How have you been?'
+          8. [2023-06-09T19:55:00Z] "[Caroline] Yeah Mel, let's spread love and understanding! Thanks for the support and encouragem"
+
+    --- bare question ---
+        stats={'phase_a_hits': 37, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['66ecafa7-f0ba-4b4a-af51-0ae09c6c819e']
+          1. [2023-10-13T10:31:00Z] '[Melanie] Thanks for the tip, Caroline. Doing research and readying myself emotionally makes se' <== GOLD
+          2. [2023-05-25T13:14:00Z] '[Melanie] Wow, that agency looks great! What made you pick it?'
+          3. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          4. [2023-06-09T19:55:00Z] '[Melanie] 5 years already! Time flies- feels like just yesterday I put this dress on! Thanks, C'
+          5. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          6. [2023-10-20T18:55:00Z] '[Melanie] Yeah, our trip got off to a bad start. I was really scared when we got into the accid'
+          7. [2023-07-15T13:51:00Z] "[Melanie] My fam's been awesome - they helped out and showed lots of love and support."
+          8. [2023-05-25T13:14:00Z] "[Melanie] Hey Caroline, since we last chatted, I've had a lot of things happening to me. I ran "
+
+==============================================================================
+### idx 152 [adversarial]  pred="I don't know"
+    Q       : What did Caroline realize after her charity race?
+    ref     : 'self-care is important'
+    gold in : ['2edb452d-4427-4609-841a-1ebf3d348973', 'c2e068be-0f49-423f-92b5-a763477d8ddf', '58ca54c5-11f7-4b8c-bead-07a5558a595b', '258ccb92-7032-410b-bc22-97f5bf7c349a']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 36, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['c2e068be-0f49-423f-92b5-a763477d8ddf', '58ca54c5-11f7-4b8c-bead-07a5558a595b', '258ccb92-7032-410b-bc22-97f5bf7c349a']
+          1. [2023-05-25T13:14:00Z] "[Melanie] Hey Caroline, since we last chatted, I've had a lot of things happening to me. I ran "
+          2. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          3. [2023-05-25T13:14:00Z] "[Melanie] Thanks, Caroline! The event was really thought-provoking. I'm starting to realize tha" <== GOLD
+          4. [2023-05-25T13:14:00Z] "[Caroline] That's great, Mel! Taking time for yourself is so important. You're doing an awesome"
+          5. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi" <== GOLD
+          6. [2023-06-27T10:37:00Z] "[Melanie] Wow, Caroline! You've gained so much from your own experience. Your passion and hard " <== GOLD
+          7. [2023-06-27T10:37:00Z] "[Caroline] Hey Melanie! Long time no talk! A lot's been going on in my life! Take a look at thi"
+          8. [2023-10-20T18:55:00Z] "[Melanie] Yeah, Caroline. Totally agree. They're my biggest motivation and support."
+
+    --- bare question ---
+        stats={'phase_a_hits': 38, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['c2e068be-0f49-423f-92b5-a763477d8ddf']
+          1. [2023-05-25T13:14:00Z] "[Melanie] Hey Caroline, since we last chatted, I've had a lot of things happening to me. I ran "
+          2. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi" <== GOLD
+          3. [2023-08-25T13:33:00Z] "[Caroline] Hey, Mel! How's it going? There's something I want to tell you. I went hiking last w"
+          4. [2023-08-25T13:33:00Z] "[Caroline] Wow, Mel, you're amazing! Volunteering and making a difference- it's so heartwarming"
+          5. [2023-07-17T14:31:00Z] "[Caroline] I mentor a transgender teen just like me. We've been working on building up confiden"
+          6. [2023-08-28T15:19:00Z] '[Caroline] It was so special to me. It reminded me of my own struggles in the past and how I fe'
+          7. [2023-08-28T15:19:00Z] "[Caroline] I'm definitely carrying on volunteering at the youth center. It's an important part "
+          8. [2023-07-17T14:31:00Z] "[Caroline] Seeing my mentee's face light up when they saw the support was the best! Such a spec"
+
+==============================================================================
+### idx 171 [adversarial]  pred="I don't know"
+    Q       : What did Melanie see at the council meeting for adoption?
+    ref     : 'many people wanting to create loving homes for children in need'
+    gold in : ['6a38971b-864f-409e-a46c-78988554e673']
+
+    --- eval query (with prefix) ---
+        stats={'phase_a_hits': 30, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['6a38971b-864f-409e-a46c-78988554e673']
+          1. [2023-05-25T13:14:00Z] '[Melanie] Wow, that agency looks great! What made you pick it?'
+          2. [2023-10-22T09:55:00Z] "[Caroline] Woohoo Melanie! I passed the adoption agency interviews last Friday! I'm so excited "
+          3. [2023-05-25T13:14:00Z] "[Melanie] That's great, Caroline! Loving the inclusivity and support. Anything you're excited f"
+          4. [2023-07-15T13:51:00Z] '[Caroline] That photo is stunning! So glad you bonded over our love of nature. Last Friday I we' <== GOLD
+          5. [2023-10-13T10:31:00Z] '[Melanie] Thanks, Caroline! Appreciate your help. Got any tips for getting started on it?'
+          6. [2023-05-08T13:56:00Z] "[Melanie] Wow, that's cool, Caroline! What happened that was so awesome? Did you hear any inspi"
+          7. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"
+          8. [2023-10-22T09:55:00Z] "[Melanie] Congrats, Caroline! Adoption sounds awesome. I'm so happy for you. These figurines I "
+
+    --- bare question ---
+        stats={'phase_a_hits': 29, 'lambda_used': 0.25, 'query_type': 'factual', 'link_traversal_added': 3, 'total_retrieved': 8}
+        retrieved=8  gold_retrieved=True ['6a38971b-864f-409e-a46c-78988554e673']
+          1. [2023-05-25T13:14:00Z] '[Melanie] Wow, that agency looks great! What made you pick it?'
+          2. [2023-07-15T13:51:00Z] '[Caroline] That photo is stunning! So glad you bonded over our love of nature. Last Friday I we' <== GOLD
+          3. [2023-05-25T13:14:00Z] "[Melanie] That's great, Caroline! Loving the inclusivity and support. Anything you're excited f"
+          4. [2023-10-13T10:31:00Z] '[Melanie] Thanks, Caroline! Appreciate your help. Got any tips for getting started on it?'
+          5. [2023-10-13T10:31:00Z] "[Caroline] Yep! Do your research and find an adoption agency or lawyer. They'll help with the p"
+          6. [2023-10-22T09:55:00Z] "[Caroline] Woohoo Melanie! I passed the adoption agency interviews last Friday! I'm so excited "
+          7. [2023-10-13T10:31:00Z] "[Melanie] Yeah, a buddy of mine adopted last year. It was a long process, but now they're super"
+          8. [2023-07-15T13:51:00Z] "[Melanie] Wow, Caroline! That's huge! How did it feel to be around so much love and acceptance?"

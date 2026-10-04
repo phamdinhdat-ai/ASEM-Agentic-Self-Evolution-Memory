@@ -1,0 +1,1794 @@
+{
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0000\\asem_thg.sqlite": {
+    "n_notes": 406,
+    "n_link_records": 7128,
+    "n_unique_undirected_pairs": 2272,
+    "relation_histogram": {
+      "same-entity": 3982,
+      "semantic": 2370,
+      "temporal": 774,
+      "superseded_by": 2
+    },
+    "entity_fanout": {
+      "mean": 294.41379310344826,
+      "median": 277.0,
+      "p90": 402.0,
+      "max": 403,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 29,
+    "implied_same_entity_pairs": 65611,
+    "n_notes_with_superseded_by": 2,
+    "share_notes_with_superseded_by": 0.0049261083743842365,
+    "n_supersession_pairs": 1,
+    "supersession_examples": [
+      {
+        "note_a": "da9e3f90-c4be-412d-9383-263dac3002d2",
+        "note_b": "ffbbcfe5-7c83-45a9-ac96-097c7845dc1c",
+        "note_a_sentence": "A few weeks before 15 July 2023, Caroline went to a pride parade, which she described as a top memory.",
+        "note_b_sentence": "Caroline attended a pride parade on Friday 11 August 2023 and found it awesome, full of energy and love everywhere.",
+        "note_a_date": "1:51 pm on 15 July, 2023",
+        "note_b_date": "2:24 pm on 14 August, 2023",
+        "link_valid_from": "2023-07-15T13:51:00Z",
+        "link_valid_to": "2023-08-14T14:24:00Z",
+        "older_note": "da9e3f90-c4be-412d-9383-263dac3002d2",
+        "newer_note": "ffbbcfe5-7c83-45a9-ac96-097c7845dc1c",
+        "older_entities": [
+          "Caroline"
+        ],
+        "newer_entities": [
+          "Caroline"
+        ],
+        "older_keywords": [
+          "pride parade",
+          "LGBTQ",
+          "community"
+        ],
+        "newer_keywords": [
+          "pride parade",
+          "LGBTQ",
+          "equality",
+          "energy"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 406,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 406,
+    "session_id_kinds": {
+      "ordinal": 406
+    },
+    "session_id_samples": [
+      "s2",
+      "s2",
+      "s1",
+      "s1",
+      "s4"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0000\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0001\\asem_thg.sqlite": {
+    "n_notes": 348,
+    "n_link_records": 6200,
+    "n_unique_undirected_pairs": 1966,
+    "relation_histogram": {
+      "same-entity": 3426,
+      "semantic": 2056,
+      "temporal": 658,
+      "superseded_by": 60
+    },
+    "entity_fanout": {
+      "mean": 286.6666666666667,
+      "median": 263.0,
+      "p90": 347.0,
+      "max": 347,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 6,
+    "implied_same_entity_pairs": 59473,
+    "n_notes_with_superseded_by": 41,
+    "share_notes_with_superseded_by": 0.11781609195402298,
+    "n_supersession_pairs": 30,
+    "supersession_examples": [
+      {
+        "note_a": "99a8eabd-f174-473e-9568-7ce2cccbedc1",
+        "note_b": "e404dcb3-af8a-4bb1-8323-eaa0c820fca1",
+        "note_a_sentence": "Gina lost her job at Door Dash in January 2023.",
+        "note_b_sentence": "Gina lost her job at Door Dash.",
+        "note_a_date": "4:04 pm on 20 January, 2023",
+        "note_b_date": "2:35 pm on 16 March, 2023",
+        "link_valid_from": "2023-01-20T16:04:00Z",
+        "link_valid_to": "2023-03-16T14:35:00Z",
+        "older_note": "99a8eabd-f174-473e-9568-7ce2cccbedc1",
+        "newer_note": "e404dcb3-af8a-4bb1-8323-eaa0c820fca1",
+        "older_entities": [
+          "Gina",
+          "Door Dash"
+        ],
+        "newer_entities": [
+          "Gina",
+          "Door Dash"
+        ],
+        "older_keywords": [
+          "Door Dash",
+          "job loss",
+          "unemployment"
+        ],
+        "newer_keywords": [
+          "job loss",
+          "Door Dash",
+          "unemployment"
+        ]
+      },
+      {
+        "note_a": "9f2aea64-1190-4f60-8a92-b9e4b30b1be6",
+        "note_b": "0f5b5853-ca47-4a12-b583-078420c4ddc8",
+        "note_a_sentence": "Jon thanks Gina for having his back and toasts to taking on new heights and all the trials that come with it.",
+        "note_b_sentence": "On 4 February 2023, Jon thanked Gina and said her kind words mean a lot and he won't give up.",
+        "note_a_date": "2:35 pm on 16 March, 2023",
+        "note_b_date": "10:43 am on 4 February, 2023",
+        "link_valid_from": "2023-03-16T14:35:00Z",
+        "link_valid_to": null,
+        "older_note": "0f5b5853-ca47-4a12-b583-078420c4ddc8",
+        "newer_note": "9f2aea64-1190-4f60-8a92-b9e4b30b1be6",
+        "older_entities": [
+          "Jon",
+          "Gina"
+        ],
+        "newer_entities": [
+          "Jon",
+          "Gina"
+        ],
+        "older_keywords": [
+          "gratitude",
+          "kind words",
+          "perseverance"
+        ],
+        "newer_keywords": [
+          "thanks",
+          "support",
+          "toast"
+        ]
+      },
+      {
+        "note_a": "9f2aea64-1190-4f60-8a92-b9e4b30b1be6",
+        "note_b": "ce025416-32ff-4c55-9277-ea74a1cd7f58",
+        "note_a_sentence": "Jon thanks Gina for having his back and toasts to taking on new heights and all the trials that come with it.",
+        "note_b_sentence": "Jon thanked Gina for being there for him, saying it has made a huge difference and feels great.",
+        "note_a_date": "2:35 pm on 16 March, 2023",
+        "note_b_date": "7:28 pm on 23 March, 2023",
+        "link_valid_from": "2023-03-16T14:35:00Z",
+        "link_valid_to": "2023-03-23T19:28:00Z",
+        "older_note": "9f2aea64-1190-4f60-8a92-b9e4b30b1be6",
+        "newer_note": "ce025416-32ff-4c55-9277-ea74a1cd7f58",
+        "older_entities": [
+          "Jon",
+          "Gina"
+        ],
+        "newer_entities": [
+          "Jon",
+          "Gina"
+        ],
+        "older_keywords": [
+          "thanks",
+          "support",
+          "toast"
+        ],
+        "newer_keywords": [
+          "gratitude",
+          "support",
+          "friendship"
+        ]
+      },
+      {
+        "note_a": "b7b40b3d-9469-4c05-8728-6dd43dbc5166",
+        "note_b": "ebd639d1-4872-42f8-8c85-21b02cafe64c",
+        "note_a_sentence": "Gina said on 11 May 2023 that dance is her stress fix too and that as soon as she starts, all her worries vanish.",
+        "note_b_sentence": "Dance serves as Gina's stress relief and fashion fuels her creativity.",
+        "note_a_date": "3:14 pm on 11 May, 2023",
+        "note_b_date": "1:26 pm on 3 April, 2023",
+        "link_valid_from": "2023-05-11T15:14:00Z",
+        "link_valid_to": null,
+        "older_note": "ebd639d1-4872-42f8-8c85-21b02cafe64c",
+        "newer_note": "b7b40b3d-9469-4c05-8728-6dd43dbc5166",
+        "older_entities": [
+          "Gina"
+        ],
+        "newer_entities": [
+          "Gina"
+        ],
+        "older_keywords": [
+          "dance",
+          "stress relief",
+          "fashion",
+          "creativity"
+        ],
+        "newer_keywords": [
+          "dance",
+          "stress relief",
+          "mental health"
+        ]
+      },
+      {
+        "note_a": "bf78d09c-40bf-4d98-9bd9-5f8e84ec3f09",
+        "note_b": "fb612e87-42b9-44e3-87ec-0a5bf4392e8c",
+        "note_a_sentence": "Gina told Jon on 11 May 2023 that stepping into the unknown must be scary but that his determination and drive will make his dance studio a huge success.",
+        "note_b_sentence": "Gina told Jon they are in this together and to not let anything stop him.",
+        "note_a_date": "3:14 pm on 11 May, 2023",
+        "note_b_date": "11:24 am on 25 April, 2023",
+        "link_valid_from": "2023-05-11T15:14:00Z",
+        "link_valid_to": null,
+        "older_note": "fb612e87-42b9-44e3-87ec-0a5bf4392e8c",
+        "newer_note": "bf78d09c-40bf-4d98-9bd9-5f8e84ec3f09",
+        "older_entities": [
+          "Gina",
+          "Jon"
+        ],
+        "newer_entities": [
+          "Gina",
+          "Jon"
+        ],
+        "older_keywords": [
+          "support",
+          "together"
+        ],
+        "newer_keywords": [
+          "determination",
+          "success",
+          "encouragement"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 348,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 348,
+    "session_id_kinds": {
+      "ordinal": 348
+    },
+    "session_id_samples": [
+      "s2",
+      "s2",
+      "s3",
+      "s3",
+      "s3"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0001\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0002\\asem_thg.sqlite": {
+    "n_notes": 458,
+    "n_link_records": 6960,
+    "n_unique_undirected_pairs": 2507,
+    "relation_histogram": {
+      "same-entity": 4486,
+      "semantic": 1598,
+      "temporal": 852,
+      "superseded_by": 24
+    },
+    "entity_fanout": {
+      "mean": 321.70742358078604,
+      "median": 319.0,
+      "p90": 452.0,
+      "max": 452,
+      "zero_share": 0.002183406113537118
+    },
+    "n_distinct_entities": 32,
+    "implied_same_entity_pairs": 79134,
+    "n_notes_with_superseded_by": 21,
+    "share_notes_with_superseded_by": 0.04585152838427948,
+    "n_supersession_pairs": 12,
+    "supersession_examples": [
+      {
+        "note_a": "d7c83ce6-bf02-4dee-8734-937e837f6677",
+        "note_b": "b89ca9fa-b2b3-4614-b938-ec1d9f203796",
+        "note_a_sentence": "John has a strong urge to serve his country and community and is running for office to make an impact.",
+        "note_b_sentence": "John is running for office again.",
+        "note_a_date": "2:33 pm on 5 February, 2023",
+        "note_b_date": "8:55 pm on 25 February, 2023",
+        "link_valid_from": "2023-02-05T14:33:00Z",
+        "link_valid_to": "2023-02-25T20:55:00Z",
+        "older_note": "d7c83ce6-bf02-4dee-8734-937e837f6677",
+        "newer_note": "b89ca9fa-b2b3-4614-b938-ec1d9f203796",
+        "older_entities": [
+          "John"
+        ],
+        "newer_entities": [
+          "John"
+        ],
+        "older_keywords": [
+          "politics",
+          "serve",
+          "community",
+          "office"
+        ],
+        "newer_keywords": [
+          "running for office",
+          "politics",
+          "campaign"
+        ]
+      },
+      {
+        "note_a": "386997cc-f4c2-4eb9-872b-e23734b25148",
+        "note_b": "73f596f1-b3a5-42a0-8b9b-802addd52595",
+        "note_a_sentence": "Maria offered to help John in any way she could after the flood.",
+        "note_b_sentence": "Maria offered to help John and said they work well together.",
+        "note_a_date": "6:29 pm on 7 July, 2023",
+        "note_b_date": "9:36 am on 2 April, 2023",
+        "link_valid_from": "2023-07-07T18:29:00Z",
+        "link_valid_to": null,
+        "older_note": "73f596f1-b3a5-42a0-8b9b-802addd52595",
+        "newer_note": "386997cc-f4c2-4eb9-872b-e23734b25148",
+        "older_entities": [
+          "Maria",
+          "John"
+        ],
+        "newer_entities": [
+          "Maria",
+          "John"
+        ],
+        "older_keywords": [
+          "help",
+          "support",
+          "teamwork"
+        ],
+        "newer_keywords": [
+          "help",
+          "offer",
+          "support"
+        ]
+      },
+      {
+        "note_a": "77adb3ca-6dff-4499-872a-14baed2594af",
+        "note_b": "cc75aff8-3613-44ef-958e-16a0a8aae393",
+        "note_a_sentence": "Maria offered to lend an ear or help John however she can.",
+        "note_b_sentence": "Maria told John she is there for him and to let her know if he needs help.",
+        "note_a_date": "6:59 pm on 5 July, 2023",
+        "note_b_date": "11:51 am on 3 June, 2023",
+        "link_valid_from": "2023-07-05T18:59:00Z",
+        "link_valid_to": null,
+        "older_note": "cc75aff8-3613-44ef-958e-16a0a8aae393",
+        "newer_note": "77adb3ca-6dff-4499-872a-14baed2594af",
+        "older_entities": [
+          "Maria",
+          "John"
+        ],
+        "newer_entities": [
+          "Maria",
+          "John"
+        ],
+        "older_keywords": [
+          "support",
+          "help",
+          "friendship"
+        ],
+        "newer_keywords": [
+          "support",
+          "help"
+        ]
+      },
+      {
+        "note_a": "3063802e-bbf1-4311-94ca-50d0ecf3380d",
+        "note_b": "6de211b8-1d04-4f80-8b0c-915b509121dc",
+        "note_a_sentence": "Maria volunteers at a homeless shelter.",
+        "note_b_sentence": "Maria has been volunteering at a homeless shelter, and she has built a good support system there.",
+        "note_a_date": "6:20 pm on 3 August, 2023",
+        "note_b_date": "6:03 pm on 6 March, 2023",
+        "link_valid_from": "2023-08-03T18:20:00Z",
+        "link_valid_to": null,
+        "older_note": "6de211b8-1d04-4f80-8b0c-915b509121dc",
+        "newer_note": "3063802e-bbf1-4311-94ca-50d0ecf3380d",
+        "older_entities": [
+          "Maria"
+        ],
+        "newer_entities": [
+          "Maria"
+        ],
+        "older_keywords": [
+          "volunteering",
+          "homeless shelter",
+          "support system"
+        ],
+        "newer_keywords": [
+          "volunteering",
+          "homeless shelter"
+        ]
+      },
+      {
+        "note_a": "6de211b8-1d04-4f80-8b0c-915b509121dc",
+        "note_b": "cdd2605d-eeab-4b67-8496-f379150ec908",
+        "note_a_sentence": "Maria has been volunteering at a homeless shelter, and she has built a good support system there.",
+        "note_b_sentence": "Maria volunteers at a homeless shelter.",
+        "note_a_date": "6:03 pm on 6 March, 2023",
+        "note_b_date": "6:10 pm on 22 December, 2022",
+        "link_valid_from": "2023-03-06T18:03:00Z",
+        "link_valid_to": null,
+        "older_note": "cdd2605d-eeab-4b67-8496-f379150ec908",
+        "newer_note": "6de211b8-1d04-4f80-8b0c-915b509121dc",
+        "older_entities": [
+          "Maria",
+          "homeless shelter"
+        ],
+        "newer_entities": [
+          "Maria"
+        ],
+        "older_keywords": [
+          "volunteering",
+          "homeless shelter"
+        ],
+        "newer_keywords": [
+          "volunteering",
+          "homeless shelter",
+          "support system"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 458,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 458,
+    "session_id_kinds": {
+      "ordinal": 458
+    },
+    "session_id_samples": [
+      "s2",
+      "s1",
+      "s6",
+      "s7",
+      "s4"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0002\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0003\\asem_thg.sqlite": {
+    "n_notes": 500,
+    "n_link_records": 8626,
+    "n_unique_undirected_pairs": 2774,
+    "relation_histogram": {
+      "same-entity": 4942,
+      "semantic": 2728,
+      "temporal": 942,
+      "superseded_by": 14
+    },
+    "entity_fanout": {
+      "mean": 367.8,
+      "median": 335.0,
+      "p90": 499.0,
+      "max": 499,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 17,
+    "implied_same_entity_pairs": 101197,
+    "n_notes_with_superseded_by": 11,
+    "share_notes_with_superseded_by": 0.022,
+    "n_supersession_pairs": 7,
+    "supersession_examples": [
+      {
+        "note_a": "c8d3e4a0-a630-4bca-9180-54a13d548b3d",
+        "note_b": "60bed851-8b12-4e80-bd03-2bc498aff6e9",
+        "note_a_sentence": "Nate encouraged Joanna to keep up the good work on her dairy-free dessert creations.",
+        "note_b_sentence": "Nate encouraged Joanna not to quit and told her the path forward will show up soon.",
+        "note_a_date": "11:54 am on 2 May, 2022",
+        "note_b_date": "6:59 pm on 18 March, 2022",
+        "link_valid_from": "2022-05-02T11:54:00Z",
+        "link_valid_to": null,
+        "older_note": "60bed851-8b12-4e80-bd03-2bc498aff6e9",
+        "newer_note": "c8d3e4a0-a630-4bca-9180-54a13d548b3d",
+        "older_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "newer_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "support",
+          "perseverance"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "desserts"
+        ]
+      },
+      {
+        "note_a": "c8d3e4a0-a630-4bca-9180-54a13d548b3d",
+        "note_b": "b1505727-aeaf-46fc-8241-47970f0c444b",
+        "note_a_sentence": "Nate encouraged Joanna to keep up the good work on her dairy-free dessert creations.",
+        "note_b_sentence": "Nate encouraged Joanna to keep going and reach for her dreams, saying she has tons of talent and potential.",
+        "note_a_date": "11:54 am on 2 May, 2022",
+        "note_b_date": "7:49 pm on 20 May, 2022",
+        "link_valid_from": "2022-05-02T11:54:00Z",
+        "link_valid_to": "2022-05-20T19:49:00Z",
+        "older_note": "c8d3e4a0-a630-4bca-9180-54a13d548b3d",
+        "newer_note": "b1505727-aeaf-46fc-8241-47970f0c444b",
+        "older_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "newer_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "desserts"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "talent",
+          "potential",
+          "dreams"
+        ]
+      },
+      {
+        "note_a": "3764319f-7f20-4375-886f-ca504e8e790d",
+        "note_b": "73ce2aab-528b-4a94-a417-8b4c1340ddca",
+        "note_a_sentence": "Nate said he is here for Joanna and is glad his support makes a difference.",
+        "note_b_sentence": "Nate told Joanna he is always there for her and is proud of how hard she has worked.",
+        "note_a_date": "6:59 pm on 18 March, 2022",
+        "note_b_date": "11:15 am on 6 October, 2022",
+        "link_valid_from": "2022-03-18T18:59:00Z",
+        "link_valid_to": "2022-10-06T11:15:00Z",
+        "older_note": "3764319f-7f20-4375-886f-ca504e8e790d",
+        "newer_note": "73ce2aab-528b-4a94-a417-8b4c1340ddca",
+        "older_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "newer_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "older_keywords": [
+          "support",
+          "here for you"
+        ],
+        "newer_keywords": [
+          "support",
+          "proud",
+          "encouragement"
+        ]
+      },
+      {
+        "note_a": "ef588aaa-01d4-4b58-96ff-7d74dc962961",
+        "note_b": "80857456-f014-4349-844b-5f325877d2ad",
+        "note_a_sentence": "Joanna said Nate's support means a lot to her and that she will keep him updated.",
+        "note_b_sentence": "Joanna said Nate's support means a lot and that having people like him cheering her on makes her journey easier.",
+        "note_a_date": "7:37 pm on 15 April, 2022",
+        "note_b_date": "7:49 pm on 20 May, 2022",
+        "link_valid_from": "2022-04-15T19:37:00Z",
+        "link_valid_to": "2022-05-20T19:49:00Z",
+        "older_note": "ef588aaa-01d4-4b58-96ff-7d74dc962961",
+        "newer_note": "80857456-f014-4349-844b-5f325877d2ad",
+        "older_entities": [
+          "Joanna",
+          "Nate"
+        ],
+        "newer_entities": [
+          "Joanna",
+          "Nate"
+        ],
+        "older_keywords": [
+          "support",
+          "appreciation",
+          "update"
+        ],
+        "newer_keywords": [
+          "support",
+          "gratitude",
+          "friendship"
+        ]
+      },
+      {
+        "note_a": "6bb92442-3d44-479b-9811-b7754f41cb2d",
+        "note_b": "b1505727-aeaf-46fc-8241-47970f0c444b",
+        "note_a_sentence": "Nate encouraged Joanna to keep up her hard work and believe in herself for her writing.",
+        "note_b_sentence": "Nate encouraged Joanna to keep going and reach for her dreams, saying she has tons of talent and potential.",
+        "note_a_date": "2:34 pm on 10 July, 2022",
+        "note_b_date": "7:49 pm on 20 May, 2022",
+        "link_valid_from": "2022-07-10T14:34:00Z",
+        "link_valid_to": null,
+        "older_note": "b1505727-aeaf-46fc-8241-47970f0c444b",
+        "newer_note": "6bb92442-3d44-479b-9811-b7754f41cb2d",
+        "older_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "newer_entities": [
+          "Nate",
+          "Joanna"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "talent",
+          "potential",
+          "dreams"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "writing",
+          "support"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 500,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 500,
+    "session_id_kinds": {
+      "ordinal": 500
+    },
+    "session_id_samples": [
+      "s3",
+      "s2",
+      "s5",
+      "s5",
+      "s2"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0003\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0004\\asem_thg.sqlite": {
+    "n_notes": 511,
+    "n_link_records": 7388,
+    "n_unique_undirected_pairs": 2811,
+    "relation_histogram": {
+      "same-entity": 5050,
+      "semantic": 1358,
+      "temporal": 964,
+      "superseded_by": 16
+    },
+    "entity_fanout": {
+      "mean": 353.8825831702544,
+      "median": 345,
+      "p90": 510.0,
+      "max": 510,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 47,
+    "implied_same_entity_pairs": 95888,
+    "n_notes_with_superseded_by": 12,
+    "share_notes_with_superseded_by": 0.023483365949119372,
+    "n_supersession_pairs": 8,
+    "supersession_examples": [
+      {
+        "note_a": "8e59ccf7-49ce-44f3-956e-dfc90a22c573",
+        "note_b": "cbee24f7-b4b5-4345-b2c9-cd5cb7ee09e9",
+        "note_a_sentence": "Tim said that John's friendship means a lot to him.",
+        "note_b_sentence": "Tim told John that their friendship means a lot to him and that he is there for John anytime.",
+        "note_a_date": "9:52 am on 1 December, 2023",
+        "note_b_date": "3:00 pm on 2 October, 2023",
+        "link_valid_from": "2023-12-01T09:52:00Z",
+        "link_valid_to": null,
+        "older_note": "cbee24f7-b4b5-4345-b2c9-cd5cb7ee09e9",
+        "newer_note": "8e59ccf7-49ce-44f3-956e-dfc90a22c573",
+        "older_entities": [
+          "Tim",
+          "John"
+        ],
+        "newer_entities": [
+          "Tim",
+          "John"
+        ],
+        "older_keywords": [
+          "friendship",
+          "support"
+        ],
+        "newer_keywords": [
+          "friendship",
+          "appreciation"
+        ]
+      },
+      {
+        "note_a": "715b0379-33d5-47ab-8876-4840b645c897",
+        "note_b": "b05edc89-c5ca-4057-9755-37579050de90",
+        "note_a_sentence": "John congratulated Tim on his progress and encouraged him to keep up the hard work with music.",
+        "note_b_sentence": "On 26 August 2023, John told Tim that he relates to exam and homework stress but encouraged him that he's got this.",
+        "note_a_date": "5:34 pm on 6 December, 2023",
+        "note_b_date": "6:59 pm on 26 August, 2023",
+        "link_valid_from": "2023-12-06T17:34:00Z",
+        "link_valid_to": null,
+        "older_note": "b05edc89-c5ca-4057-9755-37579050de90",
+        "newer_note": "715b0379-33d5-47ab-8876-4840b645c897",
+        "older_entities": [
+          "John",
+          "Tim"
+        ],
+        "newer_entities": [
+          "John",
+          "Tim"
+        ],
+        "older_keywords": [
+          "support",
+          "encouragement",
+          "exams",
+          "homework"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "hard work",
+          "music"
+        ]
+      },
+      {
+        "note_a": "5a370b13-663f-4186-98ba-494ba5122b29",
+        "note_b": "497f5e30-6949-43ac-9150-f00e875aafc1",
+        "note_a_sentence": "Tim congratulated John on his basketball team's win on 16 December 2023.",
+        "note_b_sentence": "Tim congratulated John and said he was proud of John for winning the trophy with all his hard work.",
+        "note_a_date": "3:37 pm on 16 December, 2023",
+        "note_b_date": "1:50 pm on 13 October, 2023",
+        "link_valid_from": "2023-12-16T15:37:00Z",
+        "link_valid_to": null,
+        "older_note": "497f5e30-6949-43ac-9150-f00e875aafc1",
+        "newer_note": "5a370b13-663f-4186-98ba-494ba5122b29",
+        "older_entities": [
+          "Tim",
+          "John"
+        ],
+        "newer_entities": [
+          "Tim",
+          "John"
+        ],
+        "older_keywords": [
+          "congratulations",
+          "proud",
+          "trophy",
+          "hard work"
+        ],
+        "newer_keywords": [
+          "congratulations",
+          "basketball",
+          "win"
+        ]
+      },
+      {
+        "note_a": "1102526d-fe2f-4203-a9a4-5d29125a3491",
+        "note_b": "c8cf7473-8e21-4978-bb78-ae6988faa089",
+        "note_a_sentence": "Tim told John he is there for him anytime and encouraged him to keep believing in himself.",
+        "note_b_sentence": "Tim encouraged John to keep going and not give up on his dreams.",
+        "note_a_date": "1:50 pm on 13 October, 2023",
+        "note_b_date": "5:08 pm on 15 June, 2023",
+        "link_valid_from": "2023-10-13T13:50:00Z",
+        "link_valid_to": null,
+        "older_note": "c8cf7473-8e21-4978-bb78-ae6988faa089",
+        "newer_note": "1102526d-fe2f-4203-a9a4-5d29125a3491",
+        "older_entities": [
+          "Tim",
+          "John"
+        ],
+        "newer_entities": [
+          "Tim",
+          "John"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "dreams",
+          "support"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "belief",
+          "support"
+        ]
+      },
+      {
+        "note_a": "1102526d-fe2f-4203-a9a4-5d29125a3491",
+        "note_b": "7e27cef6-f243-4cd7-a73b-750aade16056",
+        "note_a_sentence": "Tim told John he is there for him anytime and encouraged him to keep believing in himself.",
+        "note_b_sentence": "Tim encouraged John to stay motivated and remember that anything is possible with hard work, and to keep pushing for his goals.",
+        "note_a_date": "1:50 pm on 13 October, 2023",
+        "note_b_date": "1:50 pm on 13 October, 2023",
+        "link_valid_from": "2023-10-13T13:50:00Z",
+        "link_valid_to": null,
+        "older_note": "1102526d-fe2f-4203-a9a4-5d29125a3491",
+        "newer_note": "7e27cef6-f243-4cd7-a73b-750aade16056",
+        "older_entities": [
+          "Tim",
+          "John"
+        ],
+        "newer_entities": [
+          "Tim",
+          "John"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "belief",
+          "support"
+        ],
+        "newer_keywords": [
+          "motivation",
+          "hard work",
+          "goals",
+          "possibility"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 511,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 511,
+    "session_id_kinds": {
+      "ordinal": 511
+    },
+    "session_id_samples": [
+      "s3",
+      "s4",
+      "s4",
+      "s4",
+      "s2"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0004\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0005\\asem_thg.sqlite": {
+    "n_notes": 498,
+    "n_link_records": 8826,
+    "n_unique_undirected_pairs": 2823,
+    "relation_histogram": {
+      "same-entity": 4926,
+      "semantic": 2948,
+      "temporal": 940,
+      "superseded_by": 12
+    },
+    "entity_fanout": {
+      "mean": 346.4698795180723,
+      "median": 326.0,
+      "p90": 495.0,
+      "max": 495,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 14,
+    "implied_same_entity_pairs": 92999,
+    "n_notes_with_superseded_by": 10,
+    "share_notes_with_superseded_by": 0.020080321285140562,
+    "n_supersession_pairs": 6,
+    "supersession_examples": [
+      {
+        "note_a": "597ca0f2-1b31-443f-9790-2a5e8db14eeb",
+        "note_b": "a905acbf-c02b-412f-be30-88f3446a8d1e",
+        "note_a_sentence": "Audrey advised Andrew that city-dwellers with a pup need enough time and energy, especially for a German Shepherd like Toby who needs to offset a lot of energy.",
+        "note_b_sentence": "Audrey reminded Andrew that forming a bond takes time and not to rush.",
+        "note_a_date": "11:05 am on 4 August, 2023",
+        "note_b_date": "12:24 am on 24 August, 2023",
+        "link_valid_from": "2023-08-04T11:05:00Z",
+        "link_valid_to": "2023-08-24T00:24:00Z",
+        "older_note": "597ca0f2-1b31-443f-9790-2a5e8db14eeb",
+        "newer_note": "a905acbf-c02b-412f-be30-88f3446a8d1e",
+        "older_entities": [
+          "Audrey",
+          "Andrew",
+          "Toby"
+        ],
+        "newer_entities": [
+          "Audrey",
+          "Andrew"
+        ],
+        "older_keywords": [
+          "advice",
+          "pup",
+          "time",
+          "energy",
+          "German Shepherd"
+        ],
+        "newer_keywords": [
+          "bond",
+          "patience",
+          "advice"
+        ]
+      },
+      {
+        "note_a": "fe969c1f-b50a-457b-9f07-73c3df5b8d54",
+        "note_b": "f6d7a7bd-2f4a-496b-b1d1-463c2a52823f",
+        "note_a_sentence": "Andrew told Audrey that Audrey put so much love into making the dog tags, making them extra special.",
+        "note_b_sentence": "Andrew said Audrey's personalized wooden dog tags look great and asked if Audrey made them.",
+        "note_a_date": "10:05 am on 11 July, 2023",
+        "note_b_date": "10:05 am on 11 July, 2023",
+        "link_valid_from": "2023-07-11T10:05:00Z",
+        "link_valid_to": null,
+        "older_note": "fe969c1f-b50a-457b-9f07-73c3df5b8d54",
+        "newer_note": "f6d7a7bd-2f4a-496b-b1d1-463c2a52823f",
+        "older_entities": [
+          "Andrew",
+          "Audrey"
+        ],
+        "newer_entities": [
+          "Andrew",
+          "Audrey"
+        ],
+        "older_keywords": [
+          "love",
+          "dog tags",
+          "special",
+          "compliment"
+        ],
+        "newer_keywords": [
+          "dog tags",
+          "compliment",
+          "handmade"
+        ]
+      },
+      {
+        "note_a": "ebc80d7b-ff3c-448c-af5e-50c63d7b2687",
+        "note_b": "a905acbf-c02b-412f-be30-88f3446a8d1e",
+        "note_a_sentence": "Audrey advised Andrew to take care of Toby and Buddy first before getting more dogs.",
+        "note_b_sentence": "Audrey reminded Andrew that forming a bond takes time and not to rush.",
+        "note_a_date": "7:59 pm on 4 November, 2023",
+        "note_b_date": "12:24 am on 24 August, 2023",
+        "link_valid_from": "2023-11-04T19:59:00Z",
+        "link_valid_to": null,
+        "older_note": "a905acbf-c02b-412f-be30-88f3446a8d1e",
+        "newer_note": "ebc80d7b-ff3c-448c-af5e-50c63d7b2687",
+        "older_entities": [
+          "Audrey",
+          "Andrew"
+        ],
+        "newer_entities": [
+          "Audrey",
+          "Andrew",
+          "Toby",
+          "Buddy"
+        ],
+        "older_keywords": [
+          "bond",
+          "patience",
+          "advice"
+        ],
+        "newer_keywords": [
+          "advice",
+          "dog care",
+          "multi-dog owner"
+        ]
+      },
+      {
+        "note_a": "944b463d-715a-42cc-b634-2479bfdb32d2",
+        "note_b": "86dc1de1-a62f-4d38-a953-81f7be9b8351",
+        "note_a_sentence": "Audrey offered Andrew help with his dogs, saying she is there for him.",
+        "note_b_sentence": "Audrey offered to help Andrew find a pet-friendly place by asking him to email her his criteria.",
+        "note_a_date": "7:59 pm on 4 November, 2023",
+        "note_b_date": "11:27 am on 2 June, 2023",
+        "link_valid_from": "2023-11-04T19:59:00Z",
+        "link_valid_to": null,
+        "older_note": "86dc1de1-a62f-4d38-a953-81f7be9b8351",
+        "newer_note": "944b463d-715a-42cc-b634-2479bfdb32d2",
+        "older_entities": [
+          "Audrey",
+          "Andrew"
+        ],
+        "newer_entities": [
+          "Audrey",
+          "Andrew"
+        ],
+        "older_keywords": [
+          "help",
+          "email",
+          "criteria",
+          "pet-friendly"
+        ],
+        "newer_keywords": [
+          "help",
+          "support",
+          "dogs"
+        ]
+      },
+      {
+        "note_a": "ca85b113-55eb-450b-b4fb-2de509bff869",
+        "note_b": "1b2ff746-e2e5-4fbf-93b6-26e4a3682f08",
+        "note_a_sentence": "Audrey says her dogs bring so much joy and love into her life and mean everything to her.",
+        "note_b_sentence": "Audrey loves her dogs very much and wants to make them as happy as possible.",
+        "note_a_date": "5:53 pm on 24 September, 2023",
+        "note_b_date": "12:24 am on 24 August, 2023",
+        "link_valid_from": "2023-09-24T17:53:00Z",
+        "link_valid_to": null,
+        "older_note": "1b2ff746-e2e5-4fbf-93b6-26e4a3682f08",
+        "newer_note": "ca85b113-55eb-450b-b4fb-2de509bff869",
+        "older_entities": [
+          "Audrey"
+        ],
+        "newer_entities": [
+          "Audrey"
+        ],
+        "older_keywords": [
+          "love",
+          "dogs",
+          "bond"
+        ],
+        "newer_keywords": [
+          "love",
+          "joy",
+          "dogs",
+          "happiness"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 498,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 498,
+    "session_id_kinds": {
+      "ordinal": 498
+    },
+    "session_id_samples": [
+      "s1",
+      "s1",
+      "s2",
+      "s1",
+      "s3"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0005\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0006\\asem_thg.sqlite": {
+    "n_notes": 527,
+    "n_link_records": 7582,
+    "n_unique_undirected_pairs": 2863,
+    "relation_histogram": {
+      "same-entity": 5198,
+      "semantic": 1374,
+      "temporal": 992,
+      "superseded_by": 18
+    },
+    "entity_fanout": {
+      "mean": 383.123339658444,
+      "median": 344,
+      "p90": 522.0,
+      "max": 523,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 36,
+    "implied_same_entity_pairs": 111596,
+    "n_notes_with_superseded_by": 17,
+    "share_notes_with_superseded_by": 0.03225806451612903,
+    "n_supersession_pairs": 9,
+    "supersession_examples": [
+      {
+        "note_a": "6b38b9ed-efef-4a97-80ad-9ec540dc9319",
+        "note_b": "b5ea51ed-20a5-42be-a83a-4fb9997fb5c9",
+        "note_a_sentence": "James adopted his dog Ned, and Ned has been awesome since the adoption.",
+        "note_b_sentence": "On 5 April 2022, James adopted a puppy named Ned from a shelter in Stamford.",
+        "note_a_date": "9:18 pm on 26 August, 2022",
+        "note_b_date": "9:52 am on 12 April, 2022",
+        "link_valid_from": "2022-08-26T21:18:00Z",
+        "link_valid_to": null,
+        "older_note": "b5ea51ed-20a5-42be-a83a-4fb9997fb5c9",
+        "newer_note": "6b38b9ed-efef-4a97-80ad-9ec540dc9319",
+        "older_entities": [
+          "James",
+          "Ned",
+          "Stamford"
+        ],
+        "newer_entities": [
+          "James",
+          "Ned"
+        ],
+        "older_keywords": [
+          "adoption",
+          "puppy",
+          "shelter",
+          "Ned"
+        ],
+        "newer_keywords": [
+          "adopted",
+          "dog",
+          "Ned"
+        ]
+      },
+      {
+        "note_a": "c13e2376-42ce-4bb5-b20c-5308b1c1d3a3",
+        "note_b": "81ea95a9-53fb-4cf0-8c60-d57dbd6841ce",
+        "note_a_sentence": "James offered to always be there for John and to provide financial assistance or advice if needed.",
+        "note_b_sentence": "James told John he is there if John needs someone to talk or vent to, saying it might help alleviate some of the difficult times John is going through.",
+        "note_a_date": "1:45 pm on 6 August, 2022",
+        "note_b_date": "6:53 pm on 1 September, 2022",
+        "link_valid_from": "2022-08-06T13:45:00Z",
+        "link_valid_to": "2022-09-01T18:53:00Z",
+        "older_note": "c13e2376-42ce-4bb5-b20c-5308b1c1d3a3",
+        "newer_note": "81ea95a9-53fb-4cf0-8c60-d57dbd6841ce",
+        "older_entities": [
+          "James",
+          "John"
+        ],
+        "newer_entities": [
+          "James",
+          "John"
+        ],
+        "older_keywords": [
+          "financial assistance",
+          "advice",
+          "support"
+        ],
+        "newer_keywords": [
+          "support",
+          "listening",
+          "difficult times",
+          "friendship"
+        ]
+      },
+      {
+        "note_a": "6bc88661-84e6-4fb9-9cf0-686750616885",
+        "note_b": "89081182-9855-4119-a4cd-bfd42254ed73",
+        "note_a_sentence": "John thanked James for his advice, saying he would give breaking the problem down and asking for help a try.",
+        "note_b_sentence": "John thanked James for the support and said he really appreciates it.",
+        "note_a_date": "11:04 am on 23 April, 2022",
+        "note_b_date": "6:53 pm on 1 September, 2022",
+        "link_valid_from": "2022-04-23T11:04:00Z",
+        "link_valid_to": "2022-09-01T18:53:00Z",
+        "older_note": "6bc88661-84e6-4fb9-9cf0-686750616885",
+        "newer_note": "89081182-9855-4119-a4cd-bfd42254ed73",
+        "older_entities": [
+          "John",
+          "James"
+        ],
+        "newer_entities": [
+          "John",
+          "James"
+        ],
+        "older_keywords": [
+          "thanks",
+          "advice",
+          "help"
+        ],
+        "newer_keywords": [
+          "support",
+          "gratitude",
+          "appreciation"
+        ]
+      },
+      {
+        "note_a": "a4f09e95-dd58-4f0c-af0c-39b08e22ca1e",
+        "note_b": "375e4cf2-9345-49c8-84f1-791f2d70a936",
+        "note_a_sentence": "John encouraged James to be sure to call Samantha and told him everything will work out.",
+        "note_b_sentence": "John encouraged James to let him know how he likes RPGs and MOBAs.",
+        "note_a_date": "9:16 am on 10 August, 2022",
+        "note_b_date": "2:13 pm on 4 April, 2022",
+        "link_valid_from": "2022-08-10T09:16:00Z",
+        "link_valid_to": null,
+        "older_note": "375e4cf2-9345-49c8-84f1-791f2d70a936",
+        "newer_note": "a4f09e95-dd58-4f0c-af0c-39b08e22ca1e",
+        "older_entities": [
+          "John",
+          "James"
+        ],
+        "newer_entities": [
+          "John",
+          "James"
+        ],
+        "older_keywords": [
+          "RPGs",
+          "MOBAs",
+          "encouragement"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "call",
+          "Samantha"
+        ]
+      },
+      {
+        "note_a": "2c825229-a950-442d-b299-4e192ffcf5f5",
+        "note_b": "9f2aebc2-4963-48fc-8c18-2349358a1809",
+        "note_a_sentence": "John congratulated James on the successful game stream, saying his hard work is paying off.",
+        "note_b_sentence": "John said completing the game must have been a challenge, especially making sure it was enjoyable and balanced, and congratulated James again.",
+        "note_a_date": "8:56 pm on 20 September, 2022",
+        "note_b_date": "6:53 pm on 1 September, 2022",
+        "link_valid_from": "2022-09-20T20:56:00Z",
+        "link_valid_to": null,
+        "older_note": "9f2aebc2-4963-48fc-8c18-2349358a1809",
+        "newer_note": "2c825229-a950-442d-b299-4e192ffcf5f5",
+        "older_entities": [
+          "John",
+          "James"
+        ],
+        "newer_entities": [
+          "John",
+          "James"
+        ],
+        "older_keywords": [
+          "congratulations",
+          "game",
+          "balance",
+          "challenge"
+        ],
+        "newer_keywords": [
+          "congratulations",
+          "support",
+          "stream"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 527,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 527,
+    "session_id_kinds": {
+      "ordinal": 527
+    },
+    "session_id_samples": [
+      "s1",
+      "s1",
+      "s1",
+      "s3",
+      "s3"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0006\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0007\\asem_thg.sqlite": {
+    "n_notes": 508,
+    "n_link_records": 8148,
+    "n_unique_undirected_pairs": 2881,
+    "relation_histogram": {
+      "same-entity": 5022,
+      "semantic": 2140,
+      "temporal": 956,
+      "superseded_by": 30
+    },
+    "entity_fanout": {
+      "mean": 352.5236220472441,
+      "median": 340.0,
+      "p90": 499.0,
+      "max": 499,
+      "zero_share": 0.001968503937007874
+    },
+    "n_distinct_entities": 35,
+    "implied_same_entity_pairs": 96879,
+    "n_notes_with_superseded_by": 25,
+    "share_notes_with_superseded_by": 0.04921259842519685,
+    "n_supersession_pairs": 15,
+    "supersession_examples": [
+      {
+        "note_a": "8390b994-cbbd-4520-9d94-3aef6a77b880",
+        "note_b": "6175c4a1-40de-4e2e-874c-48c5b0d0b5d6",
+        "note_a_sentence": "Jolene told Deborah that Deborah's support means a lot and said she will keep Deborah updated on the project's progress.",
+        "note_b_sentence": "Jolene said she will keep Deborah posted if she decides to go to the beach for yoga.",
+        "note_a_date": "4:30 pm on 9 April, 2023",
+        "note_b_date": "4:12 pm on 22 February, 2023",
+        "link_valid_from": "2023-04-09T16:30:00Z",
+        "link_valid_to": null,
+        "older_note": "6175c4a1-40de-4e2e-874c-48c5b0d0b5d6",
+        "newer_note": "8390b994-cbbd-4520-9d94-3aef6a77b880",
+        "older_entities": [
+          "Jolene",
+          "Deborah"
+        ],
+        "newer_entities": [
+          "Jolene",
+          "Deborah"
+        ],
+        "older_keywords": [
+          "update",
+          "yoga",
+          "beach"
+        ],
+        "newer_keywords": [
+          "support",
+          "project",
+          "update"
+        ]
+      },
+      {
+        "note_a": "d2ad6f97-65b9-4c91-9a59-ea3e6ced7e6c",
+        "note_b": "1f369d70-25d3-49d2-9cef-c88b04fd9e31",
+        "note_a_sentence": "Jolene has snakes that like watching her chill and bring her a sense of calm.",
+        "note_b_sentence": "Jolene owns snakes that cannot chat or understand her, but Jolene values her time with them as it teaches her to take time and be in tune with herself.",
+        "note_a_date": "5:33 pm on 26 August, 2023",
+        "note_b_date": "4:30 pm on 9 April, 2023",
+        "link_valid_from": "2023-08-26T17:33:00Z",
+        "link_valid_to": null,
+        "older_note": "1f369d70-25d3-49d2-9cef-c88b04fd9e31",
+        "newer_note": "d2ad6f97-65b9-4c91-9a59-ea3e6ced7e6c",
+        "older_entities": [
+          "Jolene"
+        ],
+        "newer_entities": [
+          "Jolene",
+          "Jolene's snakes"
+        ],
+        "older_keywords": [
+          "snakes",
+          "pets",
+          "self-care"
+        ],
+        "newer_keywords": [
+          "snakes",
+          "pets",
+          "calm"
+        ]
+      },
+      {
+        "note_a": "94759d91-e3c7-4b95-b2d3-7b5ea6dae7bc",
+        "note_b": "46c61cdf-aaa6-425a-bd77-2829257ae8fd",
+        "note_a_sentence": "Deborah reacted to Jolene's notebook quote photo, affirming that surrounding ourselves with good things and striving to improve is key.",
+        "note_b_sentence": "Deborah reacted to Jolene's notebook spread, saying she loves the quote and that visual reminders like the photo can be super motivating.",
+        "note_a_date": "11:46 am on 30 August, 2023",
+        "note_b_date": "2:58 pm on 16 August, 2023",
+        "link_valid_from": "2023-08-30T11:46:00Z",
+        "link_valid_to": null,
+        "older_note": "46c61cdf-aaa6-425a-bd77-2829257ae8fd",
+        "newer_note": "94759d91-e3c7-4b95-b2d3-7b5ea6dae7bc",
+        "older_entities": [
+          "Deborah",
+          "Jolene"
+        ],
+        "newer_entities": [
+          "Deborah",
+          "Jolene"
+        ],
+        "older_keywords": [
+          "quote",
+          "notebook",
+          "motivation",
+          "visual reminder"
+        ],
+        "newer_keywords": [
+          "quote",
+          "reaction",
+          "improvement"
+        ]
+      },
+      {
+        "note_a": "caeeb2cb-a9b7-4376-872a-57bca77c9af9",
+        "note_b": "f57f8e1c-d377-433c-a003-d440ddde711b",
+        "note_a_sentence": "Deborah tells Jolene she is always by her side.",
+        "note_b_sentence": "Deborah told Jolene to take her time and to take care of herself, saying they will work it out.",
+        "note_a_date": "9:34 am on 24 August, 2023",
+        "note_b_date": "11:22 am on 13 March, 2023",
+        "link_valid_from": "2023-08-24T09:34:00Z",
+        "link_valid_to": null,
+        "older_note": "f57f8e1c-d377-433c-a003-d440ddde711b",
+        "newer_note": "caeeb2cb-a9b7-4376-872a-57bca77c9af9",
+        "older_entities": [
+          "Deborah",
+          "Jolene"
+        ],
+        "newer_entities": [
+          "Deborah",
+          "Jolene"
+        ],
+        "older_keywords": [
+          "reassurance",
+          "self-care",
+          "support"
+        ],
+        "newer_keywords": [
+          "support",
+          "by her side",
+          "reassurance"
+        ]
+      },
+      {
+        "note_a": "6acf2d28-6e8f-4ba3-a17d-70174644a1a4",
+        "note_b": "7f476ea5-c5ef-44c9-ba7d-e0bbff35038c",
+        "note_a_sentence": "Deborah told Jolene she is there if Jolene needs her and advised Jolene to take care of herself and rest up.",
+        "note_b_sentence": "Deborah told Jolene she is there for her if she needs her and suggested they catch up soon.",
+        "note_a_date": "8:31 pm on 6 September, 2023",
+        "note_b_date": "11:22 am on 13 March, 2023",
+        "link_valid_from": "2023-09-06T20:31:00Z",
+        "link_valid_to": null,
+        "older_note": "7f476ea5-c5ef-44c9-ba7d-e0bbff35038c",
+        "newer_note": "6acf2d28-6e8f-4ba3-a17d-70174644a1a4",
+        "older_entities": [
+          "Deborah",
+          "Jolene"
+        ],
+        "newer_entities": [
+          "Deborah",
+          "Jolene"
+        ],
+        "older_keywords": [
+          "support",
+          "catch up",
+          "friendship"
+        ],
+        "newer_keywords": [
+          "support",
+          "care",
+          "rest",
+          "wellbeing"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 508,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 508,
+    "session_id_kinds": {
+      "ordinal": 508
+    },
+    "session_id_samples": [
+      "s1",
+      "s1",
+      "s2",
+      "s1",
+      "s4"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0007\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0008\\asem_thg.sqlite": {
+    "n_notes": 425,
+    "n_link_records": 6870,
+    "n_unique_undirected_pairs": 2361,
+    "relation_histogram": {
+      "same-entity": 4192,
+      "semantic": 1838,
+      "temporal": 800,
+      "superseded_by": 40
+    },
+    "entity_fanout": {
+      "mean": 351.1435294117647,
+      "median": 326,
+      "p90": 424.0,
+      "max": 424,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 19,
+    "implied_same_entity_pairs": 88955,
+    "n_notes_with_superseded_by": 30,
+    "share_notes_with_superseded_by": 0.07058823529411765,
+    "n_supersession_pairs": 20,
+    "supersession_examples": [
+      {
+        "note_a": "6dde52f1-64ec-49f9-8533-e8c908b229c6",
+        "note_b": "32aef875-9fae-499e-9daf-fae984c4dd69",
+        "note_a_sentence": "Evan encouraged Sam to celebrate small wins because every step forward counts.",
+        "note_b_sentence": "Evan encouraged Sam to keep trying new things until something sparks his excitement.",
+        "note_a_date": "4:09 pm on 13 August, 2023",
+        "note_b_date": "1:47 pm on 18 May, 2023",
+        "link_valid_from": "2023-08-13T16:09:00Z",
+        "link_valid_to": null,
+        "older_note": "32aef875-9fae-499e-9daf-fae984c4dd69",
+        "newer_note": "6dde52f1-64ec-49f9-8533-e8c908b229c6",
+        "older_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "newer_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "new hobbies"
+        ],
+        "newer_keywords": [
+          "small wins",
+          "encouragement",
+          "progress"
+        ]
+      },
+      {
+        "note_a": "6dde52f1-64ec-49f9-8533-e8c908b229c6",
+        "note_b": "c5aa4e6b-4aad-4f74-b5ba-6fc1adeb1be2",
+        "note_a_sentence": "Evan encouraged Sam to celebrate small wins because every step forward counts.",
+        "note_b_sentence": "Evan encouraged Sam to keep moving forward slowly and taking small steps.",
+        "note_a_date": "4:09 pm on 13 August, 2023",
+        "note_b_date": "4:20 pm on 15 August, 2023",
+        "link_valid_from": "2023-08-13T16:09:00Z",
+        "link_valid_to": "2023-08-15T16:20:00Z",
+        "older_note": "6dde52f1-64ec-49f9-8533-e8c908b229c6",
+        "newer_note": "c5aa4e6b-4aad-4f74-b5ba-6fc1adeb1be2",
+        "older_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "newer_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "older_keywords": [
+          "small wins",
+          "encouragement",
+          "progress"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "support",
+          "small steps"
+        ]
+      },
+      {
+        "note_a": "9067c3aa-a584-4301-952b-6a98f2624fa8",
+        "note_b": "498589b8-4985-46c4-b1dc-16412b92371d",
+        "note_a_sentence": "Evan told Sam that progress takes time and encouraged Sam to keep pushing.",
+        "note_b_sentence": "Evan told Sam that Evan is here for Sam and urged Sam to keep taking one step at a time, and that Sam will get there eventually.",
+        "note_a_date": "7:30 pm on 21 November, 2023",
+        "note_b_date": "3:09 pm on 8 October, 2023",
+        "link_valid_from": "2023-11-21T19:30:00Z",
+        "link_valid_to": null,
+        "older_note": "498589b8-4985-46c4-b1dc-16412b92371d",
+        "newer_note": "9067c3aa-a584-4301-952b-6a98f2624fa8",
+        "older_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "newer_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "older_keywords": [
+          "one step at a time",
+          "encouragement",
+          "support"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "progress"
+        ]
+      },
+      {
+        "note_a": "dfb9fc9b-2aec-4a50-8d89-dcb9a651456e",
+        "note_b": "c5aa4e6b-4aad-4f74-b5ba-6fc1adeb1be2",
+        "note_a_sentence": "Evan told Sam he can't wait to hear about Sam's progress and encouraged Sam to keep up the hard work.",
+        "note_b_sentence": "Evan encouraged Sam to keep moving forward slowly and taking small steps.",
+        "note_a_date": "3:09 pm on 8 October, 2023",
+        "note_b_date": "4:20 pm on 15 August, 2023",
+        "link_valid_from": "2023-10-08T15:09:00Z",
+        "link_valid_to": null,
+        "older_note": "c5aa4e6b-4aad-4f74-b5ba-6fc1adeb1be2",
+        "newer_note": "dfb9fc9b-2aec-4a50-8d89-dcb9a651456e",
+        "older_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "newer_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "support",
+          "small steps"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "progress",
+          "support"
+        ]
+      },
+      {
+        "note_a": "dfb9fc9b-2aec-4a50-8d89-dcb9a651456e",
+        "note_b": "686af040-36f9-4589-af01-9922515f1e3b",
+        "note_a_sentence": "Evan told Sam he can't wait to hear about Sam's progress and encouraged Sam to keep up the hard work.",
+        "note_b_sentence": "Evan reminded Sam that it takes time, told Sam to be patient with Sam's self, and said Sam's health matters and Evan believes in Sam.",
+        "note_a_date": "3:09 pm on 8 October, 2023",
+        "note_b_date": "3:09 pm on 8 October, 2023",
+        "link_valid_from": "2023-10-08T15:09:00Z",
+        "link_valid_to": null,
+        "older_note": "dfb9fc9b-2aec-4a50-8d89-dcb9a651456e",
+        "newer_note": "686af040-36f9-4589-af01-9922515f1e3b",
+        "older_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "newer_entities": [
+          "Evan",
+          "Sam"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "progress",
+          "support"
+        ],
+        "newer_keywords": [
+          "patience",
+          "health",
+          "belief",
+          "encouragement"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 425,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 425,
+    "session_id_kinds": {
+      "ordinal": 425
+    },
+    "session_id_samples": [
+      "s2",
+      "s4",
+      "s4",
+      "s3",
+      "s3"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0008\\asem_thg.sqlite"
+  },
+  "bank :: static\\memory_banks\\locomo10\\thg_v2_postfix\\ASEM-THG\\locomo_0009\\asem_thg.sqlite": {
+    "n_notes": 483,
+    "n_link_records": 7920,
+    "n_unique_undirected_pairs": 2711,
+    "relation_histogram": {
+      "same-entity": 4782,
+      "semantic": 2206,
+      "temporal": 906,
+      "superseded_by": 26
+    },
+    "entity_fanout": {
+      "mean": 367.656314699793,
+      "median": 338,
+      "p90": 482.0,
+      "max": 482,
+      "zero_share": 0.0
+    },
+    "n_distinct_entities": 20,
+    "implied_same_entity_pairs": 100704,
+    "n_notes_with_superseded_by": 24,
+    "share_notes_with_superseded_by": 0.049689440993788817,
+    "n_supersession_pairs": 13,
+    "supersession_examples": [
+      {
+        "note_a": "cc57ed20-6e78-4a6b-93e2-b3540fd63c8a",
+        "note_b": "6fcb4c99-9eb3-4e9b-9255-dd4b0d114731",
+        "note_a_sentence": "Dave reacted to Calvin's red sports car photo, saying he loves how the sunlight hits it and that it is a great symbol of Calvin's hard work.",
+        "note_b_sentence": "Dave reacted to Calvin's photo of a red sports car driving down a road.",
+        "note_a_date": "8:57 pm on 22 September, 2023",
+        "note_b_date": "1:16 pm on 3 May, 2023",
+        "link_valid_from": "2023-09-22T20:57:00Z",
+        "link_valid_to": null,
+        "older_note": "6fcb4c99-9eb3-4e9b-9255-dd4b0d114731",
+        "newer_note": "cc57ed20-6e78-4a6b-93e2-b3540fd63c8a",
+        "older_entities": [
+          "Dave",
+          "Calvin"
+        ],
+        "newer_entities": [
+          "Dave",
+          "Calvin"
+        ],
+        "older_keywords": [
+          "red sports car",
+          "photo",
+          "react"
+        ],
+        "newer_keywords": [
+          "red sports car",
+          "sunlight",
+          "hard work",
+          "symbol"
+        ]
+      },
+      {
+        "note_a": "d2b7f3be-300e-4558-ad01-912c52be8b5c",
+        "note_b": "5cfb408f-e80b-4176-8e27-91d70c985f56",
+        "note_a_sentence": "Calvin advised Dave to keep pushing and believe in himself, saying the payoff would be worth it.",
+        "note_b_sentence": "Calvin encouraged Dave to keep chasing his dreams and living his best life.",
+        "note_a_date": "9:39 am on 15 October, 2023",
+        "note_b_date": "3:13 pm on 8 October, 2023",
+        "link_valid_from": "2023-10-15T09:39:00Z",
+        "link_valid_to": null,
+        "older_note": "5cfb408f-e80b-4176-8e27-91d70c985f56",
+        "newer_note": "d2b7f3be-300e-4558-ad01-912c52be8b5c",
+        "older_entities": [
+          "Calvin",
+          "Dave"
+        ],
+        "newer_entities": [
+          "Calvin",
+          "Dave"
+        ],
+        "older_keywords": [
+          "encouragement",
+          "dreams",
+          "support"
+        ],
+        "newer_keywords": [
+          "encouragement",
+          "perseverance",
+          "support"
+        ]
+      },
+      {
+        "note_a": "d85ed5b7-baa9-434c-802d-0de47f05d0b8",
+        "note_b": "f96ac92e-c19d-4a7e-8b33-7e68fd34a9ab",
+        "note_a_sentence": "Dave told Calvin that having something like his car is motivating and a reminder of what one can achieve.",
+        "note_b_sentence": "Dave told Calvin he is eager to see what Calvin does and urged him to keep at it and never forget his dreams.",
+        "note_a_date": "1:12 pm on 3 August, 2023",
+        "note_b_date": "1:12 pm on 3 August, 2023",
+        "link_valid_from": "2023-08-03T13:12:00Z",
+        "link_valid_to": null,
+        "older_note": "d85ed5b7-baa9-434c-802d-0de47f05d0b8",
+        "newer_note": "f96ac92e-c19d-4a7e-8b33-7e68fd34a9ab",
+        "older_entities": [
+          "Dave",
+          "Calvin"
+        ],
+        "newer_entities": [
+          "Dave",
+          "Calvin"
+        ],
+        "older_keywords": [
+          "motivation",
+          "car",
+          "encouragement"
+        ],
+        "newer_keywords": [
+          "support",
+          "dreams",
+          "encouragement"
+        ]
+      },
+      {
+        "note_a": "c91bb93d-686a-4a45-9ad6-af7833ec6fce",
+        "note_b": "4bcd9069-c3b0-47cb-ae57-6058fe625af1",
+        "note_a_sentence": "Dave wants to visit Tokyo someday to experience the people, culture, food and city life.",
+        "note_b_sentence": "Dave said he wants to take a trip to Tokyo soon after seeing Calvin's night skyline photo.",
+        "note_a_date": "10:11 am on 19 October, 2023",
+        "note_b_date": "11:50 am on 16 May, 2023",
+        "link_valid_from": "2023-10-19T10:11:00Z",
+        "link_valid_to": null,
+        "older_note": "4bcd9069-c3b0-47cb-ae57-6058fe625af1",
+        "newer_note": "c91bb93d-686a-4a45-9ad6-af7833ec6fce",
+        "older_entities": [
+          "Dave",
+          "Tokyo"
+        ],
+        "newer_entities": [
+          "Dave",
+          "Tokyo"
+        ],
+        "older_keywords": [
+          "Tokyo",
+          "trip",
+          "travel"
+        ],
+        "newer_keywords": [
+          "Tokyo",
+          "travel",
+          "culture",
+          "food"
+        ]
+      },
+      {
+        "note_a": "1db5859f-ad64-43cc-8fe8-ce70127b24c2",
+        "note_b": "0f697cc7-3c23-4d34-9d09-feb4b551a81d",
+        "note_a_sentence": "Calvin attended a music festival in Tokyo with a lively crowd and buzzing energy.",
+        "note_b_sentence": "Calvin attended an awesome music festival in Tokyo before 20 April 2023.",
+        "note_a_date": "11:06 am on 22 August, 2023",
+        "note_b_date": "4:15 pm on 20 April, 2023",
+        "link_valid_from": "2023-08-22T11:06:00Z",
+        "link_valid_to": null,
+        "older_note": "0f697cc7-3c23-4d34-9d09-feb4b551a81d",
+        "newer_note": "1db5859f-ad64-43cc-8fe8-ce70127b24c2",
+        "older_entities": [
+          "Calvin",
+          "Tokyo"
+        ],
+        "newer_entities": [
+          "Calvin",
+          "Tokyo"
+        ],
+        "older_keywords": [
+          "music festival",
+          "Tokyo",
+          "travel"
+        ],
+        "newer_keywords": [
+          "music festival",
+          "Tokyo",
+          "crowd"
+        ]
+      }
+    ],
+    "n_notes_timestamp_iso_present": 483,
+    "n_notes_timestamp_iso_null": 0,
+    "n_notes_date_unknown": 0,
+    "session_id_present": 483,
+    "session_id_kinds": {
+      "ordinal": 483
+    },
+    "session_id_samples": [
+      "s2",
+      "s2",
+      "s4",
+      "s4",
+      "s3"
+    ],
+    "n_notes_entities_empty": 0,
+    "bank_path": "static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG\\locomo_0009\\asem_thg.sqlite"
+  }
+}

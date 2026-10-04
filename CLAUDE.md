@@ -35,6 +35,24 @@ OPENAI_API_KEY="..." OPENAI_BASE_URL="https://api.deepseek.com" PYTHONPATH="." \
 # Profile pipeline latency
 python scripts/profile_pipeline.py --config configs/default.yaml --turns 5
 
+# ---- Static banks: ingest ONCE, evaluate many -------------------------
+# Phase A — freeze each system's memory bank under static/memory_banks/<dataset>/<tag>/
+python scripts/build_static_banks.py --tag deepseek \
+    --ingest-config configs/models/deepseek_api.yaml
+
+# Phase B — full LoCoMo QA from the frozen banks vs FullContext + NoMemory
+python scripts/run_static_eval.py --tag deepseek \
+    --config configs/models/deepseek_api.yaml \
+    --judge-config configs/models/judge_api.yaml \
+    --metrics em f1 rougeL bertscore_f1 judge
+
+# Retrieval-only: swap the backbone, reuse the same frozen banks
+python scripts/run_static_eval.py --tag deepseek --config configs/models/qwen3_4b_api.yaml \
+    --systems FastASEM ASEM FullContext
+
+# Or run the ready-made command list (Phase A, then Phase B)
+bash run_static_experiments.sh
+
 # Full evaluation
 python eval/run_full_evaluation.py --systems-module <module> --locomo <path> ...
 
@@ -71,7 +89,7 @@ class InferenceBackend(ABC):
     def embed(self, text: str) -> np.ndarray: ...
 ```
 
-- `build_backend(config)` factory in `asem/backends/__init__.py` dispatches to **HuggingFaceBackend** or **LangChainBackend** based on config. No stage imports a model library directly.
+- `build_backend(config)` factory in `asem/backends/__init__.py` dispatches on `inference.backend` to **HuggingFaceBackend** (`"huggingface"`), **LangChainBackend** (`"langchain"`), or **OpenAIBackend** (`"openai"`, the native `openai` SDK client with no ChatOpenAI wrapper). No stage imports a model library directly. All three share one embedder factory, so banks built by any of them are interchangeable.
 - **HuggingFaceBackend**: `transformers.pipeline` for generation, `sentence_transformers.SentenceTransformer` for embeddings. Supports 4-bit/8-bit quantization via `bitsandbytes`.
 - **LangChainBackend**: wraps any LangChain `BaseChatModel` + `Embeddings` provider (OpenAI, Anthropic, HuggingFace Hub, Ollama). Includes async methods.
 - **Training always uses HuggingFaceBackend** — GRPO requires direct model weight access. The inference backend does not affect the training path.
@@ -105,6 +123,7 @@ Six baselines in `eval/baselines.py`: `NoMemory`, `FullContext`, `SimRetrieval`,
 ## Key design decisions
 
 - **Frozen backbone**: prevents catastrophic forgetting; all adaptation is non-parametric via the external memory bank
+- **One answer budget for every system**: answering is a single model call, so ASEM, FastASEM and every baseline (FullContext included) trim their context — history turns, retrieved notes, note payload — to `answer.context_window − answer.max_tokens − safety` via `asem/token_budget.py`. `FullContext.max_history_turns` is only a turn-count pre-filter; unset `answer.context_window` keeps the old untrimmed behaviour.
 - **Free-form link schema**: LLM identifies semantic/causal/temporal relationships at runtime — no schema migration
 - **Z-score normalization in Phase B**: prevents sim magnitude from dominating Q-value in the composite score
 - **EMA over TD learning**: simpler Monte Carlo backup; handles non-stationary reward distributions

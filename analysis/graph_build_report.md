@@ -12,8 +12,19 @@ number is not usable.
 
 ---
 
-## 0. TL;DR — the five results that matter
+## 0. TL;DR — the results that matter
 
+0. 🔴 **`superseded_by` was NOT actually disabled — a falsy-check bug silently
+   discarded the configured graph.** `asem/single_pass_ingest.py:174` used
+   `hyper_graph or TemporalHyperGraph()`; because `TemporalHyperGraph` defines
+   `__len__`, a freshly built graph is **falsy**, so the `or` threw away the
+   correct config-built object and substituted a default with
+   `enable_supersession=True` — on the side that **persists edges**. Measured on
+   the post-fix production bank: **242 `superseded_by` records where ~0 was
+   expected.** **Fixed in `b4aec5e`**, guard hardened in `dd613f9` (reverting the fix
+   yields `3 failed, 3 passed`; suite `345 passed, 1 skipped, 0 failed`). **`thg_v2_postfix`
+   was built before the fix and must never be called "supersession disabled."**
+   See §4A.2.
 1. **The entity channel is a hub, and it is nearly information-free.** Corpus-wide
    (10 LoCoMo conversations, 4,579 notes) **94.7% of `same-entity` edges connect
    two notes whose shared entities are ONLY the conversation's speaker names**
@@ -68,8 +79,30 @@ different on-disk code.
 
 Also note `graph-dev`'s landed interval logic **differs** from what built this
 bank (the Lead verified `_is_single_valued_predicate` on 16/16 cases and found a
-remaining `_predicate_key("is happy") == "is"` collapse). Any before/after on
-supersession therefore requires `thg_v2_postfix`, not a re-read of `thg_v2`.
+remaining `_predicate_key("is happy") == "is"` collapse, since fixed). Any
+before/after on supersession therefore requires the post-fix banks below, not a
+re-read of `thg_v2`.
+
+**Forward pointer — the post-fix banks.** Built against **frozen revision
+`70f69c8f0ca0d546fc95c3a01c9b0c5960cc7af4`** with `asem/hyper_graph.py`
+`342ECB0A3A57BF600EB5C74AF6D589C1673403EBBE17DBB961BE2015D7FBC2E3` and
+`asem/note.py` `D12480D238413A401145D493BA898CB978AE08EAA2DB1BD11A92483F66061132`
+(hashes verified against `graph-dev`'s freeze, and recorded at **start and
+completion** of each build). **Two arms were built, not one:**
+
+- **`thg_v2_postfix`** — production defaults, `hyper_graph.supersession` **OFF**
+  (the new default). The bank the evaluation should use.
+- **`thg_v2_postfix_supON`** — identical revision with `hyper_graph.supersession:
+  true` in YAML.
+
+`_supON` exists because a naive post-fix build would differ from `thg_v2` in
+**two** ways at once — the code fixes *and* the now-default-OFF flag — so a
+supersession before/after would be uninterpretable (the drop to zero would be the
+flag, not the fix). Only `_supON`, which matches `thg_v2` on the flag and differs
+only in code, can attribute the change to GB2. The flag is reachable as a **YAML
+key** (`eval/systems.py:766-767` reads `hg_cfg.get("supersession", False)`), so
+both arms were built **without editing any file under `asem/`, `eval/` or
+`scripts/`** — only two new config files were added.
 
 ### 1.2 LongMemEval `gb_full` — pre-fix, same caveat
 
@@ -203,9 +236,12 @@ with*.
 
 ### 3.4 Part-2 full run (`gb_full`) — status and coverage
 
-Started 13:18:17, **no `--limit`, no `--clean`** (resumable). Progress at the time
-of writing: **97/500**, rate **0.40 min/question → projected ≈3.3 h total**.
-No crash, no traceback, process healthy.
+Started 13:18:17 (UTC 06:18:13Z), **no `--limit`, no `--clean`** (resumable). Progress
+was **160/500** over **4,211.93 s** (0.44 min/question) when it was **stopped
+deliberately** on memory grounds (the box has 7.9 GB total and four concurrent
+Python processes left 0.7 GB free; `gb_full` was the lowest-value process — an
+aggregate pre-fix baseline whose per-question index is null by design). No crash,
+no traceback. It remains resumable.
 
 > **`coverage`: `{n_measured: 0, n_total: 500, note: "per-question in-process
 > capture was not active for this process — the run started before the hook
@@ -213,9 +249,9 @@ No crash, no traceback, process healthy.
 > detail is null, NOT reconstructed."}`**
 >
 > Per the Lead's approved **(i)+partial** decision, the per-question graph index
-> will be produced from the **post-fix** run on a new tag, which is the more useful
-> artifact because the table's purpose is the before/after comparison. Nothing is
-> backfilled or interpolated.
+> comes from a fresh post-fix hooked run. Nothing is backfilled or interpolated.
+> **160 of 500 questions were never processed at all** — the answer file holds 160
+> rows, not 500, and must not be reported as a 500-question result.
 
 ---
 
@@ -230,17 +266,18 @@ No crash, no traceback, process healthy.
 | locomo_0002 | 32 | 663 | 493 | 7,544 | 2,717 | 15.30 | 5.51 | 353 | 489 | 111 | 18 | 235.8 |
 | locomo_0003 | 29 | 629 | 492 | 8,424 | 2,713 | 17.12 | 5.51 | 335 | 491 | 37 | 10 | 231.5 |
 | locomo_0004 | 29 | 680 | 482 | 6,890 | 2,620 | 14.29 | 5.44 | 322 | 480 | 99 | 12 | 233.5 |
-| locomo_0005 | 28 | 675 | 484 | 8,576 | 2,689 | 17.72 | 5.56 | 328 | 480 | 99 → **166** | 10 | 235.2 |
+| locomo_0005 | 28 | 675 | 484 | 8,576 | 2,689 | 17.72 | 5.56 | 328 | 480 | **166** † | 10 | 235.2 |
 | locomo_0006 | 31 | 689 | 513 | 7,346 | 2,772 | 14.32 | 5.40 | 327 | 507 | 136 | 12 | 252.9 |
 | locomo_0007 | 30 | 681 | 511 | 8,118 | 2,810 | 15.89 | 5.50 | 328 | 500 | 187 | 24 | 253.8 |
 | locomo_0008 | 25 | 509 | 414 | 6,640 | 2,274 | 16.04 | 5.49 | 308 | 413 | 35 | 17 | 215.6 |
 | locomo_0009 | 30 | 568 | 478 | 7,782 | 2,647 | 16.28 | 5.54 | 337 | 477 | 388 | 22 | 230.3 |
 | **TOTAL** | **272** | **5,882** | **4,579** | **73,862** | **25,205** | — | — | — | — | **1,187** | **166** | **2,216.7** |
 
-> **⚠️ `locomo_0005` discriminative = 166.** An earlier 6-conversation table
+> **† `locomo_0005` discriminative = 166.** An earlier 6-conversation table
 > reported 0005 as partial (50 notes, 14 discriminative); the completed value is
-> **166 at 484 notes**. Use the value in this table. No partial conversation is
-> included in any aggregate here.
+> **166 at 484 notes**. The figure in the table is the final, complete value; **no
+> before/after is implied** and no partial conversation is included in any
+> aggregate here.
 
 **`pairs/note` is stable at 5.40–5.65 across all 10 conversations** (347–513
 notes) while `records/note` ranges 14.29–18.13. The pair count is the more stable
@@ -283,7 +320,7 @@ row: `shared=['caroline']  A=['caroline']  B=['caroline']`.
 | locomo_0002 | 493 | 2,429 | 2,318 | 111 | 0.9543 |
 | locomo_0003 | 492 | 2,432 | 2,395 | 37 | 0.9848 |
 | locomo_0004 | 482 | 2,380 | 2,281 | 99 | 0.9584 |
-| locomo_0005 | 484 | 2,384 | 2,218 | **166** | 0.9304 |
+| locomo_0005 | 484 | 2,384 | 2,218 | **166** † | 0.9304 |
 | locomo_0006 | 513 | 2,523 | 2,387 | 136 | 0.9461 |
 | locomo_0007 | 511 | 2,510 | 2,323 | 187 | 0.9255 |
 | locomo_0008 | 414 | 2,041 | 2,006 | 35 | 0.9829 |
@@ -352,6 +389,176 @@ Fan-out detail, `locomo_0000` (365 notes): **mean 252.5, median 237, p90 362, ma
 the other 364 notes (65%)**, and p90 is **362/364 (99.5%)** — for a large fraction
 of notes, "notes sharing an entity" is *the entire bank*. Zero-share 0.0 means the
 channel never fails to fire; it fires almost always.
+
+---
+
+## 4A. `thg_v2_postfix` — the post-fix production bank (COMPLETE, 10/10)
+
+Built against **frozen revision `70f69c8f0ca0d546fc95c3a01c9b0c5960cc7af4`**, config
+`configs/models/thg_v2_postfix_off.yaml`. Hashes verified **identical at launch and
+at completion** (so the bank is attributable to a single revision):
+
+```
+hyper_graph.py         342ECB0A3A57BF600EB5C74AF6D589C1673403EBBE17DBB961BE2015D7FBC2E3  ✓
+note.py                D12480D238413A401145D493BA898CB978AE08EAA2DB1BD11A92483F66061132  ✓
+single_pass_ingest.py  086CB40206D2D4DB62B658992581DC9F1C00A71166E427B9F24EE8C8F39A04DE  ✓
+elapsed_sec 2047.53   wall clock 2101.4 s
+run: built 10, skipped 0, errors 0, notes 4664, discarded_partial 0, interrupted false
+input_sha256 79fa87e9…98ff4 (same input as thg_v2)   config_sha256 4a60fdb4…7a684
+```
+
+### 4A.1 Post-fix vs pre-fix — with the confound stated
+
+| conversation | `thg_v2` notes | postfix notes | **Δ notes** | `thg_v2` links | postfix links | **Δ links** |
+|---|---|---|---|---|---|---|
+| locomo_0000 | 365 | 406 | **+41** | 6,252 | 7,128 | +876 |
+| locomo_0001 | 347 | 348 | **+1** | 6,290 | 6,200 | −90 |
+| locomo_0002 | 493 | 458 | **−35** | 7,544 | 6,960 | −584 |
+| locomo_0003 | 492 | 500 | **+8** | 8,424 | 8,626 | +202 |
+| locomo_0004 | 482 | 511 | **+29** | 6,890 | 7,388 | +498 |
+| locomo_0005 | 484 | 498 | **+14** | 8,576 | 8,826 | +250 |
+| locomo_0006 | 513 | 527 | **+14** | 7,346 | 7,582 | +236 |
+| locomo_0007 | 511 | 508 | **−3** | 8,118 | 8,148 | +30 |
+| locomo_0008 | 414 | 425 | **+11** | 6,640 | 6,870 | +230 |
+| locomo_0009 | 478 | 483 | **+5** | 7,782 | 7,920 | +138 |
+| **TOTAL** | **4,579** | **4,664** | **+85 (+1.9%)** | **73,862** | **73,640** | **−222** |
+
+> **⚠️ THIS IS NOT A CLEAN BEFORE/AFTER AND MUST NOT BE PRESENTED AS ONE.**
+> The fixes change the **note population**, so the two banks are not comparable
+> note-for-note. **Δnotes is not systematic: +41, +1, −35, +8, +29, +14, +14, −3,
+> +11, +5** — it goes **both directions** (`locomo_0002` loses 35 notes,
+> `locomo_0007` loses 3), and the net +85 hides a per-conversation spread of
+> **−35…+41**. Any accuracy delta between these banks carries this confound.
+> **Restrict cross-bank claims to the cost axis** (where `max_context_notes`
+> controls the note count) and state the note-count delta beside any accuracy
+> delta. The clean ablations are same-bank config-only comparisons.
+
+### 4A.2 🔴 DEFECT FOUND — `enable_supersession=False` did not reach the write side
+
+`thg_v2_postfix` was built with `hyper_graph.supersession` **absent** → the config
+value is `False` → `superseded_by` was expected to be **~0**. Measured:
+
+```
+locomo_0000 406/7128 {same-entity 3982, semantic 2370, temporal  774, superseded_by  2}
+locomo_0001 348/6200 {same-entity 3426, semantic 2056, temporal  658, superseded_by 60}
+locomo_0002 458/6960 {same-entity 4486, semantic 1598, temporal  852, superseded_by 24}
+locomo_0003 500/8626 {same-entity 4942, semantic 2728, temporal  942, superseded_by 14}
+locomo_0004 511/7388 {same-entity 5050, semantic 1358, temporal  964, superseded_by 16}
+locomo_0005 498/8826 {same-entity 4926, semantic 2948, temporal  940, superseded_by 12}
+locomo_0006 527/7582 {same-entity 5198, semantic 1374, temporal  992, superseded_by 18}
+locomo_0007 508/8148 {same-entity 5022, semantic 2140, temporal  956, superseded_by 30}
+locomo_0008 425/6870 {same-entity 4192, semantic 1838, temporal  800, superseded_by 40}
+locomo_0009 483/7920 {same-entity 4782, semantic 2206, temporal  906, superseded_by 26}
+TOTAL: 4664 notes | 73,640 links | superseded_by 242 records (~121 pairs)
+```
+
+**GB2e was not effective: the column should be 0 and it was 242.**
+
+#### Root cause — a truthiness bug, not two deliberate objects
+
+`asem/single_pass_ingest.py:174` read:
+
+```python
+self.hyper_graph = hyper_graph or TemporalHyperGraph()      # WRONG
+```
+
+`TemporalHyperGraph` defines `__len__` (returning the fact-node count), **so a
+freshly constructed graph is FALSY** — verified independently:
+
+```
+bool(TemporalHyperGraph(enable_supersession=False)) == False     <- EMPTY => FALSY
+len(fresh graph) == 0        hasattr(TemporalHyperGraph, "__len__") == True
+```
+
+`eval/systems.py` was **already correct**: it builds one `thg_graph` and passes it
+to both the retriever (`:790`) and the ingestor (`:823`). **The `or` discarded that
+correct object and substituted a default**, so the ingestor's graph kept the
+constructor default `True` (`asem/hyper_graph.py:73`) — and the ingestor is the
+side that persists edges. Measured before the fix:
+
+```
+pipeline.retriever.hyper_graph.enable_supersession    = False   <- config applied
+single_pass_ingestor.hyper_graph.enable_supersession  = True    <- default, config discarded
+pipeline.retriever.hyper_graph is single_pass_ingestor.hyper_graph ?  False
+```
+
+> **This is precisely stated as a falsy-check bug, not "the ingestor builds its own
+> graph."** The latter reading suggests two deliberate objects and a design change;
+> the truth is **one correct object discarded by `or`**, which is a one-line fix.
+> It also explains why searching for `TemporalHyperGraph()` construction sites
+> found only one. The bug is **invisible except while the graph is empty** — which
+> is exactly the state at construction time, and never again afterwards.
+
+#### Fix landed — `b4aec5e`, guard hardened in `dd613f9`
+
+```python
+self.hyper_graph = hyper_graph if hyper_graph is not None else TemporalHyperGraph()
+```
+
+Verified end-to-end through the real builder path after the fix:
+
+```
+supersession OFF -> retriever=False ingestor=False same_object=True
+supersession ON  -> retriever=True  ingestor=True  same_object=True
+```
+
+`asem/single_pass_ingest.py` after the fix:
+`2650CEEA7658116CDFD774E91DA05AAA89DD7373E0B1576B6C40C05FBA7A8841`.
+
+A system-level guard (`tests/test_system_wiring.py`, 6 tests, via
+`build_asem_thg_system`) was added **and proven able to fail**: reverting line 174
+to the `or` form yields **3 failed, 3 passed**; with the fix, **6 passed**.
+
+**Reproduced by this workstream (`pytest`, both environments):**
+
+```
+tests/test_system_wiring.py, no credentials  ->  6 passed
+tests/test_system_wiring.py, .env loaded     ->  6 passed
+full suite, .env loaded                      ->  345 passed, 1 skipped, 0 failed
+```
+
+> **The guard's first version was itself defective, and the defect was the same
+> error class as everything else in this workstream.** It constructed its backend
+> through the normal path, so with `OPENAI_API_KEY` unset it died at
+> `asem/backends/openai_backend.py:90` **before reaching any wiring assertion** —
+> producing `2 failed, 2 passed`, **identical observable output to a real wiring
+> regression**. A future revert of line 174 would therefore have been dismissed as
+> "just an environment problem". The test has since been made **credential-independent**
+> by injecting a recording backend through the existing `backend=` parameter, and
+> the counts above were re-measured in a fully bare environment to confirm it.
+> *A wiring test must not be able to fail for a credential reason.* This was found
+> by running the suite to verify a quoted number instead of trusting it — the same
+> discipline that caught the `gb_full` fake `0.0` (§5.6).
+
+**Why 339 green tests missed it:** every existing test constructed
+`TemporalHyperGraph` **directly** and asserted on the class — which was correct.
+The defect lived in the **wiring** (which object the ingestor ends up holding),
+which no class-level unit test can observe. This is the third independent instance
+in this workstream of *a test that cannot fail is not evidence*.
+
+**Flag direction verified both ways.** Checking only `supersession: false` would
+still pass if the flag were hard-wired to `False`, so the ON direction is asserted
+too. Measured across all three configs:
+
+```
+deepseek_v41_flash_thg_v1.yaml   retriever=False ingestor=False   (no hyper_graph block)
+thg_v2_postfix_off.yaml          retriever=False ingestor=False
+thg_v2_postfix_supon.yaml        retriever=True  ingestor=True    (only config that sets it)
+```
+
+> **🔴 `thg_v2_postfix` was built BEFORE this fix, so it must NEVER be described as
+> "supersession disabled."** It has 242 live `superseded_by` records, and
+> `enhanced_retriever.relation_weights` promotes that relation at **1.3× — the
+> highest weight in its table**. Any ASEM-THG accuracy number computed from this
+> bank therefore includes wrong supersessions actively promoted in ranking; that
+> is a candidate explanation for weak knowledge-update performance and should be
+> stated rather than read as a retrieval-design failure. A bank built **after**
+> `b4aec5e` is required for a true supersession-off baseline.
+
+This defect was found by this workstream and reported with the measured evidence;
+the fix, the precise truthiness root cause and the guard are the Lead's
+(`b4aec5e`). The workstream did **not** patch it, as `asem/` and `eval/` are
+outside its write scope.
 
 ---
 
@@ -511,43 +718,76 @@ explicit ablation.
 > when `n_errors > 0`** (exit non-zero, write `exposure_rate: null`,
 > `refused: true`) — a warning beside a plausible number loses to the number.
 
-### 5.7 Failure rendered as a plausible zero — a systemic pattern
+### 5.7 Plausible-looking numbers from a process that did not measure the thing
 
-Three independent instances occurred in this workstream and its neighbours. Each
-produced a **well-formed, plausible-looking number** from a **total failure**:
+**Four** independent instances occurred in this workstream and its neighbours. Each
+produced output a reader would accept as a measurement of the thing being measured:
 
-| # | failure | rendered as | caught by |
-|---|---|---|---|
-| 1 | `retrieve()` called with 1 arg → `TypeError` on every call | `exposure rate 0.0000` | printing per-row fields, not the summary |
-| 2 | judge model not entitled → `403 FORBIDDEN` on every call | `judge: 0.0, judge_coverage: 0.0` | entitlement preflight script |
-| 3 | inherited bank history (`L` read back) mistaken for new output | a well-formed **nonzero** pair count | clearing `L` and re-running |
+| # | failure | rendered as | mechanism | caught by |
+|---|---|---|---|---|
+| 1 | `retrieve()` called with 1 arg → `TypeError` on every call | `exposure rate 0.0000` | failure → **falsy** `None` → `0.0` | printing per-row fields, not the summary |
+| 2 | judge model not entitled → `403 FORBIDDEN` on every call | `judge: 0.0, judge_coverage: 0.0` | failure → **falsy** `0.0` | entitlement preflight script |
+| 3 | inherited bank history (`L` read back) mistaken for new output | a well-formed **NONZERO** pair count | **real number, wrong object** | clearing `L` and re-running |
+| 4 | wiring regression test needed `OPENAI_API_KEY` | `2 failed, 2 passed` | **env failure ≡ code failure** — indistinguishable | running the suite to check a quoted count |
+
+**The class is not "failure rendered as zero" — that is only the most common
+mechanism.** Instance 3 produced a *nonzero* number; instance 4 produced *the same
+failure signature as the regression it was written to detect*. All four are the
+same error: the process did not measure what the reader thinks it measured. As
+`graph-dev` put it, **the danger is not that a failure looks malformed; it is that
+the number is plausible enough to explain away.**
 
 This is a **different and more dangerous error class** than an arithmetic mistake:
 a wrong number is visible on recomputation, whereas these are
-**indistinguishable from a legitimate measurement of the thing being measured** —
-`0%` exposure was a *totally plausible finding*. The rule this implies: **any
-aggregate computed over a loop that can fail must report its denominator AND its
-error count, and must refuse to emit a number when errors > 0; and no failure may
-ever flow into a summary as a falsy value (`None`/`[]`/`0`), because those are
-indistinguishable from a measured zero.**
+**indistinguishable from a legitimate measurement**. `0%` exposure was a *totally
+plausible finding*; a lone supersession pair count in an ablation bank was
+*business as usual*; and a credential error in a regression test looks exactly like
+*the bug the test exists to catch*.
+
+**Rules this implies:**
+1. Any aggregate computed over a loop that can fail must report its **denominator
+   and its error count**, and must **refuse to emit a number when errors > 0** — a
+   warning beside a plausible number loses to the number.
+2. No failure may ever flow into a summary as a **falsy value** (`None`/`[]`/`0`),
+   because those are indistinguishable from a measured zero.
+3. Before treating a nonzero result as evidence about code, **verify the object it
+   was measured on** — especially when reading a persisted artifact that may carry
+   history the current process did not produce.
+4. **A test must not be able to fail for a reason unrelated to what it asserts.**
+   Isolate the environment (inject dependencies) so "credentials missing" and "the
+   regression returned" cannot produce the same output.
 
 ### 5.8 Scope limits on this section — what `thg_v2` can and cannot testify about
 
-- **GB1 is forward-only.** `graph-dev` verified that `locomo_0000`'s `triplets`
-  column is **NULL on every pre-existing row**, so `hydrate()` rebuilds no
-  versioning index for it, and a clean-slate replay emits **0** supersession edges
-  even with the flag on. The 166 pairs are therefore **output of the OLD build
-  only** and are **not evidence about the current code at HEAD**. The 0-of-22-correct
-  verdict is a statement about the revision that built `thg_v2`.
+- **GB1 is forward-only.** Two independent readers confirm the artifact itself:
+  `graph-dev` verified a clean-slate replay of `locomo_0000` emits **0**
+  supersession edges with the flag off, and the Lead opened the bank directly and
+  measured **10 persisted `superseded_by` records (= 5 pairs) and 0 of 365 notes
+  carrying triplets** — i.e. the `triplets` column is empty on every row, so
+  `hydrate()` rebuilds no versioning index for it. The 166 pairs are therefore
+  **output of the OLD build only** and are **not evidence about the current code at
+  HEAD**. The 0-of-22-correct verdict is a statement about the revision that built
+  `thg_v2`.
 - **`hub_only_edge_fraction` is the WRONG acceptance metric for GB5.** GB5 is
   deliberately **ordering-only**: the fixture shows stored same-entity edges
   1792 → 2724 and hub share **99.27% → 99.01%**, i.e. essentially flat by design
   (the count moved only because the inverse index finds peers the old capped O(N)
-  scan dropped, not because the cap changed). The real GB5 evidence is **ranking**
-  (note `00cb74d3`'s rare-sharing peer `7ab53820` moved #5 @0.6589 → #1 @3.8245,
-  displacing 4 hub-only peers). §4.2's 94.7% is therefore **the pre-fix defect
-  measurement, NOT a post-fix acceptance target** — a flat post-fix hub share is
-  the expected result, not a failed fix.
+  scan dropped, not because the cap changed). **§4.2's 94.7% is therefore the
+  pre-fix defect measurement, NOT a post-fix acceptance target** — a flat post-fix
+  hub share is the expected result, not a failed fix.
+- **GB5's reach is bounded, and the bound is measurable.** The single witness is
+  genuine — note `00cb74d3`'s rare-sharing peer `7ab53820` moves **#5 @0.6589 →
+  #1 @3.8245**, displacing 4 hub-only peers — but the evidence script's own
+  **aggregate** prints top-5 slots as **`hub-only=1769 discriminative=52`
+  identically before and after**, and only **23/365 notes (6.3%)** have any rare
+  peer in their top-5 at all. So the correct claim is: *the IDF weighting
+  demonstrably promotes rare-sharing peers **where they exist**, and they exist in
+  ~6% of notes*. **Note the convergence: 6.3% (23/365) ≈ the ~5.3% of the entity
+  channel that carries signal (§4.2)** — two independent measurements agreeing
+  that only ~5–6% of cases have discriminative signal to recover. A re-weighting
+  fix can only help those cases, and it does help them. "GB5 improves
+  discriminative ranking" **without** the bound would contradict the aggregate in
+  the same script.
 - **The 166 pairs are inherited history, not a leak from new code.** `graph-dev`
   confirmed loading that bank and re-running `add_note` with
   `enable_supersession=False` leaves exactly 10 links untouched.
@@ -569,16 +809,23 @@ indistinguishable from a measured zero.**
 
 **Banks**
 - `data/benchmarks/longmemeval_banks/asem_thg.sqlite` — the `gb_smoke`/`gb_full` scratch bank (last question only)
-- `static/memory_banks/locomo10/thg_v2/ASEM-THG/locomo_000N/asem_thg.sqlite` × 10
+- `static/memory_banks/locomo10/thg_v2/ASEM-THG/locomo_000N/asem_thg.sqlite` × 10 — **mixed-window** (see §1.1)
+- `static/memory_banks/locomo10/thg_v2_postfix/ASEM-THG/locomo_000N/asem_thg.sqlite` × 10 — **single-revision post-fix**, the production bank
 - `static/memory_banks/locomo10/thg_v2/manifest.json`, `banks.json`
+- `static/memory_banks/locomo10/thg_v2_postfix/manifest.json`, `banks.json`
+
+**Configs added (no existing file modified)**
+- `configs/models/thg_v2_postfix_off.yaml` — production defaults (`supersession` absent → OFF)
+- `configs/models/thg_v2_postfix_supon.yaml` — the `supersession: true` ablation arm. **Not built**: the Lead re-scoped the work to ASEM-THG only once `superseded_by` was confirmed disabled-by-default. Recorded here as a *noted decision* (kept because it documents the two-ways-not-one confound), not as a pending item. **Post-`b4aec5e` this config now works end-to-end** (verified: `retriever=True ingestor=True same_object=True`), so the arm is buildable if ever wanted — it simply is not needed for the narrowed scope.
 
 **Results**
 - `data/benchmarks/results/longmemeval/gb_smoke/…json`, `…md`
-- `data/benchmarks/results/longmemeval/gb_full/preds/…jsonl` (resumable)
+- `data/benchmarks/results/longmemeval/gb_full/preds/…jsonl` — **160/500 questions**
 
 **Measurement tools (all in `analysis/`, none modify the pipeline)**
 `graph_metrics.py`, `final_tables.py`, `hub_only_edges.py`, `hub_only_corpus.py`,
 `supersession_audit.py`, `supersession_corpus.py`, `supersession_appendix.py`,
+`supersession_exposure.py`, `supersession_exposure_corpus.py`,
 `reconcile_pair_denominators.py`, `build_per_question_index.py`,
 `snapshot_hook.py` + `snapshot_site/sitecustomize.py`,
 `diagnose_double_ingest.py`.
@@ -586,7 +833,9 @@ indistinguishable from a measured zero.**
 **Data artifacts**
 `_thg_v2_final_tables.json`, `_hub_only_corpus.json`, `_locomo0000_supersession.json`,
 `_locomo0000_metrics.json`, `_locomo0000_hubonly.json`, `_part1_metrics.json`,
-`_double_ingest_probe.json`, `supersession_appendix.json` / `.md`.
+`_postfix_metrics.json`, `_double_ingest_probe.json`,
+`_supersession_exposure.json`, `_supersession_exposure_corpus.json`,
+`supersession_appendix.json` / `.md`.
 
 ---
 
@@ -605,6 +854,11 @@ indistinguishable from a measured zero.**
 | **Per-question index for `gb_full`** | **coverage 0/500.** Hook absent for that process; not reconstructed. |
 | **166/166 semantic verdict** | **NOT CLAIMED.** 22 read, 144 `unread`. |
 | **`superseded_by` accuracy ablation** | **NOT RUN** — needs task-4 judge pipeline. |
+| **GB2e (`superseded_by` default OFF) actually disabling the relation** | **FALSIFIED — it did NOT.** `thg_v2_postfix` shows **242 `superseded_by` records** where ~0 was expected. Cause: a **falsy-check bug** — `TemporalHyperGraph` defines `__len__`, so an empty graph is falsy and `hyper_graph or TemporalHyperGraph()` (`asem/single_pass_ingest.py:174`) discarded the configured object, substituting a default with `enable_supersession=True` on the side that persists edges. **FIXED in `b4aec5e`** (Lead) with a system-level guard proven to fail on the bug. **`thg_v2_postfix` predates the fix** and is not a supersession-off baseline. See §4A.2. |
+| **`thg_v2` vs `thg_v2_postfix` as a clean before/after** | **NOT VALID — confounded twice.** The note population changed (net +85, per-conversation **−35…+41**, both directions) *and* `superseded_by` is live in both. See §4A.1. |
+| **"GB5 improves discriminative ranking", corpus-level** | **NOT SUPPORTED by the evidence script's own aggregate.** The single witness is real (`00cb74d3`: rare peer #5→#1, displacing 4 hub-only peers), but the same script prints top-5 slots **`hub-only=1769 discriminative=52` identically before and after**, and only **23/365 (6.3%)** of notes have any rare peer in their top-5. Bounded reach, not a corpus-level improvement. Note the convergence: 6.3% ≈ the ~5.3% of the entity channel that carries signal (§4.2). |
+| **`gb_full` as a 500-question result** | **NOT VALID.** Stopped deliberately at **160/500** (4,211.93 s) on memory grounds. The answer file holds **160 rows**. |
+| **Mechanism behind the `thg_v2`→postfix note-count change** | **NOT ESTABLISHED.** The peer-discovery/extraction change is a *likely* cause, explicitly labelled as such; the experiment was not run (outside the narrowed scope). |
 
 ---
 

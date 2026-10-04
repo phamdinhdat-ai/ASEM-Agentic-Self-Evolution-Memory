@@ -1,0 +1,59 @@
+{
+  "phase": "ingest",
+  "dataset": "locomo10",
+  "tag": "ws4_locomo_graphfree",
+  "bank_root": "static/memory_banks\\locomo10",
+  "input": "datasets/locomo/locomo10.json",
+  "input_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+  "config_sha256": "24e0063645cbdba1e326e90178b83da934acc7cd3f4a69a08f88f36962aa4b80",
+  "model": "chib/deepseek-v4.1-flash",
+  "embedder_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "systems": [
+    "SimRetrieval"
+  ],
+  "created_at": "2026-10-03T14:20:55",
+  "updated_at": "2026-10-03T14:24:40",
+  "elapsed_sec": 0.0,
+  "conversations": [
+    {
+      "conversation_id": "locomo_0000",
+      "sessions": 19,
+      "turns": 419,
+      "systems": {
+        "SimRetrieval": {
+          "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+          "config_sha256": "24e0063645cbdba1e326e90178b83da934acc7cd3f4a69a08f88f36962aa4b80",
+          "model": "chib/deepseek-v4.1-flash",
+          "thinking": null,
+          "notes": 419,
+          "link_edges": 0,
+          "new_edges": 0,
+          "status": "ok",
+          "bank": "static/memory_banks\\locomo10\\ws4_locomo_graphfree\\SimRetrieval\\locomo_0000\\simretrieval.sqlite",
+          "bytes": 7438336,
+          "elapsed_sec": 224.89
+        }
+      }
+    }
+  ],
+  "totals": {
+    "conversations": 1,
+    "banks_ok": 1,
+    "banks_skipped": 0,
+    "banks_error": 0,
+    "notes": {
+      "SimRetrieval": 419
+    }
+  },
+  "run": {},
+  "config_history": [
+    {
+      "config_sha256": "24e0063645cbdba1e326e90178b83da934acc7cd3f4a69a08f88f36962aa4b80",
+      "ingest_config": "configs/models/deepseek_v41_flash.yaml",
+      "model": "chib/deepseek-v4.1-flash",
+      "thinking": null,
+      "first_used": "2026-10-03T14:20:55"
+    }
+  ]
+}

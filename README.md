@@ -392,14 +392,20 @@ python scripts/run_training.py \
 | `ValueRetrievalOnly` | Q-value retrieval on IEU triplets |
 | `ASEM` | Full five-stage pipeline (v1, turn-by-turn) |
 | `ASEMv2` | **Two-phase batch ingestion + enhanced graph retrieval** |
+| `FastASEM` | v3: LLM-free graph weaving at ingest (`X = c = fact`), `direct_answer` graph-node prompt |
 
 ---
 
 ## Metrics
 
-- **EM** — Exact Match (primary)
-- **rougeL** — ROUGE-L F1
+- **EM** — Exact Match (strict; near-zero on free-form answers, so never read it alone)
+- **F1 / rougeL** — token-overlap metrics (penalise verbose, correct answers)
 - **bertscore_f1** — BERTScore F1 (requires `bert_score` package)
+- **judge** — LLM-as-a-judge binary verdict (`eval/llm_as_a_judge.py`, `eval/metrics.py`);
+  see [judge caveats](README.md#8-hiệu-chỉnh-judge)
+
+Always report **judge next to EM/F1**: this codebase's systems answer in prose, so EM≈0
+while the judge can still mark the answer correct (see the benchmark report below).
 
 ---
 
@@ -448,13 +454,23 @@ open memory_graph.html    # macOS
 
 ## QA Categories (LoCoMo)
 
-| Category | Name | Description |
-|---|---|---|
-| 1 | single_hop | Factual recall from one turn |
-| 2 | temporal | Time-based reasoning |
-| 3 | commonsense | Inference / counterfactual |
-| 4 | conversational | Direct dialogue quote |
-| 5 | adversarial | Deliberately mis-attributed question |
+> **Label mismatch.** `CATEGORY_NAMES` in `scripts/run_locomo10_experiments.py` is wrong for
+> categories 1, 3 and 4. Measured from `datasets/locomo/locomo10.json`: category 1 rows carry
+> **3.13 evidence turns on average (98% need >1)**, category 4 rows **1.07 (only 5% need >1)**,
+> category 3 **2.08**. So the harness prints `single_hop` for the multi-hop set and
+> `conversational` for the single-hop set. The table below is the corrected mapping; the left
+> column keeps the raw `category` id stored in the predictions/results files.
+
+| Category | Harness label (wrong) | Actual type | n | Evidence turns (mean) |
+|---|---|---|---|---|
+| 1 | ~~single_hop~~ | **multi_hop** | 282 | 3.13 |
+| 2 | temporal | temporal | 321 | 1.17 |
+| 3 | ~~commonsense~~ | **open_domain** (inference / counterfactual) | 96 | 2.08 |
+| 4 | ~~conversational~~ | **single_hop** | 841 | 1.07 |
+| 5 | adversarial | adversarial (mis-attributed question; gold = the original fact) | 446 | 1.03 |
+
+Total 1986 QA. Any table in this repo that prints `single_hop` / `conversational` must be read
+with this correction in mind.
 
 ---
 
@@ -472,3 +488,238 @@ open memory_graph.html    # macOS
 - The v1 `ASEMSystem.answer()` re-ingests history turns for every QA pair without dedup — v2 fixes this.
 - `_MAX_LINK_HOPS = 3` existed as scaffolding in v1 but was never wired — v2 implements true N-hop.
 - `note.z` (intent embedding) was stored but unused in v1 — v2 gates Q-values by query-to-z similarity.
+
+---
+
+# Benchmark report — LoCoMo10 frozen banks (`ds_fixed`) × Qwen3-4B-Instruct-2507
+
+Báo cáo phân tích lần chạy static-bank với backbone nhỏ (4B). Mọi con số dưới đây được đọc
+**trực tiếp từ artifact trên đĩa** (`preds/`, `scores/`) hoặc tính lại bằng các script audit
+LLM-free ở `scratch_diag/` — không có suy đoán.
+
+## 0. Cấu hình lần chạy
+
+| Thành phần | Giá trị |
+|---|---|
+| Bank | `static/memory_banks/locomo10/ds_fixed/` (ASEM re-ingest: 2732 note; FastASEM copy từ `ds_nothink`: 3504 note) |
+| Dataset | `datasets/locomo/locomo10.json`, 10 hội thoại, **1986 QA** |
+| Backbone **và judge** | `configs/models/qwen3_4b_instruct_api.yaml` (Qwen3-4B-Instruct-2507 qua API OpenAI-compatible) |
+| Ngân sách answer | `context_window: 8192`, `answer.max_tokens: 512` (budget prompt = 7616 token) |
+| Truy hồi | `k1=20`, `k2=5`, `δ=0.30`, RRF (dense 1.0 / BM25 0.8 / entity 0.6 / temporal 0.5), `max_context_notes: 8` |
+| Metrics | `em, f1, rougeL, bertscore_f1, judge` |
+| Thời gian | 39 008 s (~10.8 h) cho 4 hệ thống × 1986 QA + judge |
+
+Artifact: `data/benchmarks/results/static/locomo10/ds_fixed__qwen_qwen3_4b_instruct_2507.{md,json}`,
+`preds/`, `scores/`.
+
+> Lưu ý: config trên Kaggle không nằm trong repo; file tương đương là
+> `configs/models/qwen3_4b_api.yaml`.
+
+Tái lập phần phân tích (không gọi API, không cần GPU):
+
+```bash
+conda activate memory-r1
+python scratch_diag/qwen3_result_audit.py                 # -> scratch_diag/_qwen3_audit.txt
+python scratch_diag/fullcontext_evidence_survival.py     # evidence còn sống trong prompt FullContext
+python scratch_diag/retrieval_recall_qwen.py             # tách INGESTION / RETRIEVAL / GENERATION
+```
+
+## 1. Điểm tổng
+
+| System | n | EM | F1 | ROUGE-L | BERTScore-F1 | Judge |
+|---|---|---|---|---|---|---|
+| ASEM | 1986 | 0.0055 | 0.2372 | 0.2236 | 0.8563 | **0.6782** |
+| FastASEM | 1986 | 0.0740 | 0.2821 | 0.2683 | 0.8688 | 0.5000 |
+| FullContext | 1986 | 0.0745 | **0.3485** | 0.3361 | **0.8773** | **0.7039** |
+| NoMemory | 1986 | 0.0035 | 0.0678 | 0.0625 | 0.8288 | 0.1843 |
+
+- ASEM đạt **96.3% mức judge của FullContext** (0.678 vs 0.704).
+- F1 của ASEM thấp hơn FullContext 32%, EM gần 0 → xem mục 4 để biết vì sao **không** nên đọc
+  kết luận này theo hướng "ASEM kém hơn".
+- FastASEM chỉ còn 0.500 judge: **11.4% câu là từ chối trả lời** và 29.6% ở nhóm adversarial.
+
+## 2. Theo loại câu hỏi (judge), nhãn đã sửa
+
+| Loại (đúng) | n | ASEM | FastASEM | FullContext | NoMemory | ASEM − FC |
+|---|---|---|---|---|---|---|
+| adversarial | 446 | 0.543 | 0.117 | 0.377 | 0.218 | **+0.166** |
+| temporal | 321 | 0.704 | 0.611 | 0.583 | 0.019 | **+0.121** |
+| open_domain | 96 | 0.500 | 0.438 | 0.531 | 0.271 | −0.031 |
+| multi_hop (`single_hop` cũ) | 282 | 0.617 | 0.475 | 0.706 | 0.103 | −0.089 |
+| single_hop (`conversational` cũ) | 841 | 0.781 | 0.677 | 0.943 | 0.247 | **−0.162** |
+
+## 3. Kiểm định ghép cặp (McNemar chính xác + bootstrap 2000, ASEM vs FullContext)
+
+| Tập | n | ASEM | FC | Chênh | p | 95% CI |
+|---|---|---|---|---|---|---|
+| Tất cả | 1986 | 0.678 | 0.704 | −2.6 pp | **0.047** | [−5.0, −0.1] pp |
+| adversarial | 446 | 0.543 | 0.377 | **+16.6 pp** | <1e-4 | [+11.0, +22.4] |
+| temporal | 321 | 0.704 | 0.583 | **+12.1 pp** | 0.0009 | [+5.6, +18.7] |
+| single_hop | 841 | 0.781 | 0.943 | **−16.2 pp** | <1e-4 | [−19.3, −13.1] |
+| multi_hop | 282 | 0.617 | 0.706 | −8.9 pp | 0.018 | [−16.0, −2.5] |
+| open_domain | 96 | 0.500 | 0.531 | −3.1 pp | 0.72 | [−13.5, +8.3] |
+| Bỏ adversarial | 1540 | 0.718 | 0.799 | **−8.1 pp** | <1e-4 | [−10.9, −5.5] |
+
+**Kết luận:** không được nói "ASEM ngang bằng FullContext". Khác biệt 2.6 pp trên toàn bộ là
+nhỏ nhưng **có thật** (p = 0.047) và khi loại adversarial thì thành 8.1 pp. Ưu thế ở adversarial
+và temporal là vững; open_domain (n=96) không đủ lực để kết luận.
+
+## 4. Vì sao F1/EM và judge nói ngược nhau
+
+| System | p50 ký tự | p50 từ | % từ chối | Judge |
+|---|---|---|---|---|
+| ASEM | 78 | 14 | 1.7% | 0.678 |
+| FastASEM | 54 | 9 | 11.4% | 0.500 |
+| FullContext | 64 | 11 | 3.0% | 0.704 |
+| NoMemory | 51 | 8 | 47.5% | 0.184 |
+
+- Chênh **F1** của FullContext tập trung ở single_hop: 0.473 vs 0.268 (**+0.205**), trong khi
+  chênh judge ở đó chỉ +0.162 → lợi thế F1 phần lớn là **chép lại nguyên văn** (xem mục 5).
+- ASEM viết thành câu kèm mệnh đề phụ (attribution, "which suggests…") → precision giảm → EM≈0
+  dù nội dung đúng. Đây là khác biệt **phong cách hệ thống**, lặp lại ở cả 10 hội thoại.
+- FastASEM F1 cao hơn ASEM **không** có nghĩa tốt hơn: judge 0.500 và 11.4% từ chối.
+
+## 5. Phát hiện quan trọng nhất: FullContext được trao sẵn đáp án
+
+`_build_history_for_qa` trong `scripts/run_locomo10_experiments.py` dựng history = toàn bộ lượt
+thoại từ session 1 **đến session chứa evidence, và bao gồm cả lượt evidence**. Replay đúng đường
+production (`scratch_diag/fullcontext_evidence_survival.py`, spy backend, ngân sách 8192/512):
+
+| Loại | history (lượt, p50) | giữ lại (p50) | % bị cắt | prompt tok p50 | **% giữ toàn bộ evidence** | vị trí evidence cuối |
+|---|---|---|---|---|---|---|
+| single_hop | 358 | 205 | 69.7% | 7588 | **100.0%** | **0.94** |
+| adversarial | 351 | 202 | 69.1% | 7586 | 100.0% | 0.93 |
+| temporal | 302 | 198 | 62.0% | 7585 | 96.0% | 0.92 |
+| multi_hop | 418 | 208 | 81.6% | 7593 | **51.1%** | 0.91 |
+
+Ở đúng nhóm FullContext thắng đậm nhất (841 câu, 42% dữ liệu), câu trả lời **nằm nguyên văn ở
+cuối prompt, vị trí 0.94**. Vì vậy 0.943 của FullContext ở nhóm này là "chép lượt thoại kề bên",
+không phải năng lực long-context. Ở nhóm cần ghép nhiều turn (multi_hop) evidence chỉ còn 51% và
+FullContext thua ASEM 8.9 pp.
+
+**Hệ quả cho phương pháp luận:** đây không phải bài toán needle-in-a-haystack. Nếu muốn đo khả
+năng đọc ngữ cảnh dài thật, phải dựng biến thể history đóng ở session **trước** evidence.
+
+## 6. Thất bại của ASEM nằm ở tầng nào? (replay retriever thật, không gọi LLM)
+
+`scratch_diag/retrieval_recall_qwen.py`: note mang đáp án = note phủ ≥60% token của gold.
+
+| Lát cắt | n | INGESTION (gold không có trong bank) | RETRIEVAL (có trong bank, không vào context) | GENERATION (có trong context vẫn sai) |
+|---|---|---|---|---|
+| Tất cả ASEM sai | 628 | 30% | 41% | 29% |
+| single_hop: ASEM sai & FC đúng | 162 | 18% | **49%** | 33% |
+| single_hop: ASEM **đúng** (đối chứng) | 653 | 8% | 8% | 84% |
+| multi_hop: ASEM sai | 102 | **58%** | 29% | 13% |
+
+- **single_hop**: một nửa lỗi là **retrieval precision** — bank có note mang đáp án nhưng nó
+  không lọt vào 8 note của context. Ví dụ `#104 "What book did Caroline recommend?"` → "Charlotte's
+  Web" thay vì "Becoming Nicole"; `#112` → "dog-faced cup" thay vì bức tranh tháng 7.
+- **multi_hop**: 58% là **lỗi ingest** — câu hỏi đòi hợp nhất nhiều phiên ("What activities does
+  Melanie partake in?" → gold 4 mục) mà không note nào chứa hợp nhất đó. Đây là giới hạn kiến trúc
+  (note = fact per-turn), không phải lỗi truy hồi.
+
+## 7. FastASEM ở adversarial: từ chối, không phải bịa
+
+| | adversarial n | ASEM | FastASEM | FullContext | NoMemory |
+|---|---|---|---|---|---|
+| judge | 446 | 54.3% | 11.7% | 37.7% | 21.7% |
+| % từ chối | 446 | 2.9% | **29.6%** | 9.2% | 40.1% |
+| judge trên các câu bị từ chối | 446 | 8% | **0%** | 5% | 1% |
+
+132/446 câu adversarial của FastASEM bị từ chối, và **0% trong số đó được chấm đúng** (vì gold tồn
+tại). Nguyên nhân nằm trong `data/prompts/P_temporal_qa.txt`: guideline 3 yêu cầu *"STILL GIVE THE
+FACT"* khi câu hỏi gán sai người, nhưng guideline 5 lại nói được phép trả lời *"I don't know"*
+"including the case where the fact belongs to a different person than the question names" — mâu
+thuẫn trực tiếp, và mô hình 4B chọn từ chối.
+
+⇒ **Không** thêm bước "kiểm tra bằng chứng / từ chối" cho FastASEM (như một số phân tích đề xuất),
+mà phải **bỏ quyền từ chối** đó. Gold của cat 5 là **fact gốc**, nên từ chối = sai theo thiết kế.
+
+## 8. Hiệu chỉnh judge
+
+Judge là **cùng Qwen3-4B** với backbone (self-judge) → phải đọc kèm sai số:
+
+| System | judge=True & có chuỗi gold | judge=True & **thiếu** chuỗi gold | judge=True nhưng `judge_error` khác null |
+|---|---|---|---|
+| ASEM | 610 (30.7%) | 737 (37.1%) | **48 (2.4% toàn bộ)** |
+| FastASEM | 458 (23.1%) | 535 (26.9%) | 31 (1.6%) |
+| FullContext | 691 (34.8%) | 707 (35.6%) | 37 (1.9%) |
+| NoMemory | 53 (2.7%) | 313 (15.8%) | 7 (0.4%) |
+
+- **2.4% dòng ASEM có verdict tự mâu thuẫn**: `judge_correct=true` nhưng `judge_error="contradiction"`,
+  reasoning ghi nguyên văn *"specifies a date in 2023, which contradicts the gold answer of 2022"*.
+  Nhiễu này **xấp xỉ chính hiệu số 2.6 pp** đang được tranh luận.
+- Trong các dòng temporal được chấm đúng, **28% (ASEM) / 42% (FullContext)** không chứa con số của gold.
+- Judge quá dễ dãi với câu diễn giải: gold `"Single"` được chấp nhận cho câu trả lời về "transition
+  changed her relationships".
+- Judge là **nhị phân** (242/446 = 0.5426), nên với n=1986 sai số ±2 pp.
+
+## 9. Hạn chế của lần chạy & việc cần làm
+
+Đã xác nhận trong code, ảnh hưởng trực tiếp tới tính công bằng của bảng điểm:
+
+1. `eval/systems.py:build_asem_system` **không truyền `answer.direct_mode`** → ASEM v1 chạy đường
+   `distil_and_answer` + `P_distil.txt` trong khi FastASEM chạy `direct_answer` + `P_temporal_qa.txt`.
+   Hai hệ thống không cùng giao thức sinh câu trả lời.
+2. Cùng chỗ đó **không truyền khối `retriever:`** → ASEM dùng default `max_link_hops=1`, config ghi 2.
+3. `CATEGORY_NAMES` sai nhãn (mục trên).
+4. `eval/static_eval.py` **không lưu `used_notes`** vào record → không thể phân tích truy hồi hậu nghiệm
+   nếu không replay retriever.
+5. Eval tĩnh **không cập nhật `q`** → `λ·z(q) ≡ 0` (guard `std==0` trong `retriever._zscore`), nên Stage 5
+   (RL/utility) hoàn toàn không được đo trong giao thức này.
+6. Chưa có baseline RAG chuẩn (BM25/dense top-k) hay hệ thống bộ nhớ khác (Mem0, A-Mem) → chưa tách
+   được đóng góp riêng của cấu trúc ASEM.
+7. Chưa ghi token/độ trễ theo từng dòng. Số đo từ tooling sẵn có (`scratch_diag/measure_context.py`):
+   prompt trả lời p50 ≈ **ASEM 3.4k / FastASEM 0.5k / FullContext 7.6k token** → ASEM rẻ hơn ~2.2× mỗi câu.
+
+### Thứ tự ưu tiên
+
+| # | Việc | File |
+|---|---|---|
+| 1 | Sửa nhãn category (1→multi_hop, 3→open_domain, 4→single_hop) | `scripts/run_locomo10_experiments.py` |
+| 2 | Bỏ quyền từ chối ở guideline 5, làm rõ guideline 3 | `data/prompts/P_temporal_qa.txt` |
+| 3 | Truyền `direct_mode` + khối `retriever` khi build ASEM | `eval/systems.py` |
+| 4 | Ghi `used_notes` / id note mang gold vào record | `eval/static_eval.py` |
+| 5 | Tăng precision retriever ở single_hop (rerank top-20, chỉnh `k2`/`λ`) | `asem/retriever.py` |
+| 6 | Note tổng hợp theo chủ đề cho multi_hop (union nhiều phiên) | `asem/batch_ingestion.py` |
+| 7 | Judge bằng model khác + lọc verdict tự mâu thuẫn | `eval/llm_as_a_judge.py` |
+| 8 | Báo cáo kèm bối cảnh "history đóng tại session evidence" | `README.md` (mục 5) |
+
+## 10. Định dạng context truy vấn (mới)
+
+Prompt trả lời không còn là một dòng JSON với UUID. Mỗi note là một block đánh số, đọc theo câu:
+
+```text
+[1] 20 April 2023 · said by Calvin · about: Calvin
+      • Calvin learned a lot and received great advice from music industry professionals, including a producer
+        who told him to stay true to himself and sound unique.
+      • [+1 more fact(s) in this note, not shown]
+      turn: "[Calvin] I learned a lot and got some great advice from professionals in the music industry."
+      topics: calvin, advice, music industry, producer
+      links: [5] same-topic, [6] extends  (+7 more not in this list: extends:3, same-topic:3, semantic:1)
+```
+
+- `[n]` là định danh note **và** là giá trị trả về trong `selected_ids` (số, không phải UUID → bỏ hẳn
+  failure mode "copy sai UUID thì mất luôn khả năng chọn note").
+- `description` được tách thành bullet theo câu, tối đa 4 câu / 420 ký tự/note; dấu `[+k more fact(s)]`
+  cho biết note còn nội dung chưa in.
+- Ngày được in dạng người đọc được (`20 April 2023`), `keywords` cắt còn 8, `content` chỉ in khi thật sự
+  bổ sung thông tin.
+- Loại bỏ UUID, `target_id`, `also_linked` rời, `—` escape.
+
+Đo trên bank `ds_fixed` (ASEM, 61 câu): context nhỏ hơn **31.5%** (p50 1 978 → 1 394 token; max 3 320 →
+1 774). Chi tiết + before/after: [report.md §9](report.md#9-thiết-kế-lại-context-truy-vấn-numbered-blocks),
+artifact `scratch_diag/context_format_preview.md`.
+
+Cùng lúc đó `asem/note.py` ép giới hạn ở write path (`cap_description` 600 ký tự cắt theo câu,
+`cap_keywords` 12) và các prompt P1/P3/P4 yêu cầu ≤ 45 từ, REWRITE chứ không append — vì bước memory
+evolution đã tạo ra những `description` dài ~1 700 ký tự. Caps chỉ áp dụng cho bank **ingest lại**.
+
+---
+
+## 11. Tóm tắt một dòng
+
+ASEM **thắng vững** ở adversarial (+16.6 pp) và temporal (+12.1 pp); khoảng cách ở single_hop là
+**retrieval precision** và đối thủ ở đó đang được trao đáp án nguyên văn ngay sát câu hỏi; 58% lỗi
+multi_hop là **ingestion**; còn khác biệt 2.6 pp ở tổng thể nằm trong cùng độ lớn với **nhiễu của
+judge 4B tự chấm chính nó**.

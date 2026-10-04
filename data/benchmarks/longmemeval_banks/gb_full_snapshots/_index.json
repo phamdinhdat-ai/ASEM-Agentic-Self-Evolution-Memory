@@ -824,6 +824,486 @@
       "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0102_5a7937c8.sqlite",
       "n_notes": 0,
       "captured_at": "2026-10-03T13:59:47"
+    },
+    {
+      "idx": 103,
+      "question_id": "gpt4_ab202e7f",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0103_gpt4_ab202e7f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:00:33"
+    },
+    {
+      "idx": 104,
+      "question_id": "gpt4_e05b82a6",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0104_gpt4_e05b82a6.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:01:08"
+    },
+    {
+      "idx": 105,
+      "question_id": "gpt4_731e37d7",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0105_gpt4_731e37d7.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:01:53"
+    },
+    {
+      "idx": 106,
+      "question_id": "edced276",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0106_edced276.sqlite",
+      "n_notes": 2,
+      "captured_at": "2026-10-03T14:02:13"
+    },
+    {
+      "idx": 107,
+      "question_id": "10d9b85a",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0107_10d9b85a.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:02:38"
+    },
+    {
+      "idx": 108,
+      "question_id": "e3038f8c",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0108_e3038f8c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:03:03"
+    },
+    {
+      "idx": 109,
+      "question_id": "2b8f3739",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0109_2b8f3739.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:03:44"
+    },
+    {
+      "idx": 110,
+      "question_id": "1a8a66a6",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0110_1a8a66a6.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:04:29"
+    },
+    {
+      "idx": 111,
+      "question_id": "c2ac3c61",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0111_c2ac3c61.sqlite",
+      "n_notes": 6,
+      "captured_at": "2026-10-03T14:04:54"
+    },
+    {
+      "idx": 112,
+      "question_id": "bf659f65",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0112_bf659f65.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:05:29"
+    },
+    {
+      "idx": 113,
+      "question_id": "gpt4_372c3eed",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0113_gpt4_372c3eed.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:06:04"
+    },
+    {
+      "idx": 114,
+      "question_id": "gpt4_2f91af09",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0114_gpt4_2f91af09.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:06:39"
+    },
+    {
+      "idx": 115,
+      "question_id": "81507db6",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0115_81507db6.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:07:30"
+    },
+    {
+      "idx": 116,
+      "question_id": "88432d0a_abs",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0116_88432d0a_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:08:05"
+    },
+    {
+      "idx": 117,
+      "question_id": "80ec1f4f_abs",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0117_80ec1f4f_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:08:50"
+    },
+    {
+      "idx": 118,
+      "question_id": "eeda8a6d_abs",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0118_eeda8a6d_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:09:11"
+    },
+    {
+      "idx": 119,
+      "question_id": "60bf93ed_abs",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0119_60bf93ed_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:09:51"
+    },
+    {
+      "idx": 120,
+      "question_id": "edced276_abs",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0120_edced276_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:10:16"
+    },
+    {
+      "idx": 121,
+      "question_id": "gpt4_372c3eed_abs",
+      "question_type": "multi-session",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0121_gpt4_372c3eed_abs.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:11:01"
+    },
+    {
+      "idx": 122,
+      "question_id": "6a1eabeb",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0122_6a1eabeb.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:11:17"
+    },
+    {
+      "idx": 123,
+      "question_id": "6aeb4375",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0123_6aeb4375.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:11:37"
+    },
+    {
+      "idx": 124,
+      "question_id": "830ce83f",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0124_830ce83f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:11:57"
+    },
+    {
+      "idx": 125,
+      "question_id": "852ce960",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0125_852ce960.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:12:17"
+    },
+    {
+      "idx": 126,
+      "question_id": "945e3d21",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0126_945e3d21.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:12:52"
+    },
+    {
+      "idx": 127,
+      "question_id": "d7c942c3",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0127_d7c942c3.sqlite",
+      "n_notes": 5,
+      "captured_at": "2026-10-03T14:13:08"
+    },
+    {
+      "idx": 128,
+      "question_id": "71315a70",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0128_71315a70.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:13:18"
+    },
+    {
+      "idx": 129,
+      "question_id": "89941a93",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0129_89941a93.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:13:48"
+    },
+    {
+      "idx": 130,
+      "question_id": "ce6d2d27",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0130_ce6d2d27.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:14:03"
+    },
+    {
+      "idx": 131,
+      "question_id": "9ea5eabc",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0131_9ea5eabc.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:14:23"
+    },
+    {
+      "idx": 132,
+      "question_id": "07741c44",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0132_07741c44.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:14:38"
+    },
+    {
+      "idx": 133,
+      "question_id": "a1eacc2a",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0133_a1eacc2a.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:14:53"
+    },
+    {
+      "idx": 134,
+      "question_id": "184da446",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0134_184da446.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:15:14"
+    },
+    {
+      "idx": 135,
+      "question_id": "031748ae",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0135_031748ae.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:15:39"
+    },
+    {
+      "idx": 136,
+      "question_id": "4d6b87c8",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0136_4d6b87c8.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:16:04"
+    },
+    {
+      "idx": 137,
+      "question_id": "0f05491a",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0137_0f05491a.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:16:19"
+    },
+    {
+      "idx": 138,
+      "question_id": "08e075c7",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0138_08e075c7.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:16:44"
+    },
+    {
+      "idx": 139,
+      "question_id": "f9e8c073",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0139_f9e8c073.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:17:04"
+    },
+    {
+      "idx": 140,
+      "question_id": "41698283",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0140_41698283.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:17:19"
+    },
+    {
+      "idx": 141,
+      "question_id": "2698e78f",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0141_2698e78f.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:17:40"
+    },
+    {
+      "idx": 142,
+      "question_id": "b6019101",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0142_b6019101.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:18:00"
+    },
+    {
+      "idx": 143,
+      "question_id": "45dc21b6",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0143_45dc21b6.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:18:35"
+    },
+    {
+      "idx": 144,
+      "question_id": "5a4f22c0",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0144_5a4f22c0.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:19:05"
+    },
+    {
+      "idx": 145,
+      "question_id": "6071bd76",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0145_6071bd76.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:19:25"
+    },
+    {
+      "idx": 146,
+      "question_id": "e493bb7c",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0146_e493bb7c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:19:56"
+    },
+    {
+      "idx": 147,
+      "question_id": "618f13b2",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0147_618f13b2.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:20:26"
+    },
+    {
+      "idx": 148,
+      "question_id": "72e3ee87",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0148_72e3ee87.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:21:01"
+    },
+    {
+      "idx": 149,
+      "question_id": "c4ea545c",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0149_c4ea545c.sqlite",
+      "n_notes": 15,
+      "captured_at": "2026-10-03T14:21:36"
+    },
+    {
+      "idx": 150,
+      "question_id": "01493427",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0150_01493427.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:21:57"
+    },
+    {
+      "idx": 151,
+      "question_id": "6a27ffc2",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0151_6a27ffc2.sqlite",
+      "n_notes": 14,
+      "captured_at": "2026-10-03T14:22:27"
+    },
+    {
+      "idx": 152,
+      "question_id": "2133c1b5",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0152_2133c1b5.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:23:12"
+    },
+    {
+      "idx": 153,
+      "question_id": "18bc8abd",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0153_18bc8abd.sqlite",
+      "n_notes": 13,
+      "captured_at": "2026-10-03T14:23:42"
+    },
+    {
+      "idx": 154,
+      "question_id": "db467c8c",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0154_db467c8c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:24:02"
+    },
+    {
+      "idx": 155,
+      "question_id": "7a87bd0c",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0155_7a87bd0c.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:24:33"
+    },
+    {
+      "idx": 156,
+      "question_id": "e61a7584",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0156_e61a7584.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:24:53"
+    },
+    {
+      "idx": 157,
+      "question_id": "1cea1afa",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0157_1cea1afa.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:25:33"
+    },
+    {
+      "idx": 158,
+      "question_id": "ed4ddc30",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0158_ed4ddc30.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:25:58"
+    },
+    {
+      "idx": 159,
+      "question_id": "8fb83627",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0159_8fb83627.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:26:18"
+    },
+    {
+      "idx": 160,
+      "question_id": "b01defab",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0160_b01defab.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:26:44"
+    },
+    {
+      "idx": 161,
+      "question_id": "22d2cb42",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0161_22d2cb42.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:26:59"
+    },
+    {
+      "idx": 162,
+      "question_id": "0e4e4c46",
+      "question_type": "knowledge-update",
+      "snapshot": "data/benchmarks/longmemeval_banks/gb_full_snapshots\\q_0162_0e4e4c46.sqlite",
+      "n_notes": 0,
+      "captured_at": "2026-10-03T14:27:34"
     }
   ],
   "double_ingest": []

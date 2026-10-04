@@ -1,15 +1,25 @@
 
-# ASEM: AGENTIC SELF-EVOLVING MEMORY FOR
+# ASEM-THG: AGENTIC SELF-EVOLVING MEMORY FOR
 
 # LARGE LANGUAGE MODEL AGENTS
 
-## STRUCTURED ORGANISATION, REINFORCEMENT-LEARNED OPERATIONS,
+## TEMPORAL HYPER-GRAPH STRUCTURE, REINFORCEMENT-LEARNED OPERATIONS,
 
 ## AND VALUE-AWARE RETRIEVAL
 
 ```
 Dat Pham Dinh
 ```
+
+> **Revision note.** This revision updates the original ASEM draft with the method
+> actually implemented and measured in this repository — **ASEM-THG** (agentic
+> self-evolving memory with a *temporal hyper-graph*). The five-stage framework is
+> preserved; Stages 1, 3 and 4 are re-specified for temporal grounding,
+> deterministic relational structure, and graph-aware value retrieval, and a new
+> Section 6 reports the current empirical results — including a rigorously bounded
+> **negative** ablation that replicates across two datasets. Every reported number
+> is traceable to an artifact under `analysis/`.
+
 ## ABSTRACT
 
 ```
@@ -26,24 +36,37 @@ ically with corpus growth. (iii) Utility blindness: policies that equate semanti
 proximity with functional value return contextually close but strategically inferior
 candidates, systematically hindering multi-hop reasoning and long-horizon task
 completion.
-We present ASEM (Agentic Self-Evolving Memory), a unified five-stage frame-
-work that addresses all three deficiencies simultaneously. ASEM introduces: a
-multi-attribute atomic note schema that encodes each experience along keyword,
-categorical, contextual, embedding, and utility axes; an RL-trained Memory Man-
-ager that selects among four principled write operations using outcome-based re-
-ward rather than surface heuristics; a dynamic linking and bidirectional memory
-evolution mechanism that weaves newly integrated notes into a traversable knowl-
-edge network while retroactively revising the representations of related prior en-
-tries; a two-phase hybrid retrieval pipeline that decouples semantic relevance from
-learned functional utility, followed by a distillation step that filters retrieved can-
-didates to the minimal noise-free subset; and a non-parametric runtime utility es-
-timation rule whose convergence in expectation to the true per-memory expected
-return, with bounded asymptotic variance, is formally guaranteed. The resulting
-system maintains a living knowledge network that self-organises, self-repairs, and
-continuously refines utility estimates of stored experiences—without ever modi-
-fying backbone LLM parameters. Empirical evaluation on long-horizon conver-
-sational benchmarks demonstrates substantial gains over strong single-paradigm
-baselines across all capability dimensions.
+We present ASEM-THG (Agentic Self-Evolving Memory with a **Temporal Hyper-
+Graph**), a unified five-stage framework that addresses all three deficiencies
+simultaneously while making the memory representation explicitly temporal and
+relational. ASEM-THG introduces: (i) a **single-pass, temporally grounded** atomic
+note schema that converts one dialogue session into standalone facts in **one** LLM
+call, resolving every pronoun and every date to an absolute calendar date so that
+difference-of-dates questions are answerable from note content alone; (ii) an
+RL-trained Memory Manager that selects among four principled write operations
+using outcome-based reward, guarded by a deterministic Tier-0 write gate; (iii) a
+**deterministic temporal hyper-graph** with four LLM-free relation types —
+`same-entity`, `temporal`, `semantic`, and `superseded_by` — maintained in two
+synchronised views, with hub suppression by smoothed inverse document frequency;
+(iv) a two-phase value-aware retrieval pipeline extended with **relation-type-weighted
+N-hop traversal** and **query-seeded Personalized PageRank** over the shared graph,
+followed by a memory-distillation step; and (v) a non-parametric runtime utility rule
+whose convergence in expectation to the true per-memory expected return, with
+bounded asymptotic variance, is formally guaranteed. The resulting system maintains
+a living knowledge network that self-organises, self-repairs, and continuously refines
+utility estimates of stored experiences — without ever modifying backbone LLM
+parameters.
+
+We report a one-variable ablation of the context builder at n=199 (LoCoMo10) and
+n=500 (LongMemEval), both at judge coverage 1.00. The answer-quality ablation is a
+**negative that replicates across both datasets** (paired binomial p = 0.21 and 0.29;
+exact-match ties on LoCoMo), and we state it as the primary finding rather than
+burying it. Separately, we establish graph-construction facts that do survive
+scrutiny: the entity channel is ~95% hub and ~19:1 noise-to-signal, and fan-out
+capping does **not** reduce hub dominance while frequency-based (IDF) weighting
+does, with a bounded reach we quantify at 6.3% of notes. The contribution is thus
+both a method and a rigorously bounded account of what its relational structure buys
+on long-horizon conversational QA.
 ```
 ## 1 INTRODUCTION
 
@@ -120,6 +143,16 @@ description, a dense embedding, an intent embedding, bidirectional link sets, an
 (Q-value). This multi-faceted structure supports simultaneous retrieval along keyword, topic,
 contextual, and utility axes.
 ```
+(1) **Single-pass, temporally grounded atomic ingestion (extends P1).** We
+introduce a session-level extractor (`SinglePassSessionIngestor`) that converts an
+entire dialogue into atomic, standalone facts in **one** LLM call, under five
+enforced extraction rules: (R1) pronoun resolution; (R2) **absolute-date resolution
+for every dated event**, with at most one date per fact; (R3) one fact per note;
+(R4) an atomic `(subject, predicate, object)` triplet per fact; and (R5) explicit
+capture of reactive/attribution turns with a `speaker` field. Construction cost
+becomes O(1) LLM calls per session instead of O(turns), and a fact retaining a
+relative or shorthand date is impossible by construction.
+
 ```
 (2) RL-driven principled memory management (P2). We train a Memory Manager using Group
 Relative Policy Optimisation (GRPO) Shao et al. (2024) with outcome-based reward derived
@@ -141,20 +174,21 @@ Util: utility-aware retrieval (P4); Evolve: non-parametric runtime self-evolutio
 ◦ partially;× absent.
 ```
 ```
-System Paradigm Rich Write Link Util Evolve
+System Paradigm Rich Write Link Util Evolve Temporal Deterministic
+                                                 grounding   graph
 ```
 ```
-MemGPT Packer et al. (2023) OS-inspired hierarchy × ◦ × × ×
-MemoryBank Zhong et al. (2024) Forgetting-curve store × ◦ × × ×
-ReadAgent Lee et al. (2024) Gist distillation ◦ × × × ×
-Mem0 Chhikara et al. (2025) Graph + LLM ops ◦ ◦ ◦ × ×
-MemoryOS Kang et al. (2025) OS-abstraction tiers ◦ ◦ × × ×
-Atomic-Linking Xu et al. (2025) Zettelkasten-inspired✓ ×✓ × ◦
-RL-Manager Yan et al. (2025) RL write operations ×✓ × × ×
-Value-Retrieval Zhang et al. (2026) Q-value retrieval ◦ × ×✓✓
+MemGPT Packer et al. (2023) OS-inspired hierarchy × ◦ × × × × —
+MemoryBank Zhong et al. (2024) Forgetting-curve store × ◦ × × × × —
+ReadAgent Lee et al. (2024) Gist distillation ◦ × × × × × —
+Mem0 Chhikara et al. (2025) Graph + LLM ops ◦ ◦ ◦ × × ◦ ×
+MemoryOS Kang et al. (2025) OS-abstraction tiers ◦ ◦ × × × ◦ ×
+Atomic-Linking Xu et al. (2025) Zettelkasten-inspired✓ ×✓ × ◦ ◦ ×
+RL-Manager Yan et al. (2025) RL write operations ×✓ × × × × ×
+Value-Retrieval Zhang et al. (2026) Q-value retrieval ◦ × ×✓✓ ◦ ×
 ```
 ```
-ASEM (ours) Unified✓✓✓✓✓
+ASEM-THG (ours) Unified✓✓✓✓✓ absolute dates LLM-free
 ```
 ```
 (4) Value-aware two-phase retrieval with distillation (P4). We propose a pipeline that decouples
@@ -507,37 +541,40 @@ existing knowledge network and retroactively revising the representations of rel
 to reflect the new information.
 ```
 ```
-Link generation. After the write operation in Stage 2, the system identifies the k nearest neigh-
-bours of mnewinM by cosine embedding similarity:
+Link generation. After the write operation in Stage 2, the system identifies the k nearest
+neighbours of mnew in M by cosine embedding similarity:
+sn,j = (enew · ej) / (‖enew‖ ‖ej‖),   Mnearnew = { mj | rank(sn,j) ≤ k, mj ∈ M }.   (10)
+The free-form design then asks the LLM to populate the link set Lnew ← LLM(mnew ‖ Mnearnew ‖ P2).   (11)
 ```
 ```
-sn,j =
-```
-```
-enew· ej
-∥enew∥∥ej∥
-```
-```
-, Mnearnew =
-```
-### 
+Deterministic hyper-graph construction. The deployed ASEM-THG system replaces the
+LLM-driven linker in Eq. (11) with a deterministic TemporalHyperGraph with four LLM-free
+relation types,
+each computed from fields already present on the notes (no extra LLM call):
+
+    same-entity  two notes that share at least one entity in E (weighted by smoothed
+                 inverse document frequency, so a rare shared entity counts more than
+                 a ubiquitous one);
+    temporal     notes whose dates d are adjacent within a session, ordered by τ ;
+    semantic     notes whose cosine similarity exceeds a graph threshold;
+    superseded_by a strict contradiction on the same atomic (subject, predicate) pair,
+                 older → newer (off by default; see §6.3).
 
 ```
-mj| rank(sn,j)≤ k, mj∈M
 ```
-. (10)
-
+Dual-view synchronisation. The graph is maintained in two synchronised views: an
+in-memory adjacency structure used for traversal and PageRank, and a persisted
+adjacency written back onto each note's link set L so that edges survive a reload
+and remain inspectable. Every relation is a typed, deduplicated record on both
+endpoints, exactly as in the free-form design — the difference is that the type and
+the endpoint are now computed, not generated.
 ```
-The backbone LLM then analyses semantic and causal connections among mnewand Mnearnewto
-populate the link set:
-Lnew ← LLM(mnew∥Mnearnew∥ P 2 ). (11)
-Links are generated without a predefined schema: the LLM produces free-form relationship de-
-scriptions that capture semantic, causal, temporal, or any other cognitively salient connection that
-the content warrants, permitting the knowledge network to develop richer relational patterns as the
-agent accumulates experience.
 ```
-
-
+Hub suppression. The `same-entity` channel is dominated by a single "hub" class (see
+§6.2), so an optional fan-out cap and a smoothed-IDF entity weighting are applied so
+that a connection through a rare entity contributes more to traversal than one through
+a speaker name that co-occurs with hundreds of notes.
+```
 
 ```
 Bidirectional memory evolution. New information may render the contextual descriptions or cat-
@@ -626,6 +663,31 @@ Mdistil, ˆ ←y πφ(q, Mret). (16)
 The Answer Agent is trained with the same GRPO objective (Eq. (8)), rewarded by the exact-match
 score between ˆ and the gold answery ygold.
 ```
+```
+Phase C — Relation-type-weighted N-hop traversal (ASEM-THG extension). The deployed
+system seeds the traversal from the top base-scored candidates and expands up to
+h = 2 hops over the temporal hyper-graph. Each traversed edge contributes with a
+decay and a relation-type weight, so a `superseded_by` edge (w = 1.3) outweighs a
+`same-entity` edge (w = 0.9) and a generic `semantic` edge (w = 0.6). Expansion is
+pruned by a minimum-similarity gate so that hub traversal cannot flood the candidate
+set.
+```
+```
+Phase D — Query-seeded Personalized PageRank (ASEM-THG extension). In parallel, a
+Personalized PageRank is run over the shared adjacency with the query-seeded base
+candidates as the teleport set, producing a global-importance score for every note.
+The final blend is a weighted sum of the base composite score, the N-hop contribution,
+and the PPR contribution, exposing three interpretable knobs (α, β, γ) that are set to
+0.35/0.25/0.40 in the frozen configuration.
+```
+```
+Bounded recovery loop. If the distilled answer is a refusal or contains no usable
+note content, the read path re-queries with a widened candidate pool (a lower similarity
+threshold and a larger k2, up to recovery_k2 = 12) and a larger distillation top-n, then
+re-runs the Answer Agent once. The loop is bounded to a single retry so that a query
+that genuinely has no supporting memory still yields the abstention rather than an
+unbounded search.
+```
 ### 4.5 STAGE 5: NON-PARAMETRIC RUNTIME UTILITY UPDATE
 
 ```
@@ -638,37 +700,40 @@ utility estimation—requiring no backbone weight modification—closes this loo
 
 
 ```
-Algorithm 1 ASEM: Agentic Self-Evolving Memory — Full Pipeline
+Algorithm 1 ASEM-THG: Agentic Self-Evolving Memory — Full Pipeline
 Require: Memory bank M; frozen backbone pLLM; Memory Manager πθ; Answer Agent πφ;
 hyperparameters k 1 ,k 2 ,k,δ,λ,α,q 0
 Ensure: Updated memory bankM′; response ˆy
 ```
 ```
-▷ — WRITE PATH (new interaction c) —
-1: Stage 1: mnew← NoteConstruct(c,P 1 ,q 0 ) ▷ Eq. 4–
-2: x← LLMExtract(c)
+▷ — WRITE PATH (new session with turns [c]) —
+1: Stage 1: mnew← SinglePassSessionIngest([c],P 1 b)   ▷ one call/session, Eq. 4–6
+2: x← facts(mnew)
 3: Mold← TopKk(ex, M)
-4: Stage 2: (o,m′)∼ πθ(·| x,Mold) ▷ Eq. 7
+4: Stage 2: (o,m′)∼ πθ(·| x,Mold)   ▷ Eq. 7 (Tier-0 gate for ADD)
 5: Apply operation o; updateM accordingly.
-6: Stage 3: Lnew← LLM(mnew∥Mnearnew∥P 2 ) ▷ Eq. 11
-7: for each mj∈Mnearnewdo
-8: m∗j← LLM(mnew∥M\{mj}∥mj∥P 3 ) ▷ Eq. 12
-9: M← (M\{mj})∪{m∗j}
-10: end for
+6: Stage 3: G← TemporalHyperGraph(M)   ▷ deterministic, 4 relations
+7: for each relation r∈{same-entity, temporal, semantic, superseded_by} do
+8:     add typed edge(s) for r, weighted by smoothed IDF
+9: end for
+10: persist dual view onto Note.L
 ```
 ```
 ▷ — READ PATH (query q) —
-11: Stage 4a: C(q)← TopKk 1 (eq, M) ▷ Eq. 13
-12: Stage 4b: Mret← TopKk 2 (C(q), score) ▷ Eq. 14–
-13: Stage 4c: (Mdistil, ˆy)← πφ(q, Mret) ▷ Eq. 16
+11: Stage 4a: C(q)← TopKk 1 (eq, M)   ▷ Eq. 13
+12: Stage 4b: Mret← TopKk 2 (C(q), score)   ▷ Eq. 14–15
+13: Stage 4c: expand C(q) by h≤2 N-hop traversal overG, weighted by relation
+14: Stage 4d: add query-seeded Personalized PageRank overG; blend α,β,γ
+15: Stage 4e: (Mdistil, ˆy)← πφ(q, Mret)   ▷ Eq. 16
+16: if refusal/no-note then re-query once with widened pool; else keep answer
 ```
 ```
 ▷ — UPDATE PATH (reward r) —
-14: Receive reward r from environment.
-15: Stage 5: for each mi∈Mdistildo qi← qi+ α(r− qi) ▷ Eq. 17
-16: enew← LLMSummarise(q, ˆy,r)
-17: M←M∪{(zq, enew, q 0 )}
-18: returnM, ˆy
+17: Receive reward r from environment.
+18: Stage 5: for each mi∈Mdistildo qi← qi+ α(r− qi)   ▷ Eq. 17
+19: enew← LLMSummarise(q, ˆy,r)
+20: M←M∪{(zq, enew, q 0 )}
+21: returnM, ˆy
 ```
 ```
 Utility update rule. After each interaction, the environment returns a scalar reward r ∈ [− 1 , 1]
@@ -830,114 +895,219 @@ where ˆσ is the within-pool standard deviation of the unnormalised Q-values).
 ```
 
 
-## 6 EXPERIMENTAL SETUP
+## 6 EXPERIMENTS AND THE HONEST RESULT
 
-### 6.1 BENCHMARKS
-
-```
-We evaluate ASEM on three long-horizon conversational benchmarks:
-```
-- LongMemEval Wu et al. (2024). 500 multi-session conversations spanning up to 50 turns,
-    with questions requiring synthesis across sessions, categorised by the number of memory hops
-    required (single-, two-, and multi-hop).
-- LoCoMo Maharana et al. (2024). A dialogue dataset with 10-session conversations averaging
-    300 turns total. Evaluation targets single-session recall, cross-session synthesis, and contradic-
-    tion resolution.
-- PersonalMemBench (internal). Simulated personal-assistant interactions over 30-day periods,
-    evaluating preference tracking, factual consistency, and multi-turn coherence.
-
-### 6.2 BASELINES
+### 6.1 WHAT WAS ACTUALLY RUN
 
 ```
-We compare against six baselines spanning the three paradigms of Section 2: No-Memory (back-
-bone only); Full-Context (all prior interactions as context; oracle upper bound); Sim-Retrieval (flat
-dense retrieval by embedding similarity); Atomic-Linking (note construction and linking without
-RL write ops or utility-aware retrieval); RL-Manager-Only (RL-trained write operations on flat en-
-tries, similarity-based retrieval); Value-Retrieval-Only (Q-value utility estimation and two-phase
-retrieval on IEU triplets without rich note structure or linking).
+The evaluation reported here is a one-variable ablation of the context builder on top
+of the same frozen bank, the same retriever, the same answer agent, and the same
+token budget. Two configurations are compared:
+
+  legacy   the pre-THG context builder (flat session notes);
+  thg_v1   the ASEM-THG builder: single-pass temporal ingestion + deterministic
+           temporal hyper-graph + graph-aware retrieval (Phases C/D).
+
+Two datasets, one run each:
+  LoCoMo10 (Maharana et al. 2024)   n = 199 questions
+  LongMemEval (Wu et al. 2024)      n = 500 questions
+
+Judge coverage is 1.00 on both datasets (every question was judged, so the judge
+column is comparable and not a partial-coverage artifact). All reported values are
+printed by a script directly from raw per-question artifacts; none are transcribed
+by hand. The evaluation is executed with the frozen code SHA
+342ECB0A3A57BF600EB5C74AF6D589C1673403EBBE17DBB961BE2015D7FBC2E3
+(unit suite: 345 passed, 1 skipped, 0 failed). The two evaluated banks are
+thg_v2 (4,579 notes / 73,862 links) and thg_v2_postfix (4,664 notes / 73,640 links).
 ```
-### 6.3 IMPLEMENTATION DETAILS
+
+### 6.2 HEADLINE RESULT: A NEGATIVE THAT REPLICATES
 
 ```
-All systems use Qwen2.5-7B-Instruct as the backbone. The Memory Manager and Answer Agent
-are fine-tuned from the same backbone initialisation. Hyperparameters: k 1 = 20, k 2 = 5, k = 5,
-δ = 0. 30 , λ = 0. 40 , α = 0. 10 , q 0 = 0. 50. Primary metric: exact-match (EM) accuracy. Secondary
-metrics: ROUGE-L, BERTScore-F1, and blind human evaluation on a random 100-question subset.
-All experiments are run with five random seeds; we report mean± one standard deviation.
+Table 2 reports the one-variable ablation. Read it before the rest of the paper: the
+ASEM-THG context builder does not beat the legacy builder on answer quality, and on
+judge and surface overlap it is very slightly worse. Exact match is a tie on LoCoMo.
 ```
+
 ```
-Ingestion is performed in batch mode. A complete session dialogue is processed with three LLM
-calls (note extraction, memory operation selection, and link generation), and the resulting notes
-are written in a single transaction followed by one index rebuild. Each note is temporally grounded
-with its session datetime and ISO-8601 timestamp, and links are stored as typed bidirectional
-records that preserve the relation label. Relative time expressions are resolved against the session
-date inside the extraction prompt. Banks are therefore dated and relation-labelled at write time,
-which is what allows the temporal and entity channels of Stage 4 to contribute rather than
-degrading silently to embedding similarity.
+Table 2. One-variable ablation of the context builder (judge coverage = 1.00).
+Dataset System EM F1 ROUGE-L BERTScore judge
+LoCoMo10 (n=199) legacy 0.3065 0.4935 0.4836 0.8685 0.6533
+LoCoMo10 (n=199) thg_v1 0.3065 0.4851 0.4717 0.8702 0.6181
+LongMemEval (n=500) legacy 0.2680 0.4232 0.4131 0.8860 0.6140
+LongMemEval (n=500) thg_v1 0.2740 0.4166 0.4092 0.8833 0.5880
 ```
+
+### 6.3 PAIRED ANALYSIS: THE DIFFERENCES ARE NOT SIGNIFICANT
+
+```
+Per-question paired comparisons confirm that the observed direction of the LoCoMo EM
+tie and the judge gaps are not statistically distinguishable from noise.
+
+LoCoMo10 (n = 199), exact match:
+  both correct 115   thg_v1 only 8   legacy only 15   neither 61
+  discordant pairs 23 (15 + 8), exact two-sided binomial p = 0.2100  (NOT significant)
+
+LoCoMo10 (n = 199), BERTScore:
+  paired mean diff +0.0017, median 0.0000, 75 wins / 72 losses / 52 ties,
+  two-sided sign test p = 0.8690  (NOT significant)
+
+LongMemEval (n = 500), exact match:
+  both correct 236   thg_v1 only 58   legacy only 71   neither 135
+  discordant pairs 129 (71 + 58), exact two-sided binomial p = 0.2907  (NOT significant)
+```
+
+```
+Where the THG channel does buy something measurable but small: mixed LoCoMo10
+questions, where thg_v1 is +1 correct example (2 of 37 → 3 of 37) over legacy. This is
+well inside the noise band and is reported as a directional hint, not a result.
+```
+
+### 6.4 PER-CATEGORY BREAKDOWN (LongMemEval, thg_v1)
+
+```
+Table 3. ASEM-THG per-category, n = 500.
+Category            EM       judge
+knowledge-update    0.3333   0.7051
+temporal-reasoning  0.1353   0.4887
+multi-session       0.1729   0.4586
+```
+
+```
+The temporal-reasoning and multi-session categories are exactly where the temporal
+hyper-graph is supposed to help, and they are the two weakest categories. This is a
+direct falsification of the naive hypothesis that "adding a temporal graph fixes
+temporal questions"; the mechanism is not the bottleneck, or it is not the right
+mechanism.
+```
+
+### 6.5 GRAPH-CONSTRUCTION FACTS THAT DO SURVIVE SCRUTINY
+
+```
+The ablation is negative, but the analysis surfaced structural facts about the entity
+channel that are robust and independently checkable. We report them because they
+explain why the answer-quality ablation is null.
+
+(a) The entity channel is a hub, not a signal. Of 22,565 same-entity link records,
+    the hub_only edge fraction is 0.9474 (≈ 21,378 hub-only vs 1,187 discriminative),
+    i.e. a ~19:1 noise-to-signal ratio. The "hub" is a class, not a single note:
+    on LoCoMo, speaker names dominate (caroline 65%, melanie 56% of notes); on
+    LongMemEval, the literal token `user` dominates (≈ 67% of notes). A channel whose
+    edges overwhelmingly connect through one ubiquitous token cannot discriminate.
+
+(b) Fan-out capping does not fix it. Capping hub fan-out reduces the edge count from
+    46,084 to 1,792 (a 25.7× reduction) but the hub share only falls from 99.94% to
+    99.27% (0.67 percentage points). Capping removes volume, not the structural skew.
+
+(c) Frequency-based (IDF) weighting does bound the damage. Weighting shared entities
+    by smoothed inverse document frequency so a rare shared entity counts more than a
+    ubiquitous one bounds the channel's reach rather than eliminating it: only 23 of 365
+    notes (6.3%) have a rare peer in their top-5; the corpus top-5 splits 1,769 / 52
+    between hub and discriminative; and a witness note 00cb74d3 moves from rank #5 to
+    rank #1 as its score rises from 0.6589 to 3.8245. This is the mechanism Stage 3
+    relies on; it is real but strictly bounded.
+
+(d) Supersession, as configured, does not work. The `superseded_by` relation is correct
+    on 0 of 5 hand-checked contradiction cases, so it is shipped OFF by default. We do
+    not claim it as a working component.
+```
+
+### 6.6 HONESTY PROTOCOL
+
+```
+Every headline number in this section is printed by a script from raw artifacts under
+`analysis/` (no hand transcription). Judge scores are reported only where coverage is
+1.00 or explicitly stated. The ablation is a negative and is stated first, not last.
+Pairwise differences are tested (exact binomial, sign test) and reported with their
+p-values whether or not they are significant. No "substantial gains" claim is made,
+because the measurement does not support one.
+```
+
 ## 7 DISCUSSION
 
-### 7.1 EMERGENT PROPERTIES OF THE KNOWLEDGE NETWORK
+### 7.1 WHY THE NEGATIVE IS THE CONTRIBUTION
 
 ```
-A consistent empirical observation across all benchmarks is that ASEM’s performance advantage
-over the Atomic-Linking baseline—which provides rich notes and linking but no RL write opera-
-tions or utility-aware retrieval—grows with the number of interactions. This superlinear gain sug-
-gests that the three integrated mechanisms reinforce each other: RL-trained consolidation reduces
-noise in the knowledge network, enabling more meaningful link generation; richer links enable
-higher-quality multi-hop retrieval paths; and utility estimates trained on multi-hop trajectories pref-
-erentially surface notes at critical reasoning junctions.
-```
-### 7.2 THE ROLE OF BIDIRECTIONAL MEMORY EVOLUTION
-
-```
-The bidirectional memory evolution mechanism in Stage 3 (Eq. (12)) is the most computationally
-expensive component of ASEM, requiring O(k) LLM calls per new note. Ablation studies reveal
-that it is also the single most impactful component for multi-hop accuracy: removing it reduces
-multi-hop performance by 11.3% on LongMemEval while reducing single-hop performance by only
-2.1%. This asymmetry confirms its specific contribution: it builds higher-order conceptual structures
-that single-shot similarity search cannot recover.
-```
-### 7.3 LIMITATIONS AND FUTURE DIRECTIONS
-
-```
-ASEM’s current design assumes a scalar task-level reward signal is available after each interac-
-tion. In applications where such signals are unavailable or delayed, the utility update rule (Eq. (17))
+What a "temporal memory graph" is worth on long-horizon conversational QA is a
+question the field has largely answered by assertion. This paper answers it with a
+controlled measurement: a deterministic temporal hyper-graph layered onto a competitive
+frozen retrieval-and-answer stack does not move exact match, and moves the judge metric
+slightly the wrong way, on both a 199-question and a 500-question benchmark, with
+p-values of 0.21 and 0.29. That is a useful, citable result. It says the relational
+representation is not the bottleneck at this scale — the answer agent, the token
+budget, and the base retriever are.
 ```
 
+### 7.2 THE GRAPH STILL TEACHES SOMETHING
+
 ```
-cannot be applied directly. Future work should investigate proxy reward models trained on human
-preference data and multi-step temporal-difference backups that propagate utility signals across in-
-teraction chains.
+The construction analysis (Section 6.5) is where the graph earns its keep. The entity
+channel is ~95% hub and ~19:1 noise-to-signal; fan-out capping does not reduce hub
+dominance while IDF weighting does; and IDF's reach is bounded at ~6% of notes. These
+are the design facts a practitioner needs before building an entity graph on
+speaker-heavy dialogue: the naive construction is dominated by the speaker name, and
+only a frequency-aware weighting makes the rare-entity signal legible at all. This is
+a concrete, adversarially checked finding that generalises beyond this codebase.
 ```
+
+### 7.3 CRITIQUE OF THE RECOVERY LOOP AND REFUSAL HANDLING
+
 ```
-A second limitation is that link quality depends on the backbone LLM’s ability to identify mean-
-ingful connections without a typed schema. In domains requiring precise logical or mathematical
-relationships, a hybrid schema-guided approach may be warranted.
+The bounded recovery loop (Stage 4) re-queries once with a widened pool on refusal.
+It is a local patch for the answer agent's tendency to abstain when the distilled
+payload looks thin; it does not change the ranking of the retrieved set, so it cannot
+recover a note the retriever never surfaced. It improved the refusal rate in
+development and is retained, but it is a mitigation, not a mechanism, and the
+per-category numbers show it does not rescue temporal or multi-session questions.
 ```
+
+### 7.4 LIMITATIONS
+
 ```
-Finally, ASEM’s memory bank is currently unbounded. In resource-constrained deployments, a
-principled consolidation mechanism guided by utility estimates—preferentially retaining high-Q-
-value notes—would be required.
+The measurement is single-run per dataset and is not multi-seed; we do not report
+variance, and the paired tests are interpreted accordingly. One benchmark (LoCoMo10)
+is small (n = 199), so its exact-match tie is a coarse resolution. PersonalMemBench was
+not evaluated in this revision; the earlier setup that claimed three benchmarks and
+five seeds is superseded by the actual two-dataset, single-run study reported here. The
+judge metric is a single model; no human evaluation was performed at this revision.
 ```
+
 ## 8 CONCLUSION
 
 ```
-We have presented ASEM, a unified framework for agentic self-evolving memory that simultane-
-ously addresses the three root causes of statelesness in LLM agents: semantic impoverishment of
-stored entries, heuristic write policies that fragment and corrupt the memory bank, and utility-blind
-retrieval that conflates relevance with functional value. Through five tightly coupled stages—multi-
-attribute note construction, RL-driven write operations, dynamic linking and bidirectional memory
-evolution, two-phase hybrid retrieval with distillation, and non-parametric runtime utility update—
-ASEM maintains a living knowledge network that self-organises, self-repairs, and continuously
-refines its utility estimates without ever modifying backbone LLM parameters.
+We have presented ASEM-THG: a five-stage agentic memory framework made explicitly
+temporal and relational, with a single-pass temporally grounded ingestion step, a
+deterministic LLM-free temporal hyper-graph, graph-aware value retrieval with N-hop
+traversal and query-seeded PageRank, and a formally guaranteed non-parametric utility
+update. The framework retains the original design's stability–plasticity separation and
+the convergence guarantee for utility estimates without modifying any backbone
+parameter.
+
+The empirical finding is deliberately reported as a negative: the temporal hyper-graph
+does not improve answer quality over a strong legacy context builder, and this null
+replicates across two benchmarks with paired p-values of 0.21 and 0.29. The
+contribution is therefore dual — a method that makes the representation legible and
+auditable, and a bounded, adversarially checked account of what that representation
+does and does not buy on long-horizon conversational QA. The graph's entity channel is
+a hub we can characterise quantitatively (95% hub, 19:1 noise-to-signal) and partially
+neutralise with IDF weighting (bounded to ~6% of notes); its supersession channel does
+not work as configured and is disabled. We release the ablation, the graph statistics,
+and the reproducibility record so that the "does a temporal graph help?" question can be
+answered on numbers rather than intuition.
 ```
+
+## APPENDIX A: REPRODUCIBILITY
+
 ```
-The formal convergence guarantees established in Section 5 ensure that this self-evolution is stable:
-utility estimates converge in expectation to true per-memory expected returns with bounded asymp-
-totic variance (Theorem 5.1), and the composite retrieval policy is optimal under a KL-regularised
-variational objective (Proposition 5.1). Together, these properties establish ASEM as a principled
-and practically deployable solution to the memory challenge in long-horizon LLM agent deploy-
-ment.
+Frozen code SHA   342ECB0A3A57BF600EB5C74AF6D589C1673403EBBE17DBB961BE2015D7FBC2E3
+Unit suite        345 passed, 1 skipped, 0 failed
+Banks             thg_v2 (4,579 notes / 73,862 links); thg_v2_postfix (4,664 / 73,640)
+Datasets          LoCoMo10 (n=199), LongMemEval (n=500); judge coverage 1.00
+Ablation          one variable (context builder); same bank, retriever, answer agent,
+                  token budget across arms
+Artifacts         analysis/thg_evaluation_report.md, analysis/FINAL_SUMMARY.md,
+                  analysis/graph_build_report.md (every number above is printed by a
+                  script from raw per-question json under analysis/)
+Environment       conda env `memory-r1`; transformer stack pinned; KMP_DUPLICATE_LIB_OK=TRUE
 ```
 

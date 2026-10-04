@@ -6,5 +6,44 @@ __pycache__/
 .env
 *.pyc
 *.pyo
-*.sh
-data/**/*
+asem*.sh
+# data/**/*
+
+# Static (ingest-once) memory banks: large, machine-local, reproducible from the
+# tag's manifest.json. The manifest and index stay tracked for provenance.
+# static/memory_banks/**/*.sqlite
+static/memory_banks/**/*.sqlite-wal
+static/memory_banks/**/*.sqlite-shm
+static/memory_banks/**/*.sqlite-journal
+
+# ---------------------------------------------------------------------------
+# ASEM-THG v3: run artifacts are not source.
+# These were untracked before the v3 branch and are machine-local reproductions
+# of runs whose inputs (manifests, configs, prompts) are tracked. Ignoring them
+# keeps the branch diff readable. Already-tracked files stay tracked — add them
+# to `git rm --cached` explicitly if you want them gone from history.
+# ---------------------------------------------------------------------------
+
+# Scratch / one-off diagnostics and probes
+scratch_diag/
+analysis/_scratch_flagcheck*/
+lib/*.log
+log_ingest.log
+smoke*.log
+
+# Run output: stdout/stderr dumps and per-run logs
+*.out
+*.err
+analysis/_*.log
+analysis/_*.out
+analysis/_*.err
+
+# The 264 MB LongMemEval haystack. Rebuildable from the source dataset; the
+# 14 MB oracle split stays tracked because the n=500 runs read it directly.
+datasets/longmemeval/longmemeval_s_cleaned.json
+
+# Per-question bank snapshots (a failed watcher artifact, ~95% empty)
+data/benchmarks/longmemeval_banks/gb_full_snapshots/
+
+# Retrieval work-copies made per run
+data/benchmarks/retrieval_work_static/

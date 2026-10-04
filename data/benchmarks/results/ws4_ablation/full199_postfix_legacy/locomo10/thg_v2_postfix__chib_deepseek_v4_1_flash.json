@@ -1,0 +1,98 @@
+{
+  "phase": "eval",
+  "dataset": "locomo10",
+  "tag": "thg_v2_postfix",
+  "model_tag": "chib_deepseek_v4_1_flash",
+  "config": "configs/models/deepseek_v41_flash.yaml",
+  "judge_config": "configs/models/judge_v41_flash.yaml",
+  "metrics": [
+    "em",
+    "f1",
+    "rougeL",
+    "bertscore_f1",
+    "judge"
+  ],
+  "bank_root": "static/memory_banks\\locomo10",
+  "work_copy": true,
+  "n_qa": 199,
+  "conversations": [
+    "locomo_0000"
+  ],
+  "elapsed_sec": 1166.88,
+  "systems": {
+    "ASEM-THG": {
+      "n": 199,
+      "missing_conversations": 0,
+      "n_answer_errors": 0,
+      "aborted": null,
+      "overall": {
+        "n": 199.0,
+        "em": 0.3065326633165829,
+        "f1": 0.49349102604997236,
+        "rougeL": 0.483569314049934,
+        "bertscore_f1": 0.8685169519491531,
+        "judge": 0.6532663316582915,
+        "judge_coverage": 1.0
+      },
+      "per_category": {
+        "adversarial": {
+          "n": 47.0,
+          "em": 0.5957446808510638,
+          "f1": 0.6278130852598938,
+          "rougeL": 0.6278130852598938,
+          "bertscore_f1": 0.797398715577227,
+          "judge": 0.6595744680851063,
+          "judge_coverage": 1.0
+        },
+        "multi_hop": {
+          "n": 32.0,
+          "em": 0.0625,
+          "f1": 0.24451875586418884,
+          "rougeL": 0.2336370594356174,
+          "bertscore_f1": 0.846975963562727,
+          "judge": 0.34375,
+          "judge_coverage": 1.0
+        },
+        "open_domain": {
+          "n": 13.0,
+          "em": 0.0,
+          "f1": 0.17830507287029024,
+          "rougeL": 0.17830507287029024,
+          "bertscore_f1": 0.8544488044885489,
+          "judge": 0.6153846153846154,
+          "judge_coverage": 1.0
+        },
+        "single_hop": {
+          "n": 70.0,
+          "em": 0.24285714285714285,
+          "f1": 0.4877297175415553,
+          "rougeL": 0.4644981975087931,
+          "bertscore_f1": 0.8989360451698303,
+          "judge": 0.7,
+          "judge_coverage": 1.0
+        },
+        "temporal": {
+          "n": 37.0,
+          "em": 0.3783783783783784,
+          "f1": 0.6598338598338598,
+          "rougeL": 0.6598338598338598,
+          "bertscore_f1": 0.9248796040947372,
+          "judge": 0.8378378378378378,
+          "judge_coverage": 1.0
+        }
+      },
+      "per_conversation": {
+        "locomo_0000": {
+          "n": 199.0,
+          "em": 0.3065326633165829,
+          "f1": 0.49349102604997236,
+          "rougeL": 0.483569314049934,
+          "bertscore_f1": 0.8685169519491531,
+          "judge": 0.6532663316582915,
+          "judge_coverage": 1.0
+        }
+      }
+    }
+  },
+  "resumed_from": 0
+}
