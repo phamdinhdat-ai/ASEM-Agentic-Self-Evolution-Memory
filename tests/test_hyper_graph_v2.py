@@ -892,3 +892,184 @@ def test_frozen_fixture_preserves_legacy_rows_through_migration(frozen_notes) ->
     """The fixture predates `triplets`, so it doubles as the GB1 migration subject."""
     assert len(frozen_notes) == 365
     assert all(n.triplets == [] for n in frozen_notes)
+
+
+# ===========================================================================
+# G2 — typed heterogeneous Personalized PageRank
+# ===========================================================================
+
+def _typed_pair_graph() -> TemporalHyperGraph:
+    """seed --(semantic, weak)--> weak_note
+       seed --(superseded_by, strong)--> strong_note
+
+    Both neighbours are one hop from the seed over the same undirected topology,
+    so a type-blind walk scores them nearly equally (any residual difference is
+    degree, not type). Only a TYPE-AWARE transition matrix can separate them.
+    """
+    graph = TemporalHyperGraph(semantic_tau=2.0, max_entity_links=0, max_semantic_links=0)
+    seed, weak, strong = _note("seed"), _note("weak"), _note("strong")
+    for n in (seed, weak, strong):
+        _add(graph, n)
+    seed.L.append(LinkRecord(target_id="weak", relation="semantic"))
+    weak.L.append(LinkRecord(target_id="seed", relation="semantic"))
+    seed.L.append(LinkRecord(target_id="strong", relation="superseded_by"))
+    strong.L.append(LinkRecord(target_id="seed", relation="superseded_by"))
+    return graph
+
+
+def test_g2_typed_edge_weights_change_the_ranking() -> None:
+    """A relation's weight must reach the PageRank transition matrix.
+
+    PRE-FIX `_directed_from_links` hardcoded `weight=1.0` on every edge and
+    `personalized_pagerank` took no edge weights at all, so `relation_weights`
+    governed only the one-hop BFS and every longer path was type-blind.
+    """
+    graph = _typed_pair_graph()
+    blind = dict(graph.personalized_pagerank(["seed"], top_k=10))
+    assert abs(blind["weak"] - blind["strong"]) < 0.02, (
+        "the fixture must start type-blind, or it proves nothing"
+    )
+
+    typed = dict(graph.personalized_pagerank(
+        ["seed"], top_k=10,
+        edge_weights={"semantic": 0.6, "superseded_by": 1.3},
+        default_edge_weight=1.0,
+    ))
+    assert typed["strong"] > typed["weak"], (
+        f"the strongly-typed edge must carry more mass: {typed}"
+    )
+
+
+def test_g2_default_edge_weight_makes_the_table_an_allow_list() -> None:
+    """`default_edge_weight=0.0` must sever every relation the map does not name."""
+    graph = _typed_pair_graph()
+    only_strong = dict(graph.personalized_pagerank(
+        ["seed"], top_k=10,
+        edge_weights={"superseded_by": 1.0},
+        default_edge_weight=0.0,
+    ))
+    assert only_strong.get("strong", 0.0) > only_strong.get("weak", 0.0)
+
+
+def test_g2_entity_seeds_reach_a_note_no_query_term_touches() -> None:
+    """The HippoRAG-2 reset scheme: a query-NAMED entity seeds the walk.
+
+    The bridging note shares no wording with the question — it is reachable only
+    through the entity node the question mentions. Note-only seeding (the
+    pre-G2 behaviour) confines the walk to what dense retrieval already found, so
+    it cannot rank this note at all.
+    """
+    graph = TemporalHyperGraph(semantic_tau=2.0, max_entity_links=0, max_semantic_links=0)
+    seed = _note("seed", entities=["Caroline"])
+    bridge = _note("bridge", entities=["Hawaii"])
+    for n in (seed, bridge):
+        _add(graph, n)
+
+    # Note-only seeding: the bridge is a separate component, so all it can
+    # receive is the uniform teleport floor — orders of magnitude below any note
+    # the walk actually reaches.
+    note_only = dict(graph.personalized_pagerank(
+        ["seed"], top_k=10, entity_seeds=None,
+    ))
+    assert note_only.get("bridge", 0.0) < 1e-4
+
+    # Entity-anchored seeding: "hawaii" is a graph node the question names, so
+    # mass starts there and flows to the note carrying it.
+    anchored = dict(graph.personalized_pagerank(
+        ["seed"], top_k=10, entity_seeds=["hawaii"], entity_seed_weight=0.5,
+    ))
+    assert anchored.get("bridge", 0.0) > 100 * note_only.get("bridge", 1e-12), (
+        f"an entity-anchored walk must reach the bridging note: {anchored}"
+    )
+
+
+def test_g2_entity_seed_weight_zero_is_the_note_only_walk() -> None:
+    """`entity_seed_weight=0.0` must reproduce the pre-G2 reset exactly."""
+    graph = TemporalHyperGraph(semantic_tau=2.0, max_entity_links=0, max_semantic_links=0)
+    seed = _note("seed", entities=["Caroline"])
+    other = _note("other", entities=["Hawaii"])
+    for n in (seed, other):
+        _add(graph, n)
+    zero = graph.personalized_pagerank(
+        ["seed"], top_k=10, entity_seeds=["hawaii"], entity_seed_weight=0.0,
+    )
+    plain = graph.personalized_pagerank(["seed"], top_k=10)
+    assert zero == plain
+
+
+def test_g2_damping_is_honoured() -> None:
+    """A different teleport factor must produce a different ranking."""
+    graph = _typed_pair_graph()
+    low = dict(graph.personalized_pagerank(["seed"], top_k=10, damping=0.05))
+    high = dict(graph.personalized_pagerank(["seed"], top_k=10, damping=0.99))
+    assert low != high
+
+
+def test_g2_typed_walk_still_returns_empty_without_a_live_seed() -> None:
+    """The empty-result contract must survive the new parameters."""
+    graph = TemporalHyperGraph()
+    graph._fact_nodes["ghost"] = _note("ghost")
+    assert graph.personalized_pagerank(
+        ["ghost"], top_k=5, edge_weights={"semantic": 0.6}, entity_seeds=["nope"],
+    ) == []
+
+
+def test_g2_entity_seeds_alone_can_drive_the_walk() -> None:
+    """With no note seed, a live entity seed must still produce a ranking."""
+    graph = TemporalHyperGraph(semantic_tau=2.0, max_entity_links=0, max_semantic_links=0)
+    _add(graph, _note("n1", entities=["Hawaii"]))
+    ranked = dict(graph.personalized_pagerank(
+        [], top_k=10, entity_seeds=["hawaii"],
+    ))
+    assert ranked.get("n1", 0.0) > 0.0
+
+
+def test_g2_transition_weights_are_idempotent_across_calls() -> None:
+    """The graph is shared across queries, so re-weighting must not compound.
+
+    The walk is invoked once per query over the SAME graph object. If the
+    relation weight replaced (or multiplied into) the stored weight without
+    caching the intrinsic value, the second query would see a different graph
+    from the first — the weights would drift monotonically and the ranking would
+    depend on how many queries had run before it.
+    """
+    graph = _typed_pair_graph()
+    weights = {"semantic": 0.6, "superseded_by": 1.3}
+
+    first = graph.personalized_pagerank(["seed"], top_k=10, edge_weights=weights)
+    # Mutate the shared graph's weights directly, then run again: the cached
+    # intrinsic value must restore the same ranking.
+    second = graph.personalized_pagerank(["seed"], top_k=10, edge_weights=weights)
+    third = graph.personalized_pagerank(["seed"], top_k=10, edge_weights=weights)
+    assert first == second == third
+
+
+def test_g2_semantic_edge_keeps_its_cosine_grading() -> None:
+    """Two semantic edges of different strength must stay different.
+
+    PRE-FIX (the first G2 draft) replaced every edge's weight with the relation's
+    flat value, so all semantic edges became equal and the cosine signal the
+    builder stored was discarded.
+    """
+    graph = TemporalHyperGraph(semantic_tau=0.1, max_entity_links=0, max_semantic_links=5)
+    seed = _note("seed", vec=[1.0, 0.0])
+    near = _note("near", vec=[0.9, 0.1])
+    far = _note("far", vec=[0.2, 0.9])
+    for n in (seed, near, far):
+        _add(graph, n)
+    # Drive the semantic channel directly so the stored weights differ.
+    seed.L.append(LinkRecord(target_id="near", relation="semantic"))
+    seed.L.append(LinkRecord(target_id="far", relation="semantic"))
+    near.L.append(LinkRecord(target_id="seed", relation="semantic"))
+    far.L.append(LinkRecord(target_id="seed", relation="semantic"))
+    graph._graph.add_edge("seed", "near", relation="semantic", weight=0.95)
+    graph._graph.add_edge("seed", "far", relation="semantic", weight=0.20)
+    graph._graph.add_edge("near", "seed", relation="semantic", weight=0.95)
+    graph._graph.add_edge("far", "seed", relation="semantic", weight=0.20)
+
+    ranked = dict(graph.personalized_pagerank(
+        ["seed"], top_k=10, edge_weights={"semantic": 0.6},
+    ))
+    assert ranked["near"] > ranked["far"], (
+        f"the stronger semantic edge must carry more mass: {ranked}"
+    )

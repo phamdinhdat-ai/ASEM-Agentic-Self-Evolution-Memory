@@ -1128,12 +1128,121 @@ class TemporalHyperGraph:
                     )
         return graph
 
+    def _transition_graph(
+        self,
+        graph: Any,
+        edge_weights: Optional[Dict[str, float]],
+        default_weight: Optional[float] = None,
+    ) -> Any:
+        """Return ``graph`` with per-RELATION transition weights applied.
+
+        Every edge carries the relation that created it (``same-entity``,
+        ``temporal``, ``semantic``, ``superseded_by``, ``entity_cooccurrence``).
+        NetworkX's PageRank reads an edge's ``weight`` attribute, so writing the
+        relation's weight there is all it takes to make the walk TYPE-AWARE: a
+        step along a ``superseded_by`` edge then carries more (or less) mass than
+        a step along a ``semantic`` one.
+
+        The relation's weight MULTIPLIES the edge's intrinsic weight rather than
+        replacing it. That distinction matters: a ``semantic`` edge is built with
+        ``weight = cosine(e_i, e_j)``, so it already encodes HOW semantically
+        close the two notes are. Overwriting it with the relation's flat 0.6
+        would throw that graded signal away and make every semantic edge equal —
+        a regression against the pre-G2 walk. Multiplying keeps both: the type
+        says how much a semantic edge counts *relative to* a temporal one, and
+        the cosine says how strong this particular semantic edge is.
+
+        Idempotence comes from caching the intrinsic weight under
+        ``_intrinsic_weight`` the first time an edge is touched, then always
+        recomputing ``weight`` from that cache. Without the cache a second call
+        would multiply the already-multiplied value and the weights would drift
+        on every query — and the graph IS shared across queries, so this is the
+        common path, not an edge case.
+
+        ``edge_weights`` maps relation -> weight. A relation ABSENT from the map
+        keeps its intrinsic weight, unless ``default_weight`` is given — ``0.0``
+        then turns the map into an ALLOW-LIST (unnamed relations carry no
+        transition mass at all), and ``1.0`` is a no-op. ``None`` (the default)
+        is the conservative choice: only the relations the caller names are
+        re-weighted, and everything else is left exactly as built.
+        """
+        if not edge_weights:
+            return graph
+        for _u, _v, data in graph.edges(data=True):
+            if "_intrinsic_weight" not in data:
+                data["_intrinsic_weight"] = float(data.get("weight", 1.0))
+            intrinsic = data["_intrinsic_weight"]
+            rel = str(data.get("relation") or "")
+            if rel in edge_weights:
+                data["weight"] = intrinsic * float(edge_weights[rel])
+            elif default_weight is not None:
+                data["weight"] = intrinsic * float(default_weight)
+            else:
+                data["weight"] = intrinsic
+        return graph
+
+    def _ppr_personalization(
+        self,
+        graph: Any,
+        note_seeds: List[str],
+        entity_seeds: Optional[Iterable[str]],
+        entity_seed_weight: float,
+    ) -> Optional[Dict[str, float]]:
+        """Reset probabilities over note and entity seeds, HippoRAG-2 style.
+
+        The classic PPR seeds only the notes the query already found, so the walk
+        can only re-rank what dense retrieval already had — it cannot REACH a note
+        that shares no query terms. Seeding the ENTITY nodes the question names
+        gives the walk a second, query-side entry point: mass starts on the entity
+        and flows to every note that mentions it, which is how a bridging premise
+        becomes reachable at all.
+
+        ``entity_seed_weight`` splits the reset mass between the two seed kinds.
+        Note seeds keep ``1 - w``, entity seeds take ``w``; a corpus whose queries
+        name entities explicitly benefits from a higher ``w``, while one where the
+        query is a paraphrase wants it low. When no entity seed is valid the note
+        seeds absorb the whole mass, so this is a strict generalisation of the
+        old behaviour (which is ``entity_seed_weight=0.0``).
+        """
+        valid_notes = [nid for nid in note_seeds if graph.has_node(nid)]
+        valid_entities: List[str] = []
+        if entity_seeds:
+            valid_entities = [
+                e for e in dict.fromkeys(entity_seeds)
+                if graph.has_node(e) and graph.degree(e) > 0
+            ]
+        if not valid_notes and not valid_entities:
+            return None
+
+        w = float(entity_seed_weight) if valid_entities else 0.0
+        personalization: Dict[str, float] = {}
+        if valid_notes and (1.0 - w) > 0.0:
+            share = (1.0 - w) / len(valid_notes)
+            for nid in valid_notes:
+                personalization[nid] = personalization.get(nid, 0.0) + share
+        if valid_entities:
+            share = w / len(valid_entities)
+            for e in valid_entities:
+                personalization[e] = personalization.get(e, 0.0) + share
+        # A note seed that is ALSO an entity seed (impossible today, since the id
+        # spaces are disjoint) would simply add; the guard below only fires if
+        # every branch above was skipped.
+        if not personalization:
+            return None
+        total = sum(personalization.values())
+        return {k: v / total for k, v in personalization.items()}
+
     def personalized_pagerank(
         self,
         seed_note_ids: List[str],
         top_k: int = 10,
         directions: str = "out",
         reverse: bool = False,
+        edge_weights: Optional[Dict[str, float]] = None,
+        damping: float = 0.85,
+        entity_seeds: Optional[Iterable[str]] = None,
+        entity_seed_weight: float = 0.5,
+        default_edge_weight: Optional[float] = None,
     ) -> List[Tuple[str, float]]:
         """Personalized PageRank over the hyper-graph, seeded on ``seed_note_ids``.
 
@@ -1149,6 +1258,16 @@ class TemporalHyperGraph:
         a caller that only wants "give me the notes feeding INTO these seeds"
         does not need to know about the ``directions`` vocabulary.
 
+        ``edge_weights`` (relation -> weight) makes the walk TYPE-AWARE: a
+        ``superseded_by`` step and a ``semantic`` step no longer carry equal mass.
+        ``default_edge_weight`` is what a relation absent from that map takes;
+        ``None`` keeps the edge's build-time weight (semantic edges carry their
+        cosine similarity), and ``0.0`` makes the map an ALLOW-LIST.
+        ``entity_seeds`` adds query-named ENTITY nodes to the reset distribution
+        (see :meth:`_ppr_personalization`), which is what lets the walk reach a
+        note that shares no query terms with the question. ``damping`` is the
+        standard PageRank teleport factor.
+
         Returns ``[(note_id, score), ...]`` sorted by score, fact nodes only.
 
         The empty-result contract matters as much as the walk. This used to
@@ -1163,9 +1282,8 @@ class TemporalHyperGraph:
         if graph is None or graph.number_of_nodes() == 0:
             return []
 
-        valid_seeds = [nid for nid in seed_note_ids if graph.has_node(nid)]
-        if not valid_seeds:
-            return []
+        want = str(directions).lower()
+        reverse_walk = bool(reverse) or want == "in"
 
         # A seed with NO incident edges cannot propagate any of its
         # personalization mass, so the walk degenerates to "the seed keeps all
@@ -1176,24 +1294,20 @@ class TemporalHyperGraph:
         # through to its other channels (the caller treats a missing score as
         # "below the ranked set", which is the correct reading of "no evidence").
         #
-        # This is checked against the graph that will actually be WALKED, not
-        # against `_graph`: the reverse walk runs over the directed projection of
-        # `Note.L`, where a seed can have incoming edges that the undirected
-        # `_graph` does not know about. Testing `_graph` here silently returned []
-        # for exactly the premise case GB4 exists to serve.
-        want = str(directions).lower()
-        reverse_walk = bool(reverse) or want == "in"
-        if reverse_walk or want == "both":
-            probe_graph = self._directed_from_links()
-        else:
-            probe_graph = graph
-        if probe_graph is None or not any(
-            probe_graph.has_node(nid) and probe_graph.degree(nid) > 0
-            for nid in valid_seeds
-        ):
-            return []
+        # The check spans BOTH graphs the walk can use: the undirected `graph`
+        # and, for a reverse/both walk, the directed projection of `Note.L`. A
+        # seed can have incoming edges the undirected graph does not know about,
+        # so testing `_graph` alone silently returned [] for exactly the premise
+        # case GB4 exists to serve.
+        def _live_in(g: Any, nid: str) -> bool:
+            return g is not None and g.has_node(nid) and g.degree(nid) > 0
 
-        personalization = {nid: (1.0 / len(valid_seeds)) for nid in valid_seeds}
+        candidates: List[Any] = [graph]
+        if reverse_walk or want == "both":
+            candidates.append(self._directed_from_links())
+        seeds = list(seed_note_ids) + list(entity_seeds or [])
+        if not any(_live_in(g, nid) for g in candidates for nid in seeds):
+            return []
 
         # The forward walk uses the undirected graph (unchanged from before GB4,
         # so `directions="out"` is byte-identical to the historical behaviour).
@@ -1201,28 +1315,39 @@ class TemporalHyperGraph:
         # express, so it runs over the DiGraph built from the persisted link
         # records — see `_directed_from_links`.
         try:
+            self._transition_graph(graph, edge_weights, default_edge_weight)
+            fwd_personalization = self._ppr_personalization(
+                graph, seed_note_ids, entity_seeds, entity_seed_weight
+            )
+            if fwd_personalization is None:
+                return []
+            fwd_scores = nx.pagerank(
+                graph, alpha=damping, personalization=fwd_personalization, max_iter=100
+            )
+            pr_scores = fwd_scores
+
             if reverse_walk or want == "both":
                 directed = self._directed_from_links()
-                if directed is None or not directed.has_node(valid_seeds[0]):
-                    return []
-                rev_graph = directed.reverse(copy=False)
-                rev_scores = nx.pagerank(
-                    rev_graph, alpha=0.85, personalization=personalization, max_iter=100
-                )
-                if want == "both" or not reverse_walk:
-                    fwd_scores = nx.pagerank(
-                        graph, alpha=0.85, personalization=personalization, max_iter=100
+                if directed is not None and directed.number_of_nodes() > 0:
+                    self._transition_graph(directed, edge_weights, default_edge_weight)
+                    rev_graph = directed.reverse(copy=False)
+                    rev_personalization = self._ppr_personalization(
+                        rev_graph, seed_note_ids, entity_seeds, entity_seed_weight
                     )
-                    pr_scores = {
-                        nid: max(float(s), float(rev_scores.get(nid, 0.0)))
-                        for nid, s in fwd_scores.items()
-                    }
-                else:
-                    pr_scores = rev_scores
-            else:
-                pr_scores = nx.pagerank(
-                    graph, alpha=0.85, personalization=personalization, max_iter=100
-                )
+                    if rev_personalization is not None:
+                        rev_scores = nx.pagerank(
+                            rev_graph, alpha=damping,
+                            personalization=rev_personalization, max_iter=100,
+                        )
+                        if want == "both":
+                            pr_scores = {
+                                nid: max(float(s), float(rev_scores.get(nid, 0.0)))
+                                for nid, s in fwd_scores.items()
+                            }
+                        elif reverse_walk:
+                            # `directions="in"` / `reverse=True`: the caller asked
+                            # for the reverse ranking alone.
+                            pr_scores = rev_scores
             fact_scores = [
                 (nid, float(score))
                 for nid, score in pr_scores.items()

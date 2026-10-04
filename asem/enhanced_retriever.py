@@ -1,18 +1,23 @@
-"""Enhanced hybrid retrieval with global graph semantics and true multi-hop traversal.
+"""Enhanced hybrid retrieval with global graph semantics and typed graph ranking.
 
 Extends the base HybridRetriever with:
 
 * **Global semantic signals**: Louvain community detection + PageRank centrality
-* **True N-hop traversal**: Recursive BFS with configurable depth and decay factor
+* **Typed heterogeneous Personalized PageRank**: one walk whose transition matrix
+  carries each edge's relation type and whose reset distribution carries the
+  entity nodes the query names (G2)
 * **Intent-grounded Q-values**: Query-to-z similarity gates utility relevance
 * **Hybrid scoring**: ``alpha*local + beta*global + gamma*utility``
 
 The original phases A+B are preserved (ANN recall + z-score composite re-rank).
-Phase C is upgraded from 1-hop to configurable N-hop with graph-aware scoring.
+Phase C is a single typed PageRank (:meth:`EnhancedHybridRetriever._graph_rank`),
+which replaced the earlier pair of ad-hoc channels — a bounded relation-weighted
+BFS and a type-blind PPR append — that disagreed about what an edge means.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -32,15 +37,25 @@ class EnhancedHybridRetriever(HybridRetriever):
     """Hybrid retrieval augmented with global graph structure.
 
     Extends ``HybridRetriever`` (preserving all existing fields / Phase A+B logic)
-    and adds graph-based re-ranking, community-aware boosting, true N-hop
-    traversal with decay, and intent-grounded utility scoring.
+    and adds graph-based re-ranking, community-aware boosting, a typed
+    heterogeneous Personalized PageRank over the hyper-graph, and intent-grounded
+    utility scoring.
 
     New knobs (in addition to inherited ones):
         alpha: Weight for local semantic similarity (default 0.35).
         beta:  Weight for global graph score (default 0.25).
         gamma: Weight for learned utility (default 0.40).
-        max_hops: Maximum depth for multi-hop link traversal (default 2).
-        hop_decay: Decay factor per hop, applied as ``decay ** hop`` (default 0.7).
+        base_weight: Weight on the base Phase A+B ordering in Phase D (0.60).
+        multi_hop_topn: How many base winners seed the graph walk (default 2).
+        relation_weights: Per-relation transition weights for the walk and the
+            base retriever's link traversal (single source of truth).
+        ppr_edge_weights: Override for the walk's transition table (None = derive
+            from ``relation_weights``).
+        ppr_damping: PageRank teleport factor (default 0.85).
+        entity_seed_weight: Share of reset mass given to query-named entities.
+        entity_seed_topn: How many query entities may seed the walk (default 5).
+        graph_rank_topn: How many walk-ranked notes may enter the pool (default 20).
+        use_graph_rank: Master switch for the walk (default True).
         community_boost: Multiplier for same-community notes (default 1.2).
         enable_intent_q: Gate Q-values by query-to-z similarity (default True).
         enable_global_semantics: Toggle community + PageRank (default True).
@@ -57,23 +72,26 @@ class EnhancedHybridRetriever(HybridRetriever):
     # overwrite — the retrieval order, which the old flat min-max blend did.
     base_weight: float = 0.60
 
-    # ── Multi-hop ───────────────────────────────────────────────────────
+    # ── Graph walk seeding ──────────────────────────────────────────────
+    # How many base winners seed the walk (`multi_hop_topn * 2` seeds are drawn),
+    # and the relevance floor for a walk-ranked note. `multi_hop_min_score` is
+    # retained for the legacy base-retriever traversal score floor.
+    multi_hop_topn: int = 2
+    multi_hop_min_sim: float = 0.30
+    multi_hop_min_score: float = 0.0
+    # Legacy BFS knobs, retained so existing configs still load. `max_hops` and
+    # `hop_decay` no longer bound the walk (PageRank has no hop limit); they are
+    # read by the base retriever's own link traversal.
     max_hops: int = 2
     hop_decay: float = 0.7
-    multi_hop_topn: int = 2
-    # Minimum cosine similarity a traversed neighbour must clear against the
-    # query before it may be appended. Prevents relevance-blind appends from
-    # evicting gold notes when the graph is dense (see Phase 2 diagnosis:
-    # multi_hop_added was 5 on 100% of queries).
-    multi_hop_min_sim: float = 0.30
-    # Optional absolute floor on the traversal score (sim·utility·decay·rel).
-    multi_hop_min_score: float = 0.0
 
     # ── Relation-type-aware traversal ───────────────────────────────────
-    # Weights applied to link traversal scores per relation type.  Strong
-    # relations (contradicts/extends/causal) carry more information than
-    # weak ones (same-topic/temporal/semantic), so traversed neighbors
-    # reached via strong edges are preferred.
+    # Weights applied per relation type.  Strong relations
+    # (contradicts/extends/causal) carry more information than weak ones
+    # (same-topic/temporal/semantic), so traversed neighbors reached via strong
+    # edges are preferred. ONE table drives BOTH the base retriever's link
+    # traversal and the G2 graph walk's transition matrix — see
+    # `_resolve_edge_weights`.
     relation_weights: Dict[str, float] = field(default_factory=lambda: {
         "contradicts": 1.2,
         "extends": 1.1,
@@ -123,11 +141,41 @@ class EnhancedHybridRetriever(HybridRetriever):
     # the pre-W3 ranking byte-for-byte.
     ppr_reverse: bool = False
     ppr_reverse_weight: float = 0.5
+
+    # ── G2: typed heterogeneous PPR ─────────────────────────────────────
+    # Per-RELATION transition weights for the walk. `None` derives the table
+    # from `relation_weights` (see `_resolve_edge_weights`), which is what wires
+    # the typed table — until now applied only to the bounded BFS — into the
+    # PageRank transition matrix, where it governs EVERY path rather than one
+    # hop. Set explicitly to ablate a single relation's weight.
+    ppr_edge_weights: Optional[Dict[str, float]] = None
+    # PageRank teleport factor. 0.85 is the networkx default and the value the
+    # forward walk has always used; exposed so an ablation can move it.
+    ppr_damping: float = 0.85
+    # Entity-anchored seeding (HippoRAG 2's reset scheme, but over TYPED edges).
+    # Seeding only on the base winners confines the walk to notes dense
+    # retrieval already found, so a bridging premise that shares no query terms
+    # can never be reached. Seeding the entity nodes the QUESTION names gives the
+    # walk a second, query-side entry point. `entity_seed_weight` is the share of
+    # reset mass they receive (0.0 reproduces the note-only seeding exactly).
+    entity_seed_weight: float = 0.5
+    entity_seed_topn: int = 5
+    # Cap on how many walk-ranked notes enter the candidate pool, and an optional
+    # relevance floor for them. The floor defaults OFF because the measured
+    # behaviour of the ungated PPR append was a recall GAIN (G1: live 0.9695 vs
+    # dark 0.9594 session-recall@8) — the gate exists for the BFS, whose
+    # relevance-blind append is the failure the floor was written for.
+    graph_rank_topn: int = 20
+    graph_rank_min_sim: float = 0.0
+    # Master switch: `false` drops the walk entirely, leaving Phase D's
+    # similarity/utility/global terms — the "graph is dark" rung of the ladder.
+    use_graph_rank: bool = True
+
     # The corpus graph lives on ``pipeline.hyper_graph`` for ASEM-THG. It is
     # optional so plain ASEM / FastASEM runs keep working unchanged.
     hyper_graph: Optional[Any] = None
     # note_id -> PPR score from the most recent query. Populated by
-    # ``_ppr_expand`` and consumed by the Phase D blend.
+    # ``_graph_rank`` and consumed by the Phase D blend.
     ppr_scores: Dict[str, float] = field(default_factory=dict, init=False, repr=False)
     # GB4: note_id -> score from the REVERSED walk, kept as a SEPARATE dict (not
     # merged into `ppr_scores`) so an ablation can tell the two channels apart
@@ -139,7 +187,7 @@ class EnhancedHybridRetriever(HybridRetriever):
     # ------------------------------------------------------------------
 
     def retrieve(self, query: str, M: MemoryBank) -> List[Note]:
-        """Enhanced retrieval with global graph semantics + true multi-hop."""
+        """Enhanced retrieval: base RRF, one typed graph walk, global re-rank."""
         self.stats = {}
 
         # Run base Phase A+B (ANN + composite z-score re-rank)
@@ -153,25 +201,27 @@ class EnhancedHybridRetriever(HybridRetriever):
         if self.enable_global_semantics:
             self._refresh_graph(M)
 
-        # Shared dedupe set for both expansion phases below. Initialised here
-        # (not inside the link-traversal branch) so the PPR phase cannot hit an
-        # unbound name when `enable_link_traversal` is off.
+        # Shared dedupe set for the graph phase below. Initialised here (not
+        # inside the branch) so the Phase D blend cannot hit an unbound name.
         seen_ids = {n.id for n in base_results}
 
-        # ── Phase C-Enhanced: True multi-hop traversal ──────────────
-        if self.enable_link_traversal and self.max_hops > 0:
-            linked = self._multi_hop_expand(e_q, base_results, M)
-            for n in linked:
-                if n.id not in seen_ids:
-                    base_results.append(n)
-                    seen_ids.add(n.id)
-            self.stats["multi_hop_added"] = len(linked)
-            self.stats["max_hops"] = self.max_hops
-
-        # ── Phase C-PPR: query-seeded Personalized PageRank ─────────
-        # Runs after the link walk so seeds are the best available evidence.
-        if self.ppr_weight > 0.0 and self.hyper_graph is not None:
-            for n in self._ppr_expand(base_results, M):
+        # ── Phase C (G2): ONE typed graph walk ──────────────────────
+        # This replaces the previous pair of ad-hoc channels — a bounded BFS
+        # (`_multi_hop_expand`) and an outward PPR append (`_ppr_expand`) — with
+        # a single heterogeneous PageRank whose transition matrix carries the
+        # RELATION TYPE of every edge and whose reset distribution carries the
+        # entity nodes the question names. The two old channels disagreed about
+        # what a graph edge means (BFS weighted by relation, PPR ignored type
+        # entirely) and each appended candidates on its own relevance rules, so
+        # their combined effect was not attributable to either. See `_graph_rank`.
+        #
+        # Both switches must be on: `use_graph_rank` enables the walk itself,
+        # `ppr_weight` is how much Phase D trusts its ranking. Either at zero
+        # leaves Phase D's similarity/utility/global terms alone, which is the
+        # "graph is dark" ablation rung and, at `ppr_weight=0.0`, reproduces the
+        # pre-W3 ranking byte-for-byte.
+        if self.use_graph_rank and self.ppr_weight > 0.0:
+            for n in self._graph_rank(query, e_q, base_results, M):
                 if n.id not in seen_ids:
                     base_results.append(n)
                     seen_ids.add(n.id)
@@ -277,160 +327,198 @@ class EnhancedHybridRetriever(HybridRetriever):
         return base_results
 
     # ------------------------------------------------------------------
-    # True multi-hop expansion (BFS with decay)
+    # G2: typed heterogeneous Personalized PageRank
     # ------------------------------------------------------------------
 
-    def _multi_hop_expand(
+    def _resolve_edge_weights(self) -> Tuple[Dict[str, float], Optional[float]]:
+        """The relation -> transition-weight table the walk uses, and its default.
+
+        Returns ``(table, default_weight)``. ``ppr_edge_weights`` wins when set,
+        so a single relation can be ablated from the config. Otherwise the table
+        is DERIVED from ``relation_weights`` — the typed table that until now
+        only the bounded BFS consulted. Deriving rather than duplicating means
+        the two views of "how much does a ``superseded_by`` edge matter" can
+        never drift apart, which is the failure the old split (BFS weighted, PPR
+        uniform) produced.
+
+        ``default_weight`` is ``None`` — an unnamed relation keeps the weight the
+        graph built it with, so the semantic edges' cosine-similarity weights
+        survive and only the named relations are re-weighted. ``None`` is also
+        what a caller gets for a relation neither table names, matching the
+        BFS's neutral treatment of unknown-typed links. When
+        ``filter_relation_types`` is set the default becomes ``0.0``, which turns
+        the table into an ALLOW-LIST: an unlisted relation carries no transition
+        mass, reproducing the BFS's hard edge filter as a soft one.
+        """
+        if self.ppr_edge_weights is not None:
+            table = dict(self.ppr_edge_weights)
+        else:
+            table = dict(self.relation_weights)
+            # `entity_cooccurrence` is the note<->entity edge every note carries.
+            # It must stay weak: it is the highest-degree edge in the graph (each
+            # note touches all its entity nodes), so weighting it like a typed
+            # relation would let the walk drift to hub entities instead of facts.
+            table.setdefault("entity_cooccurrence", 0.5)
+        default: Optional[float] = None
+        if self.filter_relation_types:
+            allowed = set(self.filter_relation_types)
+            table = {rel: w for rel, w in table.items() if rel in allowed}
+            default = 0.0
+        return table, default
+
+    def _query_entities(self, query: str) -> List[str]:
+        """Entity nodes the QUESTION names, normalised the way the graph keys them.
+
+        This is HippoRAG 2's query-side entry point: the walk's reset mass starts
+        on the entities the question mentions, not only on the notes dense
+        retrieval happened to find, which is what lets a bridging premise that
+        shares no query terms with the question be reached at all.
+
+        Capitalised-but-not-ALLCAPS tokens are the candidate names, filtered of
+        question/function words (the same ``_MASK_KEEP`` vocabulary the masked
+        query channel uses) and of anything the bank's entity index does not
+        know. ``TemporalHyperGraph._entity_keys`` lowercases, so the seeds are
+        lowercased here to match the graph's node ids.
+
+        The function-word filter is what keeps this from degenerating: without
+        it "What did Caroline say" seeds the entity "what", which sits on every
+        note in the bank and would swamp the reset distribution.
+        """
+        from .retriever import _MASK_KEEP
+
+        # `_MASK_KEEP` is capitalised ("What", "Did"), but a question can spell a
+        # function word mid-sentence in lower case ("What did Caroline do in
+        # Hawaii?"). Compare case-insensitively, or "did"/"do"/"in" survive the
+        # filter and are dropped only incidentally by the graph-membership test
+        # below — which stops working the moment such a token becomes an entity
+        # key. The mask must do its own job.
+        mask = {w.lower() for w in _MASK_KEEP}
+        raw = re.findall(r"\b[A-Za-z][a-z0-9_-]+\b", query or "")
+        seeds: List[str] = []
+        for token in raw:
+            if token.isupper() or token.lower() in mask:
+                continue
+            key = token.strip().lower()
+            if key:
+                seeds.append(key)
+        # Only entities the graph actually holds can carry reset mass. The graph
+        # exposes its entity index as `_entity_nodes`; when the attribute is
+        # absent the filter is skipped and `_ppr_personalization` does the
+        # validation instead (it drops any seed the walked graph does not have).
+        graph = self.hyper_graph
+        known = getattr(graph, "_entity_nodes", None)
+        if known is not None:
+            seeds = [s for s in seeds if s in known]
+        return list(dict.fromkeys(seeds))[: self.entity_seed_topn]
+
+    def _graph_rank(
         self,
+        query: str,
         query_embedding: np.ndarray,
-        seed_notes: List[Note],
+        base_results: List[Note],
         M: MemoryBank,
     ) -> List[Note]:
-        """BFS traversal of the link graph up to ``max_hops`` depth."""
-        visited: Set[str] = {n.id for n in seed_notes}
-        frontier: Set[str] = {n.id for n in seed_notes[: self.link_traversal_topn]}
-        all_candidates: List[Tuple[float, Note]] = []
+        """One typed PageRank over the hyper-graph; returns notes to ADD to the pool.
 
-        for hop in range(1, self.max_hops + 1):
-            next_frontier: Set[str] = set()
-            decay = self.hop_decay ** hop
+        Three things distinguish this from the ``_ppr_expand`` it replaces:
 
-            # Batch-lookup all frontier neighbors
-            frontier_notes = M.get_notes_by_ids(list(frontier))
-            for note in frontier_notes:
-                if not note.L:
+        1. **Typed transitions.** The edge weights come from
+           :meth:`_resolve_edge_weights`, so the walk's mass follows
+           ``superseded_by`` differently from ``semantic`` — the graph's type
+           information now governs every path, not just the first hop of a BFS.
+        2. **Entity-anchored reset.** Seeds are the base winners AND the entity
+           nodes the question names (:meth:`_query_entities`), which is the only
+           way the walk reaches a note that dense retrieval missed entirely.
+        3. **One score vector, both directions.** The forward and (optional)
+           reverse walks are recorded separately for Phase D, and their union is
+           what gets fetched into the pool — so a premise the seed merely POINTS
+           AT is admitted alongside what follows FROM it.
+
+        The walk's output feeds Phase D, which re-ranks on similarity, utility
+        and global centrality; this widens recall and supplies the query-conditional
+        graph signal, it does not impose a final order.
+        """
+        self.ppr_scores = {}
+        self.ppr_scores_reverse = {}
+        if self.hyper_graph is None:
+            return []
+        seeds = [n.id for n in base_results[: max(self.multi_hop_topn * 2, 1)]]
+        entity_seeds = self._query_entities(query)
+        if not seeds and not entity_seeds:
+            return []
+
+        edge_weights, default_edge_weight = self._resolve_edge_weights()
+        common = dict(
+            top_k=self.ppr_topk,
+            edge_weights=edge_weights,
+            default_edge_weight=default_edge_weight,
+            damping=self.ppr_damping,
+            entity_seeds=entity_seeds or None,
+            entity_seed_weight=self.entity_seed_weight,
+        )
+        try:
+            ranked = self.hyper_graph.personalized_pagerank(seeds, **common)
+        except Exception as exc:  # noqa: BLE001 — never fail retrieval over a graph walk
+            _log.debug("Graph walk skipped: {}", exc)
+            return []
+
+        # Record the full ranking (seeds included) for the Phase D blend.
+        self.ppr_scores = {nid: float(score) for nid, score in ranked}
+
+        reverse_ranked: List[Tuple[str, float]] = []
+        if self.ppr_reverse:
+            try:
+                reverse_ranked = self.hyper_graph.personalized_pagerank(
+                    seeds, directions="in", **common
+                )
+                self.ppr_scores_reverse = {
+                    nid: float(score) for nid, score in reverse_ranked
+                }
+            except Exception as exc:  # noqa: BLE001
+                _log.debug("Reverse graph walk skipped: {}", exc)
+                self.ppr_scores_reverse = {}
+
+        self.stats["graph_rank_seeds"] = len(seeds)
+        self.stats["graph_rank_entity_seeds"] = len(entity_seeds)
+        self.stats["graph_rank_ranked"] = len(ranked)
+
+        known = {n.id for n in base_results}
+        # The union of both walks, in rank order, deduped. A premise note must
+        # actually enter the pool before Phase D can rank it.
+        wanted = list(dict.fromkeys(
+            [nid for nid, _ in ranked] + [nid for nid, _ in reverse_ranked]
+        ))
+        wanted = [nid for nid in wanted if nid not in known][: self.graph_rank_topn]
+        if not wanted:
+            self.stats["graph_rank_added"] = 0
+            return []
+        try:
+            fetched = M.get_notes_by_ids(wanted) if hasattr(M, "get_notes_by_ids") else []
+        except Exception as exc:  # noqa: BLE001
+            _log.debug("Graph walk fetch failed: {}", exc)
+            return []
+
+        by_id = {n.id: n for n in fetched}
+        added: List[Note] = []
+        for nid in wanted:  # preserve rank order, not the fetch order
+            note = by_id.get(nid)
+            if note is None or note.id in known:
+                continue
+            if self.graph_rank_min_sim > 0.0:
+                if self._cosine(query_embedding, note.e) < self.graph_rank_min_sim:
                     continue
-                # Relation-type-aware edge filtering + weighting
-                edge_map = {l.target_id: l.relation for l in note.L}
-                if self.filter_relation_types:
-                    edge_map = {
-                        tid: rel for tid, rel in edge_map.items()
-                        if rel in self.filter_relation_types
-                    }
-                if not edge_map:
-                    continue
-                linked = M.get_notes_by_ids(list(edge_map.keys()))
-                for neighbor in linked:
-                    if neighbor.id in visited:
-                        continue
-                    visited.add(neighbor.id)
-                    next_frontier.add(neighbor.id)
-
-                    sim = self._cosine(query_embedding, neighbor.e)
-                    q_eff = neighbor.q
-                    if self.enable_intent_q:
-                        q_eff *= self._cosine(query_embedding, neighbor.z)
-
-                    rel_weight = self.relation_weights.get(
-                        edge_map.get(neighbor.id, ""), self.unknown_relation_weight
-                    )
-                    score = sim * (0.5 + 0.5 * q_eff) * decay * rel_weight
-                    all_candidates.append((score, neighbor))
-
-            frontier = next_frontier
-            if not frontier:
-                break
-
-        all_candidates.sort(key=lambda x: x[0], reverse=True)
-        # Relevance gate: only admit a link-neighbour when it is actually
-        # similar to the query (and, optionally, clears an absolute score
-        # floor). Without this the dense THG graph appended a fixed top-N on
-        # every query, pushing gold notes out of the answer window.
-        kept = [
-            (s, n)
-            for s, n in all_candidates
-            if self._cosine(query_embedding, n.e) >= self.multi_hop_min_sim
-            and s >= self.multi_hop_min_score
-        ]
-        added = [note for _, note in kept[: self.multi_hop_topn]]
+            added.append(note)
+            known.add(note.id)
+        self.stats["graph_rank_added"] = len(added)
         _log.debug(
-            "Multi-hop | hops={}  candidates_found={}  gated={}  added={}",
-            self.max_hops,
-            len(all_candidates),
-            len(kept),
-            len(added),
+            "Graph walk | seeds={}  entity_seeds={}  ranked={}  added={}",
+            len(seeds), len(entity_seeds), len(ranked), len(added),
         )
         return added
 
     # ------------------------------------------------------------------
     # Global graph semantics
     # ------------------------------------------------------------------
-
-    def _ppr_expand(
-        self, base_results: List[Note], M: MemoryBank
-    ) -> List[Note]:
-        """Add notes ranked highly by PPR seeded on the current evidence.
-
-        ``TemporalHyperGraph.personalized_pagerank`` walks the ENTITY-aware graph
-        from a set of seed notes. Seeding it with the Phase A+B winners asks a
-        question the other channels cannot: "what else is connected to what I
-        have already found?" — which is how the second premise of a multi-hop
-        question (linked by entity, not by wording) becomes reachable.
-
-        The method was previously dead code (referenced only by its own unit
-        test), so THG's defining graph carried no weight at query time.
-
-        Candidates are appended in PPR order; Phase D then re-ranks everything on
-        similarity/utility/graph, so this widens recall without forcing rank.
-        """
-        if self.hyper_graph is None or self.ppr_weight <= 0.0:
-            return []
-        self.ppr_scores = {}
-        self.ppr_scores_reverse = {}
-        seeds = [n.id for n in base_results[: self.multi_hop_topn * 2]]
-        if not seeds:
-            return []
-        try:
-            ranked = self.hyper_graph.personalized_pagerank(seeds, top_k=self.ppr_topk)
-        except Exception as exc:  # noqa: BLE001 — never fail retrieval over a graph walk
-            _log.debug("PPR expansion skipped: {}", exc)
-            return []
-
-        # Record the full ranking (seeds included) for the Phase D blend.
-        self.ppr_scores = {nid: float(score) for nid, score in ranked}
-
-        # GB4: the reversed walk. Kept in its own dict so Phase D can decide how
-        # much to trust it and so `ppr_scores` retains its existing meaning.
-        reverse_added: List[str] = []
-        if self.ppr_reverse:
-            try:
-                reverse_ranked = self.hyper_graph.personalized_pagerank(
-                    seeds, top_k=self.ppr_topk, reverse=True
-                )
-                self.ppr_scores_reverse = {
-                    nid: float(score) for nid, score in reverse_ranked
-                }
-                reverse_added = [nid for nid, _ in reverse_ranked]
-            except Exception as exc:  # noqa: BLE001
-                _log.debug("Reverse PPR expansion skipped: {}", exc)
-                self.ppr_scores_reverse = {}
-
-        known = {n.id for n in base_results}
-        # Batch-fetch the ranked ids; `get_notes_by_ids` avoids one SQLite round
-        # trip per candidate. The reverse ranking is concatenated so its
-        # candidates are reachable too — a premise note must actually enter the
-        # pool before Phase D can rank it.
-        wanted = [
-            nid for nid in ([nid for nid, _ in ranked] + reverse_added)
-            if nid not in known
-        ]
-        wanted = list(dict.fromkeys(wanted))
-        if not wanted:
-            return []
-        try:
-            fetched = M.get_notes_by_ids(wanted) if hasattr(M, "get_notes_by_ids") else []
-        except Exception as exc:  # noqa: BLE001
-            _log.debug("PPR fetch failed: {}", exc)
-            return []
-
-        added: List[Note] = []
-        for note in fetched:
-            if note.id in known:
-                continue
-            added.append(note)
-            known.add(note.id)
-        self.stats["ppr_added"] = len(added)
-        return added
 
     def _refresh_graph(self, M: MemoryBank) -> None:
         """Recompute community map and PageRank when the bank has changed."""

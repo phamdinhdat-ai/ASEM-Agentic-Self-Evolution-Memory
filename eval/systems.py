@@ -819,6 +819,18 @@ def build_asem_thg_system(
         # today's outward-only ranking exactly.
         ppr_reverse=bool(_ret("ppr_reverse", False)),
         ppr_reverse_weight=float(_ret("ppr_reverse_weight", 0.5)),
+        # G2: typed heterogeneous PPR. `ppr_edge_weights` defaults to None, which
+        # derives the transition table from `relation_weights` — so the typed
+        # table that only the old BFS consulted now governs the walk as well.
+        # `entity_seed_weight` gives the walk a query-side entry point (the
+        # entity nodes the question names); 0.0 reproduces note-only seeding.
+        ppr_edge_weights=_ret("ppr_edge_weights", None),
+        ppr_damping=float(_ret("ppr_damping", 0.85)),
+        entity_seed_weight=float(_ret("entity_seed_weight", 0.5)),
+        entity_seed_topn=int(_ret("entity_seed_topn", 5)),
+        graph_rank_topn=int(_ret("graph_rank_topn", 20)),
+        graph_rank_min_sim=float(_ret("graph_rank_min_sim", 0.0)),
+        use_graph_rank=bool(_ret("use_graph_rank", True)),
     )
     answer_agent = AnswerAgent(
         backend=backend,

@@ -59,6 +59,27 @@ retriever:
   multi_hop_topn: 2
   multi_hop_min_sim: 0.30
   multi_hop_min_score: 0.0
+  # ── G2: typed heterogeneous Personalized PageRank ────────────────────
+  # Phase C is ONE walk over the hyper-graph, replacing the old pair (a bounded
+  # BFS + a type-blind PPR append). Its transition matrix carries each edge's
+  # relation type and its reset distribution carries the entity nodes the
+  # question names. `use_graph_rank: false` is the "graph is dark" ablation rung.
+  use_graph_rank: true
+  # Transition weights: null derives them from `relation_weights` above, so the
+  # typed table that only the BFS used to consult now governs the walk too.
+  # Set explicitly (relation -> weight) to ablate a single relation's weight.
+  ppr_edge_weights: null
+  # PageRank teleport factor; 0.85 is the networkx default.
+  ppr_damping: 0.85
+  # Entity-anchored seeding (HippoRAG 2's reset scheme over typed edges). The
+  # share of reset mass given to query-named entity nodes, and how many may seed.
+  # 0.0 reproduces the pre-G2 note-only seeding exactly.
+  entity_seed_weight: 0.5
+  entity_seed_topn: 5
+  # How many walk-ranked notes may enter the pool, and an optional similarity
+  # floor for them (0.0 = off; the walk's append measured as a recall GAIN).
+  graph_rank_topn: 20
+  graph_rank_min_sim: 0.0
   # Phase D blend: base ordering keeps primacy; graph/utility refine it.
   alpha: 0.35
   beta: 0.25
