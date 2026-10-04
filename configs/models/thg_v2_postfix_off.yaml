@@ -80,6 +80,16 @@ retriever:
   # floor for them (0.0 = off; the walk's append measured as a recall GAIN).
   graph_rank_topn: 20
   graph_rank_min_sim: 0.0
+  # ── G3: multi-hop query decomposition ────────────────────────────────
+  # off       = no planner (byte-for-byte the pre-G3 behaviour)
+  # heuristic = split on "and"/"or"/";" when the classifier reads reasoning/mixed
+  # llm       = one backbone call for the sub-questions, heuristic on failure
+  # The G3 probes showed the missing hop's evidence is usually ABSENT from the
+  # pool for the original query (13 of 16 incomplete cat-1 questions), so no
+  # re-ranking recovers it; a different query does (oracle: 16/16).
+  query_planner: "off"
+  max_subquestions: 3
+  planner_fuse_weight: 1.0
   # Phase D blend: base ordering keeps primacy; graph/utility refine it.
   alpha: 0.35
   beta: 0.25

@@ -331,6 +331,26 @@ def _load_config(path: str) -> dict:
         return yaml.safe_load(handle)
 
 
+def _build_query_planner(backend, ret_cfg) -> Optional[Any]:
+    """Build the G3 multi-hop planner from ``retriever.*`` config, or None.
+
+    ``query_planner: off`` (the default) returns None so the retriever attaches
+    no planner and every existing run keeps its exact behaviour. The planner is
+    imported lazily so a run that never plans never pays for the import.
+    """
+    mode = str(ret_cfg("query_planner", "off") or "off").strip().lower()
+    if mode in ("", "off", "none", "false"):
+        return None
+    from asem.query_planner import QueryPlanner
+
+    return QueryPlanner(
+        backend=backend,
+        mode=mode,
+        max_subquestions=int(ret_cfg("max_subquestions", 3)),
+        temperature=float(ret_cfg("planner_temperature", 0.0)),
+    )
+
+
 # QA baseline prompt selector. ``phase.qa_prompt`` in the config picks one of
 # these by name; an unknown value is treated as a path relative to data/prompts.
 # "calibrated" is the non-refusal-biased prompt; "trap" is the historical
@@ -831,6 +851,12 @@ def build_asem_thg_system(
         graph_rank_topn=int(_ret("graph_rank_topn", 20)),
         graph_rank_min_sim=float(_ret("graph_rank_min_sim", 0.0)),
         use_graph_rank=bool(_ret("use_graph_rank", True)),
+        # G3: multi-hop query decomposition. `off` (default) attaches no planner,
+        # so every existing run keeps its exact behaviour. `heuristic` splits on
+        # coordinating conjunctions with no LLM; `llm` asks the backbone for the
+        # sub-questions, falling back to the heuristic on any parse failure.
+        query_planner=_build_query_planner(backend, _ret),
+        planner_fuse_weight=float(_ret("planner_fuse_weight", 1.0)),
     )
     answer_agent = AnswerAgent(
         backend=backend,

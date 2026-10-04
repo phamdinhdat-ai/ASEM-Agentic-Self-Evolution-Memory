@@ -174,6 +174,18 @@ class EnhancedHybridRetriever(HybridRetriever):
     # similarity/utility/global terms — the "graph is dark" rung of the ladder.
     use_graph_rank: bool = True
 
+    # G3: multi-hop query decomposition. When set and it fires, the retriever
+    # retrieves each sub-question INDEPENDENTLY and fuses the pools, because the
+    # G3 probes showed the missing hop's evidence is usually absent from the pool
+    # for the original query — no re-ranking of that pool can recover it, but a
+    # different query can (the oracle recovered 16/16). ``None`` = no planning.
+    query_planner: Optional[Any] = None
+    # RRF weight of each SUB-question's list relative to the original query's
+    # (which is always 1.0). 1.0 interleaves them, so a sub-question's top note
+    # reaches the answer window even when the original query already filled it —
+    # the "crowded out" failure the mechanism probe measured.
+    planner_fuse_weight: float = 1.0
+
     # The corpus graph lives on ``pipeline.hyper_graph`` for ASEM-THG. It is
     # optional so plain ASEM / FastASEM runs keep working unchanged.
     hyper_graph: Optional[Any] = None
@@ -190,7 +202,34 @@ class EnhancedHybridRetriever(HybridRetriever):
     # ------------------------------------------------------------------
 
     def retrieve(self, query: str, M: MemoryBank) -> List[Note]:
-        """Enhanced retrieval: base RRF, one typed graph walk, global re-rank."""
+        """Enhanced retrieval: base RRF, one typed graph walk, global re-rank.
+
+        When a :class:`~asem.query_planner.QueryPlanner` is attached and fires
+        for a multi-hop query, the sub-questions are retrieved INDEPENDENTLY and
+        their pools fused here, before the graph walk and Phase D. The fusion is
+        what lets a sub-question's evidence reach the answer window even when
+        the original query's own results already filled it.
+        """
+        # ── G3: multi-hop decomposition (optional) ──────────────────────
+        # Each sub-question is retrieved with the planner switched OFF, so a
+        # sub-question cannot recurse into further planning.
+        subs = self.query_planner.plan(query) if self.query_planner is not None else []
+        if len(subs) > 1:
+            pools = []
+            for sq in subs:
+                pools.append(self._retrieve_core(sq, M))
+            fused = self._fuse_subquestions(pools, subs)
+            self.stats["planner_fired"] = True
+            self.stats["planner_subquestions"] = len(subs)
+            self.stats["planner_pool_sizes"] = [len(p) for p in pools]
+            self.stats.update(self.query_planner.stats)
+            self.stats["total_retrieved"] = len(fused)
+            return fused
+
+        return self._retrieve_core(query, M)
+
+    def _retrieve_core(self, query: str, M: MemoryBank) -> List[Note]:
+        """The pre-G3 retrieval path, unchanged. Planner-free by construction."""
         self.stats = {}
 
         # Run base Phase A+B (ANN + composite z-score re-rank)
@@ -328,6 +367,46 @@ class EnhancedHybridRetriever(HybridRetriever):
 
         self.stats["total_retrieved"] = len(base_results)
         return base_results
+
+    # ------------------------------------------------------------------
+    # G3: multi-hop sub-question fusion
+    # ------------------------------------------------------------------
+
+    def _fuse_subquestions(
+        self, pools: List[List[Note]], subs: List[str]
+    ) -> List[Note]:
+        """Fuse per-sub-question retrieval pools by reciprocal rank fusion.
+
+        The original query is ``subs[0]`` and is weighted 1.0; each further
+        sub-question is weighted ``planner_fuse_weight``. RRF is used because it
+        combines RANK positions rather than scores, so a sub-question's list
+        (produced by a different query, hence a different score scale) is not
+        drowned out by the original's — which is the whole point: a note the
+        original query ranked 200th but a sub-question ranked 1st must be able
+        to reach the answer window.
+
+        Output order is by fused score, so a sub-question's top note interleaves
+        with the original's rather than sitting behind it. Ties break on the
+        original query's rank, then on the note id for determinism.
+        """
+        k = max(int(self.rrf_k), 1)
+        weights = [1.0] + [float(self.planner_fuse_weight)] * (len(pools) - 1)
+
+        scores: Dict[str, float] = {}
+        first_seen: Dict[str, int] = {}   # index of the first pool that held it
+        by_id: Dict[str, Note] = {}
+        for pi, (pool, w) in enumerate(zip(pools, weights)):
+            for rank, note in enumerate(pool):
+                if note.id not in by_id:
+                    by_id[note.id] = note
+                    first_seen[note.id] = pi
+                scores[note.id] = scores.get(note.id, 0.0) + w / (k + rank + 1)
+
+        ordered = sorted(
+            by_id.values(),
+            key=lambda n: (-scores[n.id], first_seen[n.id], n.id),
+        )
+        return ordered
 
     # ------------------------------------------------------------------
     # G2: typed heterogeneous Personalized PageRank
