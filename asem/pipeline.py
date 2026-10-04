@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from datetime import datetime
+from time import perf_counter
 from typing import Any, Dict, List, Optional, Tuple
 
 from .answer_agent import AnswerAgent, is_abstention
@@ -149,7 +150,15 @@ class ASEMPipeline:
 
     def read_path(self, query: str) -> Tuple[List[Note], str]:
         _log.info("READ path | query={!r}", query[:80])
+        _t0 = perf_counter()
         candidates = self.retriever.retrieve(query, self.memory_bank)
+        # Wall-clock of the RETRIEVAL leg alone, kept in `stats` so it rides the
+        # same telemetry channel into the per-item record. Timing it here (rather
+        # than inside the retriever) covers the whole leg for every retriever
+        # subclass without each `retrieve` override having to time itself — and
+        # `EnhancedHybridRetriever` delegates to `super().retrieve()`, so timing
+        # inside would have to survive a nested reset of `stats`.
+        self.retriever.stats["retrieval_sec"] = round(perf_counter() - _t0, 6)
         _log.debug("S4 retriever | candidates={}  stats={}", len(candidates), self.retriever.stats)
         notes, answer = self.answer_agent.distil_and_answer(query, candidates)
         if self.recovery_enabled and is_abstention(answer):

@@ -321,7 +321,48 @@ def _aggregate_state(
             em_loose_flags=loose, bertscore_scores=bert, judge_flags=judge,
             adversarial_flags=adv,
         )
+    efficiency = _efficiency_summary(state)
+    if efficiency:
+        entry["efficiency"] = efficiency
     return entry
+
+
+# Per-query efficiency fields recorded on each item, and the median reported for
+# each. Medians (not means) because a single network retry or a cache-miss on the
+# first call of a conversation makes the distribution right-skewed, and the
+# question the efficiency axis answers is "what does a typical query cost".
+_EFFICIENCY_FIELDS = (
+    ("prompt_tokens", "prompt_tokens_median"),
+    ("answer_tokens", "answer_tokens_median"),
+    ("retrieval_sec", "retrieval_sec_median"),
+    ("answer_sec", "answer_sec_median"),
+)
+
+
+def _efficiency_summary(state: SystemState) -> Dict[str, Any]:
+    """Median per-query cost, over the items that recorded each field.
+
+    Fields are absent for systems that do not produce them (e.g. ``retrieval_sec``
+    only exists where a retriever writes stats), so each is summarised over its
+    own non-null support and the coverage is reported alongside — a median over
+    half the items is not the same claim as a median over all of them.
+    """
+    summary: Dict[str, Any] = {}
+    for field_name, out_key in _EFFICIENCY_FIELDS:
+        values = [
+            float(state.records[i][field_name])
+            for i in state.order
+            if state.records[i].get(field_name) is not None
+        ]
+        if not values:
+            continue
+        values.sort()
+        n = len(values)
+        mid = n // 2
+        median = values[mid] if n % 2 else (values[mid - 1] + values[mid]) / 2.0
+        summary[out_key] = round(median, 6 if "sec" in field_name else 1)
+        summary[f"{field_name}_n"] = n
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +431,29 @@ def render_report_table(results: Dict[str, Any], metric_names: Sequence[str]) ->
                 lines.append(
                     f"| {conv} | {int(bucket.get('n', 0))} | " + " | ".join(cells) + " |"
                 )
+
+    if any(entry.get("efficiency") for entry in results.get("systems", {}).values()):
+        lines.append("\n## Efficiency (per-query medians)")
+        lines.append(
+            "| System | prompt tok | answer tok | retrieval s | answer s |"
+        )
+        lines.append("|---|---|---|---|---|")
+
+        def _cell(entry: Dict[str, Any], key: str, fmt: str) -> str:
+            value = entry.get(key)
+            return "—" if value is None else format(value, fmt)
+
+        for name, entry in results.get("systems", {}).items():
+            eff = entry.get("efficiency") or {}
+            if not eff:
+                continue
+            lines.append(
+                f"| {name} | "
+                f"{_cell(eff, 'prompt_tokens_median', ',.0f')} | "
+                f"{_cell(eff, 'answer_tokens_median', ',.0f')} | "
+                f"{_cell(eff, 'retrieval_sec_median', '.3f')} | "
+                f"{_cell(eff, 'answer_sec_median', '.3f')} |"
+            )
     return "\n".join(lines)
 
 
@@ -656,6 +720,7 @@ def run_static_eval(
 
                     hist = history if name in NO_BANK_SYSTEMS else []
                     error: Optional[str] = None
+                    t_answer = time.perf_counter()
                     try:
                         pred = str(system.answer(query, hist) or "")
                     except KeyboardInterrupt:
@@ -666,6 +731,7 @@ def run_static_eval(
                         )
                         pred = ""
                         error = f"{type(exc).__name__}: {exc}"
+                    answer_sec = round(time.perf_counter() - t_answer, 6)
 
                     # Cheap per-item metrics are stored inline so a resumed run
                     # never has to re-derive them.
@@ -701,6 +767,26 @@ def run_static_eval(
                     retr_stats = getattr(system, "last_retrieval_stats", None)
                     if retr_stats:
                         record["retrieval_stats"] = retr_stats
+                    # Efficiency axis (per-query, end-to-end): context tokens the
+                    # model was sent, completion tokens it returned, and the two
+                    # wall-clock legs. ASEM systems expose the token counts on
+                    # their answer agent; baselines on the `_BudgetedAnswer`
+                    # mixin. Retrieval time rides `retrieval_stats` for the
+                    # systems that produce retrieval telemetry (ASEM-THG,
+                    # PlainRAG) and is absent elsewhere.
+                    record["answer_sec"] = answer_sec
+                    prompt_tokens = getattr(system, "last_prompt_tokens", None)
+                    answer_tokens = getattr(system, "last_answer_tokens", None)
+                    if prompt_tokens is None:
+                        agent = getattr(getattr(system, "pipeline", None), "answer_agent", None)
+                        prompt_tokens = getattr(agent, "last_prompt_tokens", None)
+                        answer_tokens = getattr(agent, "last_answer_tokens", None)
+                    if prompt_tokens is not None:
+                        record["prompt_tokens"] = int(prompt_tokens)
+                    if answer_tokens is not None:
+                        record["answer_tokens"] = int(answer_tokens)
+                    if isinstance(retr_stats, dict) and "retrieval_sec" in retr_stats:
+                        record["retrieval_sec"] = retr_stats["retrieval_sec"]
                     state.add(idx, record)
                     if handles.get(name):
                         _append_jsonl(handles[name], record)

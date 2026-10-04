@@ -4,6 +4,13 @@ Owned by WS2. Joins the manifest (notes, link_edges, elapsed_sec) with the
 computed graph metrics + hub-only fraction + supersession split, for every
 conversation in a tag. Read-only.
 
+The manifest also carries the LLM cost of each build (``llm_calls`` /
+``llm_tokens``), which is the other half of the efficiency story: ASEM-THG's
+linking is LLM-free, so its call count should track sessions, not edges. Those
+counts are reported per conversation and per system alongside the graph metrics,
+so the "cheap graph" claim is a measured number rather than an architectural
+assertion.
+
 Usage:
     python analysis/final_tables.py --tag-root static/memory_banks/locomo10/thg_v2 \
         --out analysis/_thg_v2_final_tables.json
@@ -65,6 +72,17 @@ def main() -> int:
     with open(manifest_path, "r", encoding="utf-8") as fh:
         manifest = json.load(fh)
 
+    # Graph-build cost per system, summed over the tag. Read from the manifest
+    # totals when present (a build run computes them); otherwise summed here so
+    # older manifests still yield a number instead of nothing.
+    build_cost: Dict[str, Dict[str, Any]] = {}
+    for conv in manifest["conversations"]:
+        for name, state in (conv.get("systems") or {}).items():
+            slot = build_cost.setdefault(name, {"llm_calls": 0, "llm_tokens": 0, "elapsed_sec": 0.0})
+            slot["llm_calls"] += int(state.get("llm_calls") or 0)
+            slot["llm_tokens"] += int(state.get("llm_tokens") or 0)
+            slot["elapsed_sec"] += float(state.get("elapsed_sec") or 0.0)
+
     rows: List[Dict[str, Any]] = []
     for conv in manifest["conversations"]:
         cid = conv["conversation_id"]
@@ -101,6 +119,10 @@ def main() -> int:
             "n_notes_date_unknown": m["n_notes_date_unknown"],
             "session_ids": m["session_id_samples"],
             "elapsed_sec": sysinfo.get("elapsed_sec"),
+            # LLM cost of building THIS conversation's ASEM-THG bank. None on a
+            # manifest written before the counter existed.
+            "llm_calls": sysinfo.get("llm_calls"),
+            "llm_tokens": sysinfo.get("llm_tokens"),
             "bank": bank,
             "bank_bytes": sysinfo.get("bytes"),
         })
@@ -131,6 +153,17 @@ def main() -> int:
     print(f"  total elapsed={sum(r['elapsed_sec'] or 0 for r in rows):.1f}s "
           f"(manifest elapsed_sec={manifest.get('elapsed_sec')})")
 
+    # Graph-build cost: the "cheap graph" claim, per system. A system whose
+    # linking is LLM-free (ASEM-THG) shows calls ~= sessions; one that spends an
+    # LLM call per link shows calls scaling with the edge count.
+    if any(v["llm_calls"] for v in build_cost.values()):
+        print(f"\n  {'system':<18}{'llm_calls':>11}{'llm_tokens':>12}{'calls/conv':>12}"
+              f"{'elapsed_s':>11}")
+        n_conv = max(1, len(rows))
+        for name, cost in sorted(build_cost.items()):
+            print(f"  {name:<18}{cost['llm_calls']:>11}{cost['llm_tokens']:>12}"
+                  f"{cost['llm_calls'] / n_conv:>12.1f}{cost['elapsed_sec']:>11.1f}")
+
     payload = {
         "tag_root": args.tag_root,
         "manifest_elapsed_sec": manifest.get("elapsed_sec"),
@@ -153,6 +186,7 @@ def main() -> int:
             "supersession_cross_session": tot_sup - tot_sup_same,
             "elapsed_sec_sum": sum(r["elapsed_sec"] or 0 for r in rows),
         },
+        "build_cost": build_cost,
         "per_conversation": rows,
     }
     with open(args.out, "w", encoding="utf-8") as fh:

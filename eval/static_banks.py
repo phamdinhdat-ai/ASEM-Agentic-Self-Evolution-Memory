@@ -235,10 +235,15 @@ def conversation_entry(manifest: Dict[str, Any], conversation_id: str) -> Dict[s
 
 def recompute_totals(manifest: Dict[str, Any]) -> None:
     notes: Dict[str, int] = {}
+    llm_calls: Dict[str, int] = {}
     ok = skipped = errors = 0
     for conv in manifest.get("conversations", []):
         for name, state in (conv.get("systems") or {}).items():
             notes[name] = notes.get(name, 0) + int(state.get("notes") or 0)
+            # Graph-build cost, summed per system across conversations. Absent on
+            # manifests written before this counter existed (and on systems whose
+            # build recorded no calls), so treat None as 0 rather than crash.
+            llm_calls[name] = llm_calls.get(name, 0) + int(state.get("llm_calls") or 0)
             status = state.get("status")
             if status == "ok":
                 ok += 1
@@ -252,6 +257,7 @@ def recompute_totals(manifest: Dict[str, Any]) -> None:
         "banks_skipped": skipped,
         "banks_error": errors,
         "notes": notes,
+        "llm_calls": llm_calls,
     }
 
 
@@ -282,6 +288,45 @@ def bank_index(manifest: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 # Builder
 # ---------------------------------------------------------------------------
 
+def _count_llm_calls(backend: Any) -> Optional[Any]:
+    """Wrap ``backend`` so each ``generate()`` increments a counter on it.
+
+    Graph-build cost is reported in LLM CALLS, and the number has to survive a
+    backend that overrides ``generate`` wholesale (every stub and every real
+    backend does), so a base-class hook cannot see them. The wrapper delegates
+    everything to the wrapped backend and only counts — and because the phase
+    runner reuses ONE backend across all (system, conversation) pairs, the
+    counter is read as a delta around each build.
+
+    Returns the same backend with ``generate`` rebound, or ``None`` when the
+    object exposes no ``generate`` (a caller that will make no LLM calls at all).
+    """
+    generate = getattr(backend, "generate", None)
+    if generate is None or getattr(backend, "_asem_counting_wrapped", False):
+        return backend
+
+    counter = {"calls": 0}
+
+    def _counting_generate(prompt: str, **kwargs: Any) -> Any:
+        result = generate(prompt, **kwargs)
+        counter["calls"] += 1
+        return result
+
+    try:
+        backend.generate = _counting_generate  # type: ignore[method-assign]
+        backend._asem_counting_wrapped = True  # type: ignore[attr-defined]
+        backend._asem_call_counter = counter  # type: ignore[attr-defined]
+    except (AttributeError, TypeError):  # e.g. a frozen/slots backend
+        return None
+    return backend
+
+
+def _llm_calls_so_far(backend: Any) -> int:
+    """The wrapped backend's call count, or 0 when it was never wrapped."""
+    counter = getattr(backend, "_asem_call_counter", None)
+    return int(counter["calls"]) if counter else 0
+
+
 def _ingest_one(
     name: str,
     config_path: str,
@@ -293,7 +338,15 @@ def _ingest_one(
     """Build a single (system, conversation) bank in-process. Raises on failure.
 
     Returns ``notes``, ``link_edges`` (total edges now in the bank, comparable
-    across systems) and ``new_edges`` (those created by the finalize pass).
+    across systems) and ``new_edges`` (those created by the finalize pass), plus
+    the LLM cost of the build: ``llm_calls`` and ``llm_tokens``.
+
+    The call count is a DELTA around this build, because the caller reuses one
+    backend across every (system, conversation) pair — an absolute counter would
+    attribute the whole run to its first bank. This is the measurement that makes
+    the graph-build-cost claim honest: ASEM-THG's linking is LLM-free, so its
+    per-conversation calls should track sessions, while a per-link LLM system's
+    calls scale with the edge count.
     """
     from eval.phase_runner import (
         build_eval_system,
@@ -303,6 +356,9 @@ def _ingest_one(
         system_bank_size,
     )
 
+    calls_before = _llm_calls_so_far(backend)
+    tokens_before = int(getattr(backend, "token_count", 0) or 0)
+
     system = build_eval_system(name, config_path, bank_dir, backend=backend)
     try:
         ingest_system(system, name, sessions)
@@ -311,11 +367,20 @@ def _ingest_one(
     finally:
         close_system(system)
 
+    llm_calls = _llm_calls_so_far(backend) - calls_before
+    llm_tokens = int(getattr(backend, "token_count", 0) or 0) - tokens_before
+
     # Count AFTER closing, so every system is measured the same way (the
     # finalize pass only exists for ASEM v1; the others link while ingesting).
     # `max` keeps the total honest if the file is unreadable.
     edges = max(count_links(bank_file_path), int(new_edges))
-    return {"notes": int(size), "link_edges": edges, "new_edges": int(new_edges)}
+    return {
+        "notes": int(size),
+        "link_edges": edges,
+        "new_edges": int(new_edges),
+        "llm_calls": llm_calls,
+        "llm_tokens": llm_tokens,
+    }
 
 
 def build_static_banks(
@@ -357,6 +422,9 @@ def build_static_banks(
 
     _stop = should_stop or (lambda: False)
     backend = backend if backend is not None else build_backend_from_config(ingest_config)
+    # Count LLM calls for the graph-build-cost report. Done once here, before any
+    # build, so every per-bank figure is a delta on the same shared backend.
+    backend = _count_llm_calls(backend)
 
     tag_dir = os.path.join(bank_root, tag)
     os.makedirs(tag_dir, exist_ok=True)
@@ -509,6 +577,12 @@ def build_static_banks(
                         "notes": existing,
                         "link_edges": edges if edges else int(previous.get("link_edges") or 0),
                         "new_edges": int(previous.get("new_edges") or 0),
+                        # Build cost was already paid and recorded by the run that
+                        # produced this bank; dropping it here would make the tag
+                        # total understate what the build actually cost. None (an
+                        # older manifest) stays None — unknown is not zero.
+                        "llm_calls": previous.get("llm_calls"),
+                        "llm_tokens": previous.get("llm_tokens"),
                         "status": "skipped",
                         "bank": bfile,
                         "bytes": os.path.getsize(bfile),
@@ -579,14 +653,17 @@ def build_static_banks(
                     "notes": notes,
                     "link_edges": result["link_edges"],
                     "new_edges": result["new_edges"],
+                    "llm_calls": result.get("llm_calls"),
+                    "llm_tokens": result.get("llm_tokens"),
                     "status": status,
                     "bank": bfile,
                     "bytes": os.path.getsize(bfile) if os.path.exists(bfile) else 0,
                     "elapsed_sec": round(elapsed, 2),
                 }
                 logger.info(
-                    "  [{}] {} notes | {} edges ({} new this pass) | {:.1f}s",
+                    "  [{}] {} notes | {} edges ({} new this pass) | {:.1f}s | {} llm call(s)",
                     name, notes, result["link_edges"], result["new_edges"], elapsed,
+                    result.get("llm_calls"),
                 )
                 _save()
 

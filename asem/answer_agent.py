@@ -929,6 +929,15 @@ class AnswerAgent:
     # evidence-recall instrument (`analysis/evidence_recall.py`) needs the
     # post-fit set to measure context recall rather than candidate recall.
     last_rendered_note_ids: Optional[List[str]] = None
+    # Estimated tokens of the prompt the model was actually sent, and of the
+    # completion it returned. Together with ``retrieval_sec`` (recorded by the
+    # pipeline) this is the end-to-end efficiency axis: what a question cost in
+    # context and latency, measured at the call site rather than inferred from
+    # the context builder. ``estimate_tokens`` is the same conservative
+    # ~4-chars/token estimate the budget arithmetic uses, so the reported number
+    # is the one the trimming logic itself believed.
+    last_prompt_tokens: Optional[int] = None
+    last_answer_tokens: Optional[int] = None
 
     @property
     def _thg_context(self) -> bool:
@@ -1039,9 +1048,18 @@ class AnswerAgent:
         class (e.g. an LLMRetryHandler) may not pass a cap at all. Rather than
         failing the whole benchmark run on an avoidable HTTP 400, shrink the
         output budget so that prompt + output fits the declared window.
+
+        Every answer path funnels through here, so this is also where the
+        per-query efficiency telemetry is recorded: the prompt length the model
+        actually received and the length of what came back. When a retry handler
+        calls this more than once for one question, the LAST call wins — which is
+        the one whose answer is used.
         """
+        # Recorded before the call so an exception mid-generation still leaves the
+        # prompt size observable (the prompt was still sent, or attempted).
+        self.last_prompt_tokens = self._estimate_tokens(prompt)
         try:
-            return self._call(prompt, max_tokens)
+            answer = self._call(prompt, max_tokens)
         except Exception as exc:  # noqa: BLE001
             if not (self.context_window and _is_context_overflow(exc)):
                 raise
@@ -1058,7 +1076,9 @@ class AnswerAgent:
                 "retrying with max_tokens={} against a {}-token window.",
                 est, max_tokens, new_cap, self.context_window,
             )
-            return self._call(prompt, new_cap)
+            answer = self._call(prompt, new_cap)
+        self.last_answer_tokens = self._estimate_tokens(answer)
+        return answer
 
     def _generate_resilient(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Generate with retry on transient network errors (DNS blips, etc.).

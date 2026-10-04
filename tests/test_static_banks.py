@@ -132,6 +132,55 @@ def test_bank_layout_manifest_and_index(tmp_path):
     assert index["FastASEM"][conv]["status"] == "ok"
 
 
+def test_build_cost_counts_llm_calls_per_bank(tmp_path):
+    """Graph-build cost must be the calls THIS build made, not the run's total.
+
+    The phase runner reuses one backend across every (system, conversation)
+    pair, so an absolute counter would attribute the whole run to the first
+    bank. The manifest records a per-build delta instead, and the tag total sums
+    the per-bank figures.
+    """
+    dataset_path, raw, groups, bank_root, manifest = _prepare(
+        tmp_path, systems=["FastASEM", "SimRetrieval"]
+    )
+
+    for conv in manifest["conversations"]:
+        for name, state in conv["systems"].items():
+            assert state["llm_calls"] is not None, (name, state)
+            assert state["llm_calls"] > 0, f"{name} should have made LLM calls"
+            # Recorded, though the stub backend reports no token usage — real
+            # backends populate ``token_count``; the field must still be present
+            # so the report never has to guess whether it was measured.
+            assert state["llm_tokens"] is not None, (name, state)
+
+    totals = manifest["totals"]["llm_calls"]
+    per_bank = {
+        name: sum(
+            int(conv["systems"][name]["llm_calls"])
+            for conv in manifest["conversations"]
+            if name in conv["systems"]
+        )
+        for name in ("FastASEM", "SimRetrieval")
+    }
+    assert totals == per_bank, "tag total must equal the sum of per-bank deltas"
+
+    # A re-run that SKIPS the banks must preserve the recorded cost rather than
+    # reset it to zero — the build already happened and was paid for.
+    manifest2 = build_static_banks(
+        raw_dataset=raw,
+        groups=groups,
+        systems=["FastASEM", "SimRetrieval"],
+        ingest_config=CONFIG,
+        bank_root=bank_root,
+        tag="test",
+        dataset="locomo_mini",
+        backend=StubBackend(),
+        input_path=str(dataset_path),
+    )
+    assert manifest2["run"]["skipped"] == 2
+    assert manifest2["totals"]["llm_calls"] == per_bank
+
+
 def test_fastasem_link_edges_are_recorded_without_a_finalize_pass(tmp_path):
     """Regression: FastASEM links DURING ingestion (``_weave_graph_links`` is
     deterministic and LLM-free) and exposes no ``finalize_conversation``, so
@@ -707,6 +756,52 @@ def test_per_conversation_report_and_matrix_render(tmp_path):
     assert "**EM**" in matrix and "**F1**" in matrix
     assert "| Conversation | SimRetrieval | NoMemory |" in matrix
     assert "| locomo_0000 |" in matrix
+
+
+def test_efficiency_medians_recorded_and_rendered(tmp_path):
+    """The efficiency axis must be measured, not asserted.
+
+    Every system answers through one prompt, so each item carries the prompt
+    tokens the model was sent and the completion tokens it returned; the
+    aggregate reports the MEDIAN over those items. The report table renders the
+    block only when the data is present, so older result files stay valid.
+    """
+    dataset_path, raw, groups, bank_root, _ = _prepare(tmp_path, systems=["SimRetrieval"])
+    from eval.static_eval import render_report_table
+
+    results, _ = _run_eval(
+        tmp_path, groups, bank_root, ["SimRetrieval", "FullContext"], ["em"],
+        out_name="efficiency.json",
+    )
+
+    preds_file = tmp_path / "preds" / "test__stub__SimRetrieval.jsonl"
+    rows = [
+        json.loads(line)
+        for line in open(preds_file, encoding="utf-8")
+        if line.strip()
+    ]
+    assert rows, "no prediction records written"
+    for row in rows:
+        assert row["prompt_tokens"] > 0, row
+        assert row["answer_tokens"] > 0, row
+        assert row["answer_sec"] >= 0.0, row
+
+    for name in ("SimRetrieval", "FullContext"):
+        eff = results["systems"][name]["efficiency"]
+        assert eff["prompt_tokens_n"] == 3
+        assert eff["prompt_tokens_median"] > 0
+        assert eff["answer_tokens_median"] > 0
+        assert "answer_sec_median" in eff
+
+    table = render_report_table(results, ["em"])
+    assert "## Efficiency (per-query medians)" in table
+    assert "| System | prompt tok | answer tok | retrieval s | answer s |" in table
+    assert "| SimRetrieval |" in table
+
+    # A result with no efficiency block must render exactly as before.
+    assert "## Efficiency" not in render_report_table(
+        {"systems": {"X": {"n": 1, "overall": {"em": 0.0}}}}, ["em"]
+    )
 
 
 def test_eval_unknown_conversation_is_an_empty_but_valid_result(tmp_path):

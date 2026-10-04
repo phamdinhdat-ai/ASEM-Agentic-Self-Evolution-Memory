@@ -28,6 +28,7 @@ from asem.retriever import HybridRetriever
 from asem.token_budget import (
     clip_block,
     default_output_cap,
+    estimate_tokens,
     fit_items,
     generate_with_cap,
     resolve_budget,
@@ -92,6 +93,14 @@ class _BudgetedAnswer:
     max_tokens: Optional[int] = None
     context_window: Optional[int] = None
 
+    # Per-query efficiency telemetry, mirroring ``AnswerAgent`` so the benchmark
+    # record reads the same fields on every system. Plain class attributes (not
+    # dataclass fields — this mixin is not a dataclass), so subclasses that want
+    # them in ``reset`` can still assign them; the value is set by ``_generate``,
+    # which every direct-prompt baseline funnels through.
+    last_prompt_tokens: Optional[int] = None
+    last_answer_tokens: Optional[int] = None
+
     def answer_budget(self) -> Optional[int]:
         """Tokens this system may spend on the prompt (None = no window set)."""
         return resolve_budget(self.backend, self.context_window, self.max_tokens)
@@ -129,13 +138,22 @@ class _BudgetedAnswer:
         client-wide default would still overflow the window, so the cap goes out
         with the request; without ``answer.max_tokens`` the backend's own
         default applies (and was already reserved by ``answer_budget``).
+
+        The prompt/completion token estimates are recorded here because every
+        direct-prompt baseline answers through this one method, so the benchmark
+        can report context cost per system without each baseline instrumenting
+        itself. ``estimate_tokens`` matches the budget arithmetic in
+        ``asem.token_budget``.
         """
         cap = self.max_tokens or default_output_cap(self.backend)
         _log.debug(
             "{}: answer call with max_tokens={} (prompt budget {})",
             label, cap, self.answer_budget(),
         )
-        return generate_with_cap(self.backend, prompt, cap)
+        self.last_prompt_tokens = estimate_tokens(prompt)
+        answer = generate_with_cap(self.backend, prompt, cap)
+        self.last_answer_tokens = estimate_tokens(answer)
+        return answer
 
 
 @dataclass
@@ -520,3 +538,5 @@ class PlainRAG(_BudgetedAnswer, Baseline):
         self.last_used_notes = []
         self.last_retrieval_stats = {}
         self.last_rendered_notes = []
+        self.last_prompt_tokens = None
+        self.last_answer_tokens = None
