@@ -922,6 +922,13 @@ class AnswerAgent:
     # call, never shared across questions.
     last_render_stats: Optional[RenderStats] = None
     last_question_kind: Optional[str] = None
+    # Ids of the notes that ACTUALLY reached the prompt after `_select` +
+    # `_fit`. This is distinct from the retriever's candidate list: `_fit`
+    # drops lowest-ranked notes until the prompt fits `context_window`, so a
+    # candidate can be retrieved and still never be shown to the model. The
+    # evidence-recall instrument (`analysis/evidence_recall.py`) needs the
+    # post-fit set to measure context recall rather than candidate recall.
+    last_rendered_note_ids: Optional[List[str]] = None
 
     @property
     def _thg_context(self) -> bool:
@@ -1100,6 +1107,7 @@ class AnswerAgent:
             return f"{notice}\n\n{body}" if notice else body
 
         prompt, candidates = self._fit(self._select(candidates), render)
+        self.last_rendered_note_ids = [n.id for n in candidates]
         if self.max_retries > 0:
             # Bind the cap INTO the retry handler: LLMRetryHandler calls
             # generate_fn(prompt) with NO kwargs, so passing self.backend.generate
@@ -1155,13 +1163,14 @@ class AnswerAgent:
         if not candidates:
             return "I don't know"
 
-        prompt, _ = self._fit(
+        prompt, kept = self._fit(
             self._select(candidates),
             lambda notes: self.baseline_prompt_template.format(
                 query=query,
                 context=self._render_with_stats(notes, query=query, chronological=True),
             ),
         )
+        self.last_rendered_note_ids = [n.id for n in kept]
         return self._generate_resilient(prompt, max_tokens=self.max_tokens).strip()
 
     def _render_graph_context(self, candidates: List[Note], query: str = "") -> str:

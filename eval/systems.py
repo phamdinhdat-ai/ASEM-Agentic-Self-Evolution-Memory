@@ -640,6 +640,11 @@ class ASEMTHGSystem:
     # Telemetry populated by ``answer`` (Plan Phase 0.2). Not part of construction.
     last_used_notes: List[Any] = field(default_factory=list)
     last_retrieval_stats: Dict[str, Any] = field(default_factory=dict)
+    # Notes that actually reached the answer prompt (post context-budget). See
+    # ``AnswerAgent.last_rendered_note_ids``; this is the set the evidence-recall
+    # instrument scores, since a candidate dropped by `_fit` is unavailable to
+    # the model exactly as if it had never been retrieved.
+    last_rendered_notes: List[Any] = field(default_factory=list)
 
     _ingested: bool = False
 
@@ -699,6 +704,9 @@ class ASEMTHGSystem:
         # Telemetry for retrieval-vs-generation attribution (Plan Phase 0.2).
         self.last_used_notes = [getattr(n, "id", None) for n in used_notes]
         self.last_retrieval_stats = dict(getattr(self.pipeline.retriever, "stats", {}) or {})
+        # Post-fit context set (G7): what the answer prompt actually carried.
+        rendered = getattr(self.pipeline.answer_agent, "last_rendered_note_ids", None)
+        self.last_rendered_notes = list(rendered) if rendered is not None else []
         return answer
 
     def reset(self) -> None:
@@ -869,7 +877,7 @@ def build_asem_thg_system(
     # "graph is dark" ablation rung.
     if bool(hg_cfg.get("hydrate_on_load", True)) and bank.size() > 0:
         hydrated = thg_graph.hydrate(bank.list_notes())
-        _log.info("ASEM-THG: hydrated %d note(s) from existing bank", hydrated)
+        _log.info("ASEM-THG: hydrated {} note(s) from existing bank", hydrated)
 
     pipeline = ASEMPipeline(
         memory_bank=bank,

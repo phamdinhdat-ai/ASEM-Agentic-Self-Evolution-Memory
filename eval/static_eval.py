@@ -690,6 +690,14 @@ def run_static_eval(
                     used_notes = getattr(system, "last_used_notes", None)
                     if used_notes is not None:
                         record["used_notes"] = list(used_notes)
+                    # Post-fit context set (G7). `used_notes` is the retriever's
+                    # CANDIDATE list; the context builder may drop notes from it
+                    # to fit `context_window`, and a dropped note is unavailable
+                    # to the model exactly as if it were never retrieved. The
+                    # evidence-recall instrument reads this field when present.
+                    rendered_notes = getattr(system, "last_rendered_notes", None)
+                    if rendered_notes:
+                        record["rendered_notes"] = list(rendered_notes)
                     retr_stats = getattr(system, "last_retrieval_stats", None)
                     if retr_stats:
                         record["retrieval_stats"] = retr_stats

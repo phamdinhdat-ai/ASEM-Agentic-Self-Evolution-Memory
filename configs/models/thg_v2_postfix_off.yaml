@@ -69,6 +69,26 @@ retriever:
   enable_global_semantics: true
   enable_intent_q: true
 
+# G1: hyper-graph construction knobs, previously hard-coded in
+# `TemporalHyperGraph.__init__`. The defaults below reproduce the historical
+# values byte-for-byte, so an unchanged config behaves exactly as before.
+hyper_graph:
+  # Hydrate the graph from an existing bank at build time. Without this the
+  # frozen-bank eval path built an EMPTY graph: `_fact_nodes` was empty,
+  # `personalized_pagerank` returned [] for every query, and `ppr_weight` was
+  # inert in every published number. `false` is the "graph is dark" ablation
+  # rung — same bank, same config, graph off.
+  hydrate_on_load: true
+  # Entity-node edge threshold and fan-out caps.
+  semantic_tau: 0.70
+  max_entity_links: 5
+  max_semantic_links: 5
+  # Hub suppression: entity keys at or below this smoothed idf are ignored.
+  # -.inf = down-weight hubs but never drop them (production default).
+  entity_idf_floor: -.inf
+  # GB2e: supersession stays OFF (0/5 precision on the frozen bank).
+  supersession: false
+
 answer:
   direct_mode: true
   include_dates: true
