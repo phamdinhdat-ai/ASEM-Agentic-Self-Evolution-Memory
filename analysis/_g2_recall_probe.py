@@ -116,22 +116,11 @@ qa = ds[0]["qa"]
 if _args.limit:
     qa = qa[:_args.limit]
 tmp = tempfile.mkdtemp()
-arms = {}
-for name in ARMS:
-    arms[name] = build(name, tmp)
-    print(f"built arm {name}", flush=True)
 note_sessions = load_note_sessions(BANK)
 
-# category -> [n, hits_any, hits_all, used]
-agg = {arm: defaultdict(lambda: [0, 0, 0, 0]) for arm in arms}
-top8 = {arm: {} for arm in arms}          # arm -> {qidx: tuple(top-8 ids)}
-pool = {arm: {} for arm in arms}          # arm -> {qidx: pool size}
-# Recall@8 is COARSE here: one session owns many notes, so swapping one note for
-# another inside the same session is invisible to it. Session MRR is the sharper
-# instrument — it asks whether the walk moved the FIRST gold session earlier in
-# the list, which recall@8 cannot see at all.
-mrr = {arm: [] for arm in arms}           # arm -> [1/rank of first gold session]
-
+# Questions worth scoring, with their gold sessions resolved ONCE (the join is
+# arm-independent, so recomputing it per arm would be wasted work).
+scored = []
 for qi, item in enumerate(qa):
     q = item.get("question")
     if not q:
@@ -140,8 +129,28 @@ for qi, item in enumerate(qa):
     if not gold:
         continue
     cat = item.get("category") or item.get("category_name") or "unknown"
-    for arm, system in arms.items():
-        retr = system.pipeline.retriever
+    scored.append((qi, q, gold, cat))
+
+# category -> [n, hits_any, hits_all, used]
+agg = {arm: defaultdict(lambda: [0, 0, 0, 0]) for arm in ARMS}
+top8 = {arm: {} for arm in ARMS}          # arm -> {qidx: tuple(top-8 ids)}
+pool = {arm: {} for arm in ARMS}          # arm -> {qidx: pool size}
+# Recall@8 is COARSE here: one session owns many notes, so swapping one note for
+# another inside the same session is invisible to it. Session MRR is the sharper
+# instrument — it asks whether the walk moved the FIRST gold session earlier in
+# the list, which recall@8 cannot see at all.
+mrr = {arm: [] for arm in ARMS}           # arm -> [1/rank of first gold session]
+
+# ONE ARM AT A TIME. Each system holds a full 1029-note bank plus its embedder
+# and a hydrated hyper-graph; building all four at once is what exhausted the
+# machine (7.9 GB total) on the first attempt. The per-arm result is only the
+# top-K id list and a pool size, so the system can be torn down immediately and
+# the comparison still has everything it needs.
+for arm in ARMS:
+    system = build(arm, tmp)
+    print(f"built arm {arm}", flush=True)
+    retr = system.pipeline.retriever
+    for qi, q, gold, cat in scored:
         notes = retr.retrieve(q, system.pipeline.memory_bank)
         used = [n.id for n in notes[:K]]
         top8[arm][qi] = tuple(used)
@@ -161,6 +170,15 @@ for qi, item in enumerate(qa):
             b[1] += 1
         if gold <= got:
             b[2] += 1
+    # Free the arm before the next one is built.
+    try:
+        system.pipeline.memory_bank.close()
+    except Exception:
+        pass
+    del system, retr
+    import gc
+    gc.collect()
+    print(f"scored arm {arm}", flush=True)
 
 print(f"bank={BANK}")
 print(f"notes in bank={len(note_sessions)}  questions scored="

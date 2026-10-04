@@ -161,10 +161,13 @@ class EnhancedHybridRetriever(HybridRetriever):
     entity_seed_weight: float = 0.5
     entity_seed_topn: int = 5
     # Cap on how many walk-ranked notes enter the candidate pool, and an optional
-    # relevance floor for them. The floor defaults OFF because the measured
-    # behaviour of the ungated PPR append was a recall GAIN (G1: live 0.9695 vs
-    # dark 0.9594 session-recall@8) — the gate exists for the BFS, whose
-    # relevance-blind append is the failure the floor was written for.
+    # relevance floor for them. The floor defaults OFF because gating the append
+    # only removes candidates, and an ungated append cannot lower answer-window
+    # recall — it can only add. (The G1 candidate-level "gain", 0.9695 vs 0.9594,
+    # was a pool-size artifact: scoring over the WHOLE candidate list, ~27 notes
+    # vs ~15. Scored over the top-8 the answer prompt actually reads, the two
+    # arms are identical, 0.9289. The floor is retained for the BFS case, whose
+    # relevance-blind append is what it was written for.)
     graph_rank_topn: int = 20
     graph_rank_min_sim: float = 0.0
     # Master switch: `false` drops the walk entirely, leaving Phase D's
