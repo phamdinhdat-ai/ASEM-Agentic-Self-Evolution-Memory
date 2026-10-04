@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from asem.answer_agent import AnswerAgent
 from asem.backends.base import InferenceBackend
@@ -447,3 +447,76 @@ class ValueRetrievalOnly(Baseline):
     def reset(self) -> None:
         self._seen_hashes.clear()
         self.memory_bank.clear()
+
+
+@dataclass
+class PlainRAG(_BudgetedAnswer, Baseline):
+    """Plain retrieval over a bank that ALREADY EXISTS — no graph, no utility.
+
+    This is the attribution control. ``SimRetrieval`` also does flat ANN, but it
+    builds its OWN notes with ``NoteConstructor`` from raw turns, so comparing
+    ASEM-THG against it confounds three things at once: the extraction prompt,
+    the graph, and the retrieval blend. PlainRAG holds the memory FIXED — it
+    opens the very bank ASEM-THG ingested (same notes, same extraction) and runs
+    the base :class:`HybridRetriever` (dense + BM25 + entity RRF, no multi-hop,
+    no PPR, no Phase-D graph blend) over it.
+
+    So ``ASEM-THG vs PlainRAG`` isolates exactly one variable: what the graph
+    contributes on top of plain retrieval over identical evidence. A second
+    useful comparison falls out for free — ``PlainRAG vs SimRetrieval`` measures
+    what the session-level atomic-fact extraction is worth over turn-level notes.
+
+    The answer path is the same single budgeted call every other system uses
+    (``_BudgetedAnswer``), so the token-budget fairness rule holds.
+    """
+
+    backend: InferenceBackend
+    memory_bank: MemoryBank
+    retriever: HybridRetriever
+    top_k: int
+    prompt_template: str
+    max_tokens: Optional[int] = None
+    context_window: Optional[int] = None
+
+    # Telemetry, mirroring ASEMTHGSystem so the evidence-recall instrument and
+    # the efficiency measurement read the same fields on every system.
+    last_used_notes: List[Any] = field(default_factory=list)
+    last_retrieval_stats: Dict[str, Any] = field(default_factory=dict)
+    last_rendered_notes: List[Any] = field(default_factory=list)
+
+    def answer(self, query: str, history: List[str]) -> str:
+        # No ingestion here by design: the bank is the frozen ASEM-THG bank. If
+        # it is empty the comparison is meaningless, so say so loudly rather
+        # than silently answering from an empty memory.
+        if self.memory_bank.size() == 0:
+            _log.warning(
+                "PlainRAG: bank is empty — expected the frozen ASEM-THG bank. "
+                "The graph-vs-plain comparison is not valid on an empty bank."
+            )
+
+        notes = self.retriever.retrieve(query, self.memory_bank)
+        notes = notes[: self.top_k] if self.top_k else notes
+        self.last_used_notes = [getattr(n, "id", None) for n in notes]
+        self.last_retrieval_stats = dict(getattr(self.retriever, "stats", {}) or {})
+
+        prompt, kept = self.fit_context(
+            [n.c for n in notes],
+            lambda blocks: self.prompt_template.format(
+                query=query,
+                context="\n".join(blocks) if blocks else "(no relevant memory)",
+            ),
+            label="PlainRAG",
+        )
+        # Post-fit ids so evidence recall measures what the prompt carried.
+        self.last_rendered_notes = [
+            getattr(n, "id", None) for n in (notes[: len(kept)] if kept else [])
+        ]
+        return self._generate(prompt, label="PlainRAG")
+
+    def reset(self) -> None:
+        # Deliberately does NOT clear the bank: it is a frozen, read-only
+        # artifact shared across conversations by the phase runner. Clearing it
+        # would destroy the very memory this control exists to hold constant.
+        self.last_used_notes = []
+        self.last_retrieval_stats = {}
+        self.last_rendered_notes = []

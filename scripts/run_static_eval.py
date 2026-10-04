@@ -287,7 +287,7 @@ def main() -> int:
     bank_root = os.path.join(args.static_root, dataset)
 
     all_banked = [s for s in ALL_SYSTEMS if s in BANK_FILE_NAMES]
-    default_systems = all_banked + ["FullContext", "NoMemory"]
+    default_systems = all_banked + ["PlainRAG", "FullContext", "NoMemory"]
     systems: List[str] = list(args.systems or default_systems)
     unknown = [s for s in systems if s not in ALL_SYSTEMS]
     if unknown:

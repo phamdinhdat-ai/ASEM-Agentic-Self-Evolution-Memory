@@ -126,14 +126,30 @@ def conversation_index(session_id: str) -> int:
 # Bank paths
 # ---------------------------------------------------------------------------
 
+# Systems that reuse ANOTHER system's frozen bank instead of ingesting their
+# own. PlainRAG is the attribution control for the graph: it must retrieve over
+# the EXACT notes ASEM-THG built, so it shares that bank rather than building a
+# second, differently-extracted one. An aliased system is retrieve-only — it is
+# skipped by the ingest phase and its bank path resolves to the owner's.
+BANK_ALIASES: Dict[str, str] = {
+    "PlainRAG": "ASEM-THG",
+}
+
+
+def _bank_owner(system: str) -> str:
+    """The system whose bank ``system`` reads (itself unless it is an alias)."""
+    return BANK_ALIASES.get(system, system)
+
+
 def bank_dir(bank_root: str, tag: str, system: str, conversation_id: str) -> str:
     """Deterministic per-conversation bank directory for one system."""
-    return os.path.join(bank_root, tag, system, conversation_id)
+    return os.path.join(bank_root, tag, _bank_owner(system), conversation_id)
 
 
 def bank_file(bank_root: str, tag: str, system: str, conversation_id: str) -> str:
     """Full path of the SQLite bank file for one system/conversation."""
-    name = BANK_FILE_NAMES.get(system, system.lower())
+    owner = _bank_owner(system)
+    name = BANK_FILE_NAMES.get(owner, owner.lower())
     return os.path.join(bank_dir(bank_root, tag, system, conversation_id), f"{name}.sqlite")
 
 

@@ -893,6 +893,75 @@ def build_asem_thg_system(
     return ASEMTHGSystem(pipeline=pipeline, single_pass_ingestor=single_pass_ingestor)
 
 
+def build_plain_rag_system(
+    config_path: str,
+    db_dir: str,
+    backend: Any = None,
+) -> object:
+    """PlainRAG: base hybrid retrieval over ASEM-THG's frozen bank.
+
+    Deliberately does NOT construct a note constructor, ingestor, graph, or
+    utility updater — the point is to hold the memory fixed and vary ONLY the
+    retrieval strategy. The bank is opened from the same ``asem_thg.sqlite``
+    ASEM-THG wrote (see ``BANK_ALIASES`` in ``eval/phase_runner``), so
+    ``ASEM-THG vs PlainRAG`` is a clean one-variable comparison.
+
+    The retriever is the base :class:`HybridRetriever` (dense + BM25 + entity
+    RRF), NOT ``EnhancedHybridRetriever``: no multi-hop BFS, no PPR, no Phase-D
+    graph blend. That is precisely what "plain" has to mean for the control to
+    isolate the graph's contribution.
+    """
+    from eval.baselines import PlainRAG
+
+    cfg = _load_config(config_path)
+    backend = backend if backend is not None else build_backend(cfg["inference"])
+    hp = cfg["hyperparameters"]
+    ret_cfg = cfg.get("retriever", {}) or {}
+    ans_cfg = cfg.get("answer", {}) or {}
+    answer_max_tokens, context_window = answer_budget_from_config(config_path)
+
+    def _ret(key: str, default: Any) -> Any:
+        val = ret_cfg.get(key, default)
+        return default if val is None else val
+
+    # The same RRF knobs ASEM-THG's retriever inherits, so the two systems
+    # differ in the graph layer, not in the channel weights.
+    #
+    # `enable_link_traversal=False` is load-bearing: the base retriever's Phase C
+    # walks ``Note.L``, and ASEM-THG wrote its graph edges into ``Note.L`` — so
+    # leaving it on would let the graph contribute through the back door and
+    # destroy the control. PlainRAG must be dense + BM25 + entity RRF only.
+    retriever = HybridRetriever(
+        backend=backend,
+        k1=hp["k1"], k2=_ret("k2", hp["k2"]),
+        delta=hp["delta"], lambda_weight=hp["lambda"],
+        use_bm25=bool(_ret("use_bm25", True)),
+        use_entity_filter=bool(_ret("use_entity_filter", True)),
+        use_temporal_boost=bool(_ret("use_temporal_boost", True)),
+        dense_weight=float(_ret("dense_weight", 1.0)),
+        bm25_weight=float(_ret("bm25_weight", 0.8)),
+        entity_weight=float(_ret("entity_weight", 0.6)),
+        temporal_weight=float(_ret("temporal_weight", 0.5)),
+        rrf_k=int(_ret("rrf_k", 60)),
+        enable_link_traversal=False,
+    )
+
+    _ensure_dir(db_dir)
+    # Open the ASEM-THG bank file in place — read-only in practice (PlainRAG
+    # never writes), so the shared frozen artifact is untouched.
+    bank = _make_bank(db_dir, BANK_FILE_NAMES["ASEM-THG"])
+
+    return PlainRAG(
+        backend=backend,
+        memory_bank=bank,
+        retriever=retriever,
+        top_k=int(_ret("k2", hp["k2"])),
+        prompt_template=_RETRIEVAL_PROMPT,
+        max_tokens=answer_max_tokens,
+        context_window=context_window,
+    )
+
+
 def build_baselines(
     config_path: str,
     db_dir: str,
@@ -1177,15 +1246,22 @@ BANK_FILE_NAMES: Dict[str, str] = {
     "AtomicLinking": "atomiclinking",
     "RLManagerOnly": "rlmanageronly",
     "ValueRetrievalOnly": "valueretrievalonly",
+    # PlainRAG reuses ASEM-THG's bank (see BANK_ALIASES in eval/phase_runner),
+    # so it is deliberately absent here: it owns no bank file of its own.
 }
 
 #: Systems that need no memory bank (pure prompt/context baselines).
 NO_BANK_SYSTEMS: Tuple[str, ...] = ("NoMemory", "FullContext")
 
+#: Systems that reuse another system's bank and never ingest (retrieve-only).
+#: See ``BANK_ALIASES`` in ``eval/phase_runner`` for the ownership map.
+RETRIEVE_ONLY_SYSTEMS: Tuple[str, ...] = ("PlainRAG",)
+
 #: Canonical evaluation system order.
 ALL_SYSTEMS: List[str] = [
-    "NoMemory", "FullContext", "ASEM-THG", "SimRetrieval", "AtomicLinking",
-    "RLManagerOnly", "ValueRetrievalOnly", "ASEM", "ASEMv2", "FastASEM",
+    "NoMemory", "FullContext", "ASEM-THG", "PlainRAG", "SimRetrieval",
+    "AtomicLinking", "RLManagerOnly", "ValueRetrievalOnly", "ASEM", "ASEMv2",
+    "FastASEM",
 ]
 
 
@@ -1207,6 +1283,8 @@ def build_system(
     """
     if name in ("ASEM-THG", "ASEM_THG"):
         return build_asem_thg_system(config_path, db_dir, backend=backend)
+    if name == "PlainRAG":
+        return build_plain_rag_system(config_path, db_dir, backend=backend)
     if name == "ASEM":
         return build_asem_system(config_path, db_dir, backend=backend)
     if name == "ASEMv2":
