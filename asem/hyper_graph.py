@@ -130,6 +130,35 @@ class TemporalHyperGraph:
         # caller can re-persist them (they may pre-date this ingest call).
         self._touched: Set[str] = set()
 
+    @classmethod
+    def from_bank(cls, notes: Iterable[Note], **kwargs: Any) -> "TemporalHyperGraph":
+        """Build a graph over notes that are ALREADY persisted, via :meth:`hydrate`.
+
+        This exists because the graph lives only in memory while the bank lives
+        on disk, and the read path constructs a fresh graph object per system
+        instance. Without this, a frozen-bank evaluation builds an empty graph:
+        ``_fact_nodes`` is empty, ``_resolve_ppr_graph`` returns ``None`` and
+        ``personalized_pagerank`` returns ``[]`` for every query. PPR was inert
+        for every number published before this method existed, because
+        ``hydrate`` was only ever called on the ingest path (a resumed ingest),
+        never on the eval path.
+
+        The construction is deliberately the SAME ``__init__`` the ingest path
+        uses, so a hydrated graph and an incrementally-built one are
+        indistinguishable in topology — including the versioning indices, which
+        ``hydrate`` rebuilds from the persisted ``Note.triplets``.
+
+        Args:
+            notes: The persisted notes to load. Order does not matter; every
+                index is order-independent.
+            **kwargs: Forwarded to ``__init__`` (``semantic_tau``,
+                ``max_entity_links``, ``max_semantic_links``, ``entity_idf_floor``,
+                ``enable_supersession``).
+        """
+        graph = cls(**kwargs)
+        graph.hydrate(notes)
+        return graph
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------

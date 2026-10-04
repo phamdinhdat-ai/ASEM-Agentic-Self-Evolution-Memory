@@ -718,6 +718,87 @@ def test_gb5_role_tokens_are_not_entities() -> None:
 
 
 # ===========================================================================
+# G1 — the graph is live at eval time (hydrate from an existing bank)
+# ===========================================================================
+#
+# Before G1, the graph object was constructed fresh per system instance while
+# the bank was on disk, and `hydrate()` was called only on the INGEST path (a
+# resumed ingest). On the EVAL path — the frozen-bank protocol, which opens a
+# bank that already holds every note — `_fact_nodes` stayed empty, so
+# `_resolve_ppr_graph` returned None and `personalized_pagerank` returned []
+# for every query. `ppr_weight=0.15` was inert in every published number.
+
+def test_g1_from_bank_yields_a_non_empty_ppr_ranking() -> None:
+    """A graph built from a persisted bank must be walkable.
+
+    This is the falsification the plan asks for: if PPR stays empty after
+    hydration, the hydration is wrong regardless of what any end-to-end score
+    says.
+    """
+    notes = [
+        _note("a", "Caroline lives in Boston", entities=["Caroline", "Boston"]),
+        _note("b", "Caroline visited Paris", entities=["Caroline", "Paris"]),
+        _note("c", "Melanie lives in Boston", entities=["Melanie", "Boston"]),
+        _note("d", "A fact about nobody", entities=["Nobody"]),
+    ]
+
+    # An empty graph is the pre-G1 state: no seeds are in it, so nothing ranks.
+    empty = TemporalHyperGraph()
+    assert empty.personalized_pagerank(["a"], top_k=5) == []
+
+    # `from_bank` must reproduce the graph `add_note` would have built.
+    hydrated = TemporalHyperGraph.from_bank(notes)
+    assert len(hydrated) == 4
+
+    ranked = hydrated.personalized_pagerank(["a"], top_k=5)
+    assert ranked, "hydrated graph produced an empty PPR ranking"
+    ids = [nid for nid, _ in ranked]
+    assert "a" in ids
+    # 'b' shares Caroline and 'c' shares Boston, so both are reachable from 'a'
+    # through an entity node; 'd' shares nothing and must not outrank them.
+    assert ids.index("a") < ids.index("d") if "d" in ids else True
+    assert {"b", "c"} & set(ids), "entity co-occurrence did not propagate the walk"
+
+
+def test_g1_from_bank_reproduces_add_note_topology() -> None:
+    """Hydration is not a second, divergent builder — it matches incremental add.
+
+    The frozen-bank protocol depends on this: a bank ingested incrementally and
+    the same bank re-opened and hydrated must be indistinguishable to the walk,
+    or re-retrieval over a frozen bank measures something the ingest never built.
+    """
+    notes = [
+        _note("a", "Caroline lives in Boston", entities=["Caroline", "Boston"]),
+        _note("b", "Caroline visited Paris", entities=["Caroline", "Paris"]),
+        _note("c", "Melanie lives in Boston", entities=["Melanie", "Boston"]),
+    ]
+    for n in notes:
+        n.L = [
+            LinkRecord(target_id=t, relation="same-entity")
+            for t in ("b", "c") if t != n.id
+        ]
+
+    incremental = TemporalHyperGraph()
+    for n in notes:
+        _add(incremental, n)
+    hydrated = TemporalHyperGraph.from_bank(notes)
+
+    assert set(incremental._fact_nodes) == set(hydrated._fact_nodes)
+    assert incremental._entity_index == hydrated._entity_index
+    assert incremental._entity_to_notes == hydrated._entity_to_notes
+    # The walk sees the same ranking on both, for the same seed.
+    assert incremental.personalized_pagerank(["a"], top_k=3) == \
+        hydrated.personalized_pagerank(["a"], top_k=3)
+
+
+def test_g1_hydrate_is_empty_safe() -> None:
+    """The eval builder guards on a non-empty bank; the classmethod must agree."""
+    graph = TemporalHyperGraph.from_bank([])
+    assert len(graph) == 0
+    assert graph.personalized_pagerank(["anything"], top_k=5) == []
+
+
+# ===========================================================================
 # Frozen-fixture acceptance (read-only; skipped if the bank is absent)
 # ===========================================================================
 

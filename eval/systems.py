@@ -35,6 +35,8 @@ from eval.baselines import (
     ValueRetrievalOnly,
 )
 
+_log = get_logger(__name__)
+
 
 @dataclass
 class ASEMSystem:
@@ -702,6 +704,14 @@ class ASEMTHGSystem:
     def reset(self) -> None:
         self._ingested = False
         self.pipeline.memory_bank.clear()
+        # The graph is a SEPARATE in-memory structure from the bank. Clearing
+        # only the bank left every node and edge of the previous conversation in
+        # the graph, so a reset-then-reingest (the per-conversation pattern the
+        # LongMemEval runner uses) would link new notes against a stale
+        # topology — and, with G1 hydration, would hydrate them on top of it.
+        graph = getattr(self.pipeline.retriever, "hyper_graph", None)
+        if graph is not None:
+            graph.clear()
 
 
 def build_asem_thg_system(
@@ -763,7 +773,14 @@ def build_asem_thg_system(
     # `superseded_by` at the highest weight in its table. Set
     # `hyper_graph.supersession: true` to restore the relation as an ablation;
     # the W4 interval machinery is unaffected either way.
+    #
+    # G1: the three fan-out / threshold knobs were hard-coded in the graph's
+    # `__init__` and are now readable from `hyper_graph.*` so an ablation can
+    # move them without editing source. Defaults reproduce today's values.
     thg_graph = TemporalHyperGraph(
+        semantic_tau=float(hg_cfg.get("semantic_tau", 0.70)),
+        max_entity_links=int(hg_cfg.get("max_entity_links", 5)),
+        max_semantic_links=int(hg_cfg.get("max_semantic_links", 5)),
         enable_supersession=bool(hg_cfg.get("supersession", False)),
         entity_idf_floor=float(hg_cfg.get("entity_idf_floor", float("-inf"))),
     )
@@ -837,6 +854,22 @@ def build_asem_thg_system(
 
     _ensure_dir(db_dir)
     bank = _make_bank(db_dir, "asem_thg")
+
+    # G1: hydrate the graph from a PRE-EXISTING bank. The frozen-bank protocol
+    # (Phase A builds the bank once, Phase B evaluates it many times) opens a
+    # bank that already holds every note, but the graph object above is fresh —
+    # so `_fact_nodes` was empty, `_resolve_ppr_graph` returned None, and
+    # `personalized_pagerank` returned [] for every query. Every published
+    # number was produced with `ppr_weight=0.15` inert and the entity graph
+    # absent from ranking. Hydrating here is the whole of the fix.
+    #
+    # Guarded on a non-empty bank so the INGEST path (Phase A: bank starts
+    # empty, notes are added incrementally by the ingestor) is byte-identical
+    # to before. `hydrate_on_load: false` disables it for a controlled
+    # "graph is dark" ablation rung.
+    if bool(hg_cfg.get("hydrate_on_load", True)) and bank.size() > 0:
+        hydrated = thg_graph.hydrate(bank.list_notes())
+        _log.info("ASEM-THG: hydrated %d note(s) from existing bank", hydrated)
 
     pipeline = ASEMPipeline(
         memory_bank=bank,
