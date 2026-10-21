@@ -47,3 +47,4 @@ data/benchmarks/longmemeval_banks/gb_full_snapshots/
 
 # Retrieval work-copies made per run
 data/benchmarks/retrieval_work_static/
+data/benchmarks/

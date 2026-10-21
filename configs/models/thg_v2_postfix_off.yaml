@@ -121,15 +121,12 @@ retriever:
   # concentrated in cat 1 (+0.188) and cat 3 (+0.091) and nothing in cat 2/4. So
   # widening earns its keep only on the multi-hop categories.
   #
-  # Needs a pool wide enough to CONTAIN the second session, so it moves with k2;
-  # widening without it is strictly worse. Answer tokens are unaffected — the
-  # answer agent caps the window at `max_context_notes` before rendering.
-  session_diversity: false
-  #
-  # It needs a pool wide enough to CONTAIN the second session: at the default
-  # k2=10 the pool is often one session, and there is nothing to spread. Pair it
-  # with a larger k2 (the probe used k1=200, k2=40). Widening without this is
-  # strictly worse, so the two are meant to move together.
+  # Needs a pool wide enough to CONTAIN the second session, so it moves with k2:
+  # at the default k2=10 the pool is often one session and there is nothing to
+  # spread. Pair it with a larger k2 (the probe used k1=200, k2=40). Widening
+  # without this is strictly worse, so the two are meant to move together.
+  # Answer tokens are unaffected — the answer agent caps the window at
+  # `max_context_notes` before rendering.
   session_diversity: false
   # Phase D blend: base ordering keeps primacy; graph/utility refine it.
   alpha: 0.35

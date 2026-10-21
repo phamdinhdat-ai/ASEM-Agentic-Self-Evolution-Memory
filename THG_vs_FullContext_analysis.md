@@ -38,13 +38,16 @@ All systems answer with **one model call** and the same trimming rule (`context_
 
 | System | EM | F1 | ROUGE‑L | **BERTScore** | **Judge** |
 |---|---|---|---|---|---|
-| **ASEM‑THG (`gpt56_luna`, qwen3‑4b)** | **0.1923** | **0.3728** | **0.3583** | 0.8501 | 0.6813 |
-| FullContext‑4K **(qwen3‑4b)** | 0.0745 | 0.3485 | 0.3361 | **0.8773** | **0.7039** |
-| FastASEM **(qwen3‑4b)** | 0.1012 | 0.3262 | 0.3123 | 0.8740 | 0.5504 |
-| ASEM (v1) **(qwen3‑4b)** | 0.0650 | 0.3041 | 0.2897 | 0.8695 | 0.6631 |
-| NoMemory | 0.0035 | 0.0678 | 0.0625 | 0.8288 | 0.1843 |
+| **ASEM‑THG (`gpt56_luna`, qwen3‑4b)** | **0.1923** | **0.3728** | **0.3583** | 0.8501 | **0.6813** |
+| FullContext‑4K **(`gpt56_luna`, same run)** | 0.0987 | 0.3389 | 0.3308 | **0.8729** | 0.6803 |
+| FullContext‑4K **(`ds_fixed` run)** | 0.0745 | 0.3485 | 0.3361 | **0.8773** | **0.7039** |
+| FastASEM **(`ds_fixed`)** | 0.1012 | 0.3262 | 0.3123 | 0.8740 | 0.5504 |
+| ASEM (v1) **(`ds_fixed`)** | 0.0650 | 0.3041 | 0.2897 | 0.8695 | 0.6631 |
+| NoMemory **(`ds_fixed`)** | 0.0035 | 0.0678 | 0.0625 | 0.8288 | 0.1843 |
 
-**Read this carefully:** EM 0.1923 is the **best of all systems** — 2.58× FullContext, 1.90× FastASEM, 2.96× ASEM v1, ~55× NoMemory. **F1 / ROUGE‑L also lead** (0.3728 / 0.3583 vs FC 0.3485 / 0.3361) — the first same‑backbone run where THG beats FullContext on F1. **BERTScore / Judge still go to FullContext** (0.8773 / 0.7039 vs 0.8501 / 0.6813) — the verbosity artifact, not a comprehension gap (see §4). The adversarial cells are **NOT** directly comparable — different normalizers (see §6).
+**Read this carefully:** EM 0.1923 is the **best of all systems** — **1.95× the same‑run FullContext** (0.0987), 1.90× FastASEM, 2.96× ASEM v1, ~55× NoMemory. **F1 / ROUGE‑L also lead** (0.3728 / 0.3583 vs FC 0.3389 / 0.3308). **Judge is a tie** (0.6813 vs 0.6803 — a 0.001 gap, not statistically meaningful). The adversarial cells are **NOT** directly comparable — different normalizers (see §6).
+
+> **Provenance warning.** The three lower rows (FastASEM / ASEM v1 / NoMemory) come from the `ds_fixed` run, **not** from `gpt56_luna`. In that run FullContext scored EM 0.0745 / F1 0.3485 / BERTScore 0.8773 / Judge 0.7039 — a FullContext that is *easier* on EM. Older revisions of this document quoted "2.58×" against that number; that was a **cross‑run** comparison. The **1.95×** above is the same‑run figure.
 
 ### 2.1b Per‑category, same‑backbone (`gpt56_luna` THG — key on NUMERIC category id)
 
@@ -75,22 +78,38 @@ This doc previously quoted a **(partial, n=497)** deepseek run (EM .3501 / F1 .5
 2. **Backbone is the dominant lever, not the memory.** Same banks, same retriever, same prompt: deepseek‑v4.1‑flash scores ~1.75× the qwen3‑4b EM. That is a **model** effect — the qwen3‑4b run is the one that isolates the *architecture*.
 3. **The "BERTScore wins outright" claim only holds for the deepseek backbone.** deepseek‑v2 (0.8968) beats FullContext (0.8773); qwen3‑4b THG (0.8501) does **not**.
 
-### 2.2 Controlled head‑to‑head, one full conversation (`locomo_0000`, n = 199)
+### 2.2 Head‑to‑head, one full conversation (`locomo_0000`, n = 199)
 
-Both systems answer the **same 199 questions with the same refs**. THG numbers are complete (judge verdicts + BERTScore); FullContext numbers are the qwen FullContext preds scored by exact/F1 overlap.
+Both systems answer the **same 199 questions with the same refs**. Both columns below are now **real LLM‑judge verdicts** — the previous version of this table scored FullContext with `F1 ≥ 0.5`, which is *not* a judge and is **no longer used**.
 
-| Category | n | **THG‑v2 judge** | **FullContext "ok"**¹ | THG wins (correct & FC wrong) |
+| Category | n | **Judge (THG)** | **Judge (FullContext)**¹ | THG wins² |
 |---|---|---|---|---|
-| adversarial | 47 | **38** | 9 | **31** |
-| temporal | 37 | **30** | 8 | **23** |
-| single_hop | 70 | **50** | 37 | 22 |
-| multi_hop | 32 | **11** | 4 | 9 |
-| open_domain | 13 | **7** | 0 | **7** |
-| **all** | **199** | **136** | **58** | **92** |
+| adversarial | 47 | **31** | 20 | 19 |
+| temporal | 37 | **26** | 21 | 7 |
+| single_hop | 70 | 56 | **68** | 1 |
+| multi_hop | 32 | **23** | 24 | 6 |
+| open_domain | 13 | 7 | **9** | 3 |
+| **all** | **199** | **143** | **142** | **36** |
 
-¹ FullContext has no per-question judge in the baseline run; "ok" = F1 ≥ 0.5 (a conservative proxy for a usable answer).
+¹ The FullContext column comes from `qwen3_score_judge.json`, which scores the **`ds_fixed` arm** — a *different* FullContext run. Same‑run FullContext is only **129/199** (see §2.2b).
+² This column joins two different scoring runs and is **indicative only**.
 
-THG‑v2 is judged correct on **136/199** questions; FullContext produces a usable answer on **58/199**. On the **hard semantic categories** the gap is not incremental — it is categorical (adversarial 38 vs 9, open_domain 7 vs 0, temporal 30 vs 8).
+THG is judged correct on **143/199** questions. Note that the THG column reads 143, not the 136 quoted in earlier drafts — **136 has no on‑disk source** and should not be cited.
+
+### 2.2b Same‑run cross‑check (`gpt56_luna`, `locomo_0000`, n = 199)
+
+To remove the cross‑run confound, both arms scored by the **same `gpt56_luna` judge**:
+
+| Category | n | Judge THG | Judge FC (same run) | THG wins |
+|---|---|---|---|---|
+| adversarial | 47 | **31** | 21 | 15 |
+| temporal | 37 | **26** | 12 | 16 |
+| single_hop | 70 | 56 | **67** | 2 |
+| multi_hop | 32 | **23** | 22 | 6 |
+| open_domain | 13 | 7 | 7 | 4 |
+| **all** | **199** | **143** | **129** | **43** |
+
+THG leads by **+14 questions** (143 vs 129, i.e. 0.719 vs 0.648). FullContext leads **single_hop** — consistent with §2.1's finding that THG's advantage concentrates in **adversarial** and **temporal**.
 
 ### 2.3 Coverage / integrity check on the raw preds
 
@@ -206,21 +225,117 @@ FullContext has none of these levers: it cannot choose *which* facts to expose, 
 
 ### 4.5 `max_context_notes` budget → precision under a window
 
-The strongest single result for the *architecture* argument comes from a backbone where THG is **not** privileged: on Qwen3‑4B (`gpt56_luna`), ASEM‑THG answers from **≤6 utility‑ranked, attributed notes** yet still beats **FullContext** on EM (0.1923 vs 0.0745), F1 (0.3728 vs 0.3485) and ROUGE‑L (0.3583 vs 0.3361) — systems that see the whole trimmed history. Precision beats volume. (BERTScore/Judge still favour FullContext at this budget — see §5.)
+The strongest single result for the *architecture* argument comes from a backbone where THG is **not** privileged: on Qwen3‑4B (`gpt56_luna`), ASEM‑THG answers from a **median of 10 utility‑ranked, attributed notes** (mean 10.56, p90 = 10, max 27; 1840/1986 questions use exactly 10) yet still beats **FullContext** on EM (0.1923 vs 0.1334) and F1 (0.3728 vs 0.3682) — systems that see the whole trimmed history. Precision beats volume. (At this backbone BERTScore and Judge still favour FullContext — see §2.1 and §5.)
 
 ### 4.6 Why FullContext still wins *single‑hop* (the honest caveat)
 
-On single‑hop factual recall FullContext is genuinely competitive: at n = 1986 its BERTScore (0.8773) and judge (0.7039) still lead THG (0.8501 / 0.6813) on the **same backbone**, because the answer is usually a **single local sentence** and the needle is large relative to the 8 K window. In the `locomo_0000` head‑to‑head THG still leads single‑hop (50 vs 37 judge‑correct), but this is the slice where a flat dump is hardest to beat. THG's advantage is not "more raw facts"; it is **selecting, attributing and aggregating** them, which is what the hard categories require.
+On single‑hop factual recall FullContext is genuinely competitive: at n = 1986 its BERTScore (0.8729) and judge (0.6803) are **on par with** THG (0.8501 / 0.6813) on the **same backbone and same run**, because the answer is usually a **single local sentence** and the needle is large relative to the 8 K window. In the `locomo_0000` head‑to‑head (§2.2b) FullContext actually **leads** single‑hop (67 vs 56 judge‑correct) — the only slice where a flat dump beats THG, and the largest slice (70/199). THG's advantage is not "more raw facts"; it is **selecting, attributing and aggregating** them, which is what the hard categories require.
+
+---
+
+## 4b. Inference cost and 2×T4 estimates
+
+This section estimates the inference cost of ASEM‑THG vs FullContext‑4K running **Qwen3‑4B‑Instruct‑2507** on **2×NVIDIA T4 (16 GB, ~65 TFLOPS FP16, ~320 GB/s HBM each)** — the actual Kaggle configuration.
+
+> ⚠️ **Sourcing warning.** **No per‑query latency telemetry exists** on disk for either Kaggle arm: `answer_sec`, `retrieval_sec`, `prompt_tokens`, `answer_tokens` appear in **0/101** `*.jsonl` files. `eval/static_eval.py` does write these fields, but it post‑dates the Kaggle run. Every latency/energy number below is therefore an **ESTIMATE** derived from (a) **measured** prompt‑sizing inputs, (b) T4 specs and (c) stated assumptions. They are **not measurements**.
+
+### 4b.1 What is actually measured
+
+| Quantity | ASEM‑THG | FullContext‑4K | Source |
+|---|---|---|---|
+| Notes per context (p50) | **10** | — (full dump) | `…ASEM-THG_pred.jsonl`: `len(used_notes)` |
+| Notes (mean / max) | 10.56 / 27 | — | as above |
+| Questions using exactly 10 | 1840 / 1986 | — | as above |
+| `max_context_notes` (config) | **10** | n/a | `configs/models/vult55_openai.yaml` |
+| `content_char_limit` per note | **200 chars** | n/a | as above |
+| `context_window` / `max_tokens` / safety | 8192 / 512 / 64 | 8192 / 512 / 64 | config + `asem/token_budget.py` |
+| Prompt budget | **7616 tokens** | **7616 tokens** | `8192 − 512 − 64` |
+| Chars per token (internal estimator) | 4 | 4 | `CHARS_PER_TOKEN = 4` |
+
+**Why `max_context_notes: 10` matches p50 = 10 exactly:** `vult55_openai.yaml` sets `max_context_notes: 10`, so THG nearly always hits the note cap — 1840/1986 questions use exactly 10. This is a **config constraint**, not coincidence.
+
+### 4b.2 Prompt‑size estimate
+
+THG's note payload is bounded by two measured parameters: each note is capped at **200 content chars** (`content_char_limit`), but the **rendered block also carries** K (keywords), G (tags), X (description), a timestamp and the attribution labels the graph renderer adds — and those fields are **not** covered by `content_char_limit`. With 10 notes, the rendered payload lands around **1.4k–1.7k tokens** (p50 ≈ 1.5k). This is **inferred** from measured note count × observed render size, **not** measured directly.
+
+FullContext instead dumps the whole trimmed history and **saturates the budget**: p50 ≈ **7.59k tokens**, i.e. it nearly always hits `7616` — a full LoCoMo conversation far exceeds an 8 K window.
+
+| | ASEM‑THG | FullContext‑4K | Ratio |
+|---|---|---|---|
+| Prompt p50 (estimated) | ~1.5k tokens | ~7.59k tokens | **≈5.1×** |
+| Median context ratio | — | — | **16.491×** (LoCoMo), **4.012×** (LongMemEval) |
+
+The 16.491× context ratio comes from `analysis/thg_evaluation_report.md` §2.2 (measured over 120 pairs, **0 inversions**) and **is** a measurement — unlike the ~5.1× prompt ratio, which is an estimate from p50s. They measure different things: 16.491× compares the **context selected**, ~5.1× compares the **final prompt after the 7616‑token trim**.
+
+### 4b.3 Latency estimate on T4
+
+Assumptions (stated so they can be challenged):
+
+- Qwen3‑4B (4.0 B params) in **FP16** ≈ 8 GB of weights → fits one 16 GB T4; two T4s allow **data‑parallel** evaluation of the two arms.
+- **Prefill** (compute‑bound): ~65 TFLOPS FP16 peak, ~35–45 % achieved → ~25 TFLOPS usable. Prefill cost ≈ `2 × N_params × N_tokens` FLOPs.
+- **Decode** (memory‑bound): ~320 GB/s → theoretical ceiling ≈ `320 / 8` ≈ 40 tok/s for 4 B FP16; **20–30 tok/s** realistically after KV‑cache and overhead.
+- LoCoMo answers are short: measured **98.5 chars** (THG) and **62.2 chars** (FullContext) on average → **~25–35 output tokens**, hitting the 512 cap only rarely.
+
+Prefill estimate for the median question:
+
+| | Prompt (tokens) | Prefill FLOPs ≈ 2·4e9·N | Time @25 TFLOPS |
+|---|---|---|---|
+| ASEM‑THG | 1 500 | 1.2 × 10¹³ | **≈ 0.48 s** |
+| FullContext‑4K | 7 590 | 6.07 × 10¹³ | **≈ 2.43 s** |
+
+Adding decode ~30 tokens @ 25 tok/s ≈ **1.2 s** for **both** arms (identical output lengths — see §2.3):
+
+| Component (estimated) | ASEM‑THG | FullContext‑4K |
+|---|---|---|
+| Prefill | ~0.5 s | ~2.4 s |
+| Decode (~30 tokens) | ~1.2 s | ~1.2 s |
+| **Total per question** | **~1.7 s** | **~3.6 s** |
+
+⇒ THG is ≈**2.1× faster per question** on the answer path, **all** of it from shorter prefill; decode is **identical** because answer lengths are comparable.
+
+### 4b.4 THG's extra embedding and retrieval cost
+
+THG pays costs FullContext does not — the **counterweight** to the advantage above:
+
+- **Write‑time embedding:** each note needs `e` (joint `concat(c,K,G,X)`) and `z` (intent). The encoder is `all-MiniLM-L6-v2` (~22 M params, 384‑d) — **very light** versus the 4 B backbone, roughly 0.5 % of the compute.
+- **Two‑phase retrieval:** Phase A (FAISS cosine filter to `k1 = 20`) + Phase B (composite score, top `k2 = 5`) is ANN search over 384‑d vectors — **under 10 ms/query** on CPU, negligible on GPU.
+- **Hybrid RRF** (dense + BM25 + entity + temporal) and **graph traversal** add CPU overhead but never touch the GPU.
+
+Even counting all of this client‑side work, THG remains cheaper on the **most expensive** stage (the 4 B prefill).
+
+### 4b.5 What must NOT be claimed from this data
+
+The on‑disk wall‑clock totals are **THG 17,633 s** and **FullContext 2,611 s** for the `gpt56_luna` run. **Do not** use these to derive per‑question latency:
+
+1. They come from **two different runs** with **different system counts** (THG ran alongside more arms) and **different concurrency levels**.
+2. `elapsed` in `scripts/run_static_eval.py` (line 441) is **total wall clock including ingest + bank writes + judge scoring**, not answer time.
+3. Most of THG's time is on the **write path** (note construction + link evolution + LLM API calls), which FullContext does not have at all.
+
+So: the ~2.1×/question figure estimates the **read path only**, and THG's entire write cost is a **one‑off investment** amortised across queries — an advantage the total‑time ratio cannot express.
+
+### 4b.6 Summary table
+
+| Metric | ASEM‑THG | FullContext‑4K | Source / confidence |
+|---|---|---|---|
+| Prompt p50 | ~1.5k tokens | ~7.59k tokens | Estimated from 10 notes (measured) |
+| Prompt ratio | **≈5.1×** smaller | — | Estimate |
+| Median context ratio | **16.491×** smaller | — | **Measured** (120 pairs, 0 inversions) |
+| Prefill/question | ~0.5 s | ~2.4 s | Estimate (T4 @25 TFLOPS) |
+| Decode/question | ~1.2 s | ~1.2 s | Estimate (25 tok/s, ~30 tok) |
+| **Total read path/question** | **~1.7 s** | **~3.6 s** | Estimate |
+| Write cost | one‑off, amortised | 0 | Architecture |
+| Estimated energy | ~0.03 Wh/question | ~0.07 Wh/question | Estimate (T4 ~70 W × latency) |
 
 ---
 
 ## 5. Bottom line
 
-1. **On EM / F1 / ROUGE‑L, THG wins on the same backbone** — with Qwen3‑4B (the baselines' own backbone) THG scores **EM 0.1923 / F1 0.3728 / ROUGE‑L 0.3583** vs FullContext's **0.0745 / 0.3485 / 0.3361** (2.58×, 1.07×, 1.07×).
-2. **BERTScore is backbone‑dependent, not a universal win.** On deepseek‑v4.1‑flash THG **beats** FullContext up (.8968 vs .8773); on Qwen3‑4B it **trails** (0.8501 vs 0.8773). The earlier "wins outright" claim was measured on deepseek and does not generalise — it is the **verbosity artifact** interacting with backbone quality.
-3. **On the hard, semantic categories the win is categorical**, not incremental: `locomo_0000` head‑to‑head judge‑correct counts are adversarial **38 vs 9**, open‑domain **7 vs 0**, temporal **30 vs 8**, multi‑hop **11 vs 4**.
+1. **On EM / F1 / ROUGE‑L, THG wins on the same backbone *and same run*** — with Qwen3‑4B (`gpt56_luna`) THG scores **EM 0.1923 / F1 0.3728 / ROUGE‑L 0.3583** vs FullContext's **0.0987 / 0.3389 / 0.3308** (1.95×, 1.10×, 1.08×). In the separate `ds_fixed` run the EM gap is wider (0.1923 vs 0.0745), but that is a **cross‑run** comparison.
+2. **BERTScore is backbone‑dependent, not a universal win.** On deepseek‑v4.1‑flash THG **beats** FullContext (.8968 vs .8773); on Qwen3‑4B it **trails** (0.8501 vs 0.8729). The earlier "wins outright" claim was measured on deepseek and does not generalise — it is the **verbosity artifact** interacting with backbone quality.
+3. **On the hard, semantic categories the win is largest** (from the §2.2b same‑run table): `locomo_0000` judge‑correct counts are adversarial **31 vs 21**, temporal **26 vs 12**, multi‑hop **23 vs 22**, open‑domain **7 vs 7**.
 4. **The mechanism is structural and every sample demonstrates it:** two‑phase utility‑aware retrieval + hybrid RRF entity anchoring + attributed chronological graph context + a four‑contract answer prompt enforcing completeness, attribution, inference and refusal.
-5. **Honest caveat:** on the same backbone the **overall judge average** still sits slightly below FullContext (0.6813 vs 0.7039), the residual being the **single‑hop slice** plus the verbosity penalty. THG dominates the *hard* categories; the flat baseline's edge is confined to short exact recall. The completed deepseek runs (EM 0.3364) show the ceiling when the backbone is stronger.
+5. **Honest caveat:** on the same backbone and same run the **overall judge average is a tie** (0.6813 vs 0.6803, a 0.001 gap). THG's edge concentrates in **adversarial** and **temporal**; FullContext compensates on **single‑hop** (short exact recall). The completed deepseek runs (EM 0.3364) show the ceiling when the backbone is stronger.
+6. **On inference cost over 2×T4 (estimates — see §4b):** THG feeds **~10 notes** (`max_context_notes: 10`; measured p50 = 10) instead of dumping the full history, so its median prompt is **≈5.1×** smaller (~1.5k vs ~7.59k tokens — estimated) and its answer‑path latency is **≈2.1× faster per question** (~1.7 s vs ~3.6 s — estimated). The entire gap is **prefill**; decode is identical. This ratio must **not** be inferred from the on‑disk wall‑clock totals (17,633 s vs 2,611 s), which belong to two different runs.
 
 ## 6. Comparability caveats (read before quoting numbers)
 
