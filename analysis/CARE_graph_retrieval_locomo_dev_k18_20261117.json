@@ -1,0 +1,60 @@
+{
+  "benchmark": "locomo",
+  "k": 18,
+  "config": {
+    "knn": 5,
+    "w_next": 1.0,
+    "w_sem": 1.0,
+    "w_entity": 0.5,
+    "w_session": 0.3,
+    "w_community": 0.3,
+    "entity_max_df": 0.05,
+    "seeds": 5,
+    "alpha": 0.5,
+    "iterations": 40,
+    "louvain_seed": 20261117
+  },
+  "n_questions": 1531,
+  "seconds": 62.7,
+  "graph_stats_mean": {
+    "turns": 588.2,
+    "entities": 92.6,
+    "sessions": 27.2,
+    "communities": 10.3,
+    "semantic_edges": 2286.8,
+    "nodes": 718.3,
+    "edges": 4350.5
+  },
+  "recall": {
+    "dense": 0.7246077396348977,
+    "ppr": 0.695054089304746,
+    "mix_0.5": 0.7350758995449833,
+    "mix_0.7": 0.7356874327324042
+  },
+  "by_type": {
+    "dense": {
+      "multi-hop": 0.5517477439419751,
+      "open-domain": 0.47940074906367036,
+      "single-hop": 0.7776456599286563,
+      "temporal": 0.8052083333333332
+    },
+    "ppr": {
+      "multi-hop": 0.4730492182683604,
+      "open-domain": 0.44795109054857896,
+      "single-hop": 0.7639714625445898,
+      "temporal": 0.7776041666666667
+    },
+    "mix_0.5": {
+      "multi-hop": 0.5427368161588053,
+      "open-domain": 0.47725269883234195,
+      "single-hop": 0.796076099881094,
+      "temporal": 0.8153645833333332
+    },
+    "mix_0.7": {
+      "multi-hop": 0.5579310889106732,
+      "open-domain": 0.47725269883234195,
+      "single-hop": 0.7897344431232659,
+      "temporal": 0.8216145833333333
+    }
+  }
+}

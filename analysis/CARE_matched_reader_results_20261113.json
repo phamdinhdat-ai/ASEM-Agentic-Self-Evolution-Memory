@@ -1,0 +1,102 @@
+{
+  "protocol": "care-matched-reader-dense-top8-v1",
+  "n_questions": 1986,
+  "n_conversations": 10,
+  "arms": {
+    "bm25_8_first": {
+      "n": 1986,
+      "aggregate": 0.4588360878346916,
+      "answerable": 0.3488626431426607,
+      "refusal_correct": 374,
+      "refusal_n": 446,
+      "source_recall": 0.5353320337849509,
+      "model_calls": 1986,
+      "prompt_tokens": 1338256,
+      "completion_tokens": 80658,
+      "total_model_tokens": 1418914,
+      "mean_model_tokens": 714.4582074521652
+    },
+    "bm25_8_conditional": {
+      "n": 1986,
+      "aggregate": 0.5255809327544485,
+      "answerable": 0.46480761847424334,
+      "refusal_correct": 328,
+      "refusal_n": 446,
+      "source_recall": 0.703262046590421,
+      "model_calls": 2990,
+      "prompt_tokens": 3525360,
+      "completion_tokens": 121767,
+      "total_model_tokens": 3647127,
+      "mean_model_tokens": 1836.4184290030212
+    },
+    "dense_8_first": {
+      "n": 1986,
+      "aggregate": 0.41683361090117127,
+      "answerable": 0.2907997086037182,
+      "refusal_correct": 380,
+      "refusal_n": 446,
+      "source_recall": 0.45757466789818724,
+      "model_calls": 1986,
+      "prompt_tokens": 1335943,
+      "completion_tokens": 84340,
+      "total_model_tokens": 1420283,
+      "mean_model_tokens": 715.1475327291038
+    },
+    "dense_8_conditional": {
+      "n": 1986,
+      "aggregate": 0.49944034552623645,
+      "answerable": 0.4414860559838348,
+      "refusal_correct": 312,
+      "refusal_n": 446,
+      "source_recall": 0.6918707917413739,
+      "model_calls": 3056,
+      "prompt_tokens": 3687285,
+      "completion_tokens": 126670,
+      "total_model_tokens": 3813955,
+      "mean_model_tokens": 1920.420443101712
+    }
+  },
+  "contrasts": {
+    "dense_8_first_minus_bm25_8_first": {
+      "mean": -0.04200247693352035,
+      "improved": 284,
+      "worsened": 381,
+      "tied": 1321,
+      "cluster_bootstrap_95": [
+        -0.06562046546503622,
+        -0.01933261234743255
+      ]
+    },
+    "bm25_8_conditional_minus_bm25_8_first": {
+      "mean": 0.06674484491975695,
+      "improved": 279,
+      "worsened": 46,
+      "tied": 1661,
+      "cluster_bootstrap_95": [
+        0.050334679868706794,
+        0.08478407472252947
+      ]
+    },
+    "dense_8_conditional_minus_dense_8_first": {
+      "mean": 0.08260673462506522,
+      "improved": 344,
+      "worsened": 68,
+      "tied": 1574,
+      "cluster_bootstrap_95": [
+        0.06587214860962733,
+        0.10395667065301761
+      ]
+    },
+    "bm25_8_conditional_minus_dense_8_conditional": {
+      "mean": 0.026140587228212088,
+      "improved": 286,
+      "worsened": 229,
+      "tied": 1471,
+      "cluster_bootstrap_95": [
+        0.015282211963540031,
+        0.03771702853518145
+      ]
+    }
+  },
+  "interpretation": "Within-public-LoCoMo ablation; not held-out validation"
+}

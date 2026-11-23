@@ -1,0 +1,183 @@
+% Editable vector artwork for the CARE architecture figure.
+% Required libraries: tikz, arrows.meta, calc.
+\definecolor{careInk}{RGB}{25,47,72}
+\definecolor{careMuted}{RGB}{91,111,133}
+\definecolor{careBorder}{RGB}{206,219,231}
+\definecolor{careCanvas}{RGB}{246,249,253}
+\definecolor{careTeal}{RGB}{18,151,141}
+\definecolor{careBlue}{RGB}{57,106,209}
+\definecolor{careViolet}{RGB}{116,87,191}
+\definecolor{careAmber}{RGB}{226,146,43}
+\definecolor{careGreen}{RGB}{40,151,105}
+\definecolor{careRose}{RGB}{214,93,92}
+
+\begin{tikzpicture}[x=1cm,y=1cm,line cap=round,line join=round,
+  flow/.style={-{Stealth[length=2.4mm,width=1.8mm]},line width=1.1pt,draw=careInk},
+  returnflow/.style={-{Stealth[length=2.4mm,width=1.8mm]},line width=1.15pt,draw=careBlue},
+  card/.style={rounded corners=7pt,draw=careBorder,line width=.8pt,fill=white},
+  pill/.style={rounded corners=5pt,draw=careBorder,line width=.7pt,fill=white}]
+
+  % Quiet field and title establish visual hierarchy without a heavy frame.
+  \fill[careCanvas,rounded corners=11pt] (0,0) rectangle (16.7,7.45);
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{13}{15}\selectfont,text=careInk]
+    at (0.53,7.08) {CARE: source-anchored conditional reading};
+  \node[anchor=east,font=\sffamily\fontsize{8.5}{10}\selectfont,text=careMuted]
+    at (16.16,7.08) {\textbf{bounded inference} \; $\leq 2$ reader calls};
+  \draw[careBorder,line width=.6pt] (0.54,6.72) -- (16.16,6.72);
+
+  % Soft offset shadows and primary cards.
+  \foreach \xa/\xb in {0.52/3.16,3.66/6.30,6.80/9.64,10.14/12.78,13.28/16.18}{
+    \fill[careInk!7,rounded corners=7pt]
+      ($(\xa,3.68)+(0.055,-0.07)$) rectangle ($(\xb,6.35)+(0.055,-0.07)$);
+    \draw[card] (\xa,3.68) rectangle (\xb,6.35);
+  }
+
+  % Colored edge rails identify five functional roles.
+  \fill[careTeal,rounded corners=2pt] (0.52,3.95) rectangle (0.58,6.08);
+  \fill[careBlue,rounded corners=2pt] (3.66,3.95) rectangle (3.72,6.08);
+  \fill[careViolet,rounded corners=2pt] (6.80,3.95) rectangle (6.86,6.08);
+  \fill[careAmber,rounded corners=2pt] (10.14,3.95) rectangle (10.20,6.08);
+  \fill[careGreen,rounded corners=2pt] (13.28,3.95) rectangle (13.34,6.08);
+
+  % Icon medallions.
+  \fill[careTeal] (1.10,5.77) circle (.39);
+  \fill[careBlue] (4.24,5.77) circle (.39);
+  \fill[careViolet] (7.40,5.77) circle (.39);
+  \fill[careAmber] (10.72,5.77) circle (.39);
+  \fill[careGreen] (13.86,5.77) circle (.39);
+
+  % Archive icon: two speech cards with a short transcript line.
+  \draw[white,line width=1.05pt,rounded corners=1.3pt]
+    (0.94,5.88) rectangle (1.25,6.02);
+  \draw[white,line width=1.05pt,rounded corners=1.3pt]
+    (0.91,5.61) rectangle (1.25,5.79);
+  \draw[white,line width=.8pt] (0.96,5.70)--(1.18,5.70);
+
+  % Sparse retrieval icon: magnifying glass with two found traces.
+  \draw[white,line width=1.35pt] (4.18,5.82) circle (.115);
+  \draw[white,line width=1.35pt] (4.27,5.73)--(4.42,5.57);
+  \draw[white,line width=.7pt] (4.05,5.56)--(4.16,5.56);
+
+  % Reader icon: open pages and a small reasoning spark.
+  \draw[white,line width=1.0pt] (7.18,5.88) .. controls (7.28,5.96) and (7.34,5.93) .. (7.40,5.88)
+    .. controls (7.46,5.93) and (7.53,5.96) .. (7.62,5.88);
+  \draw[white,line width=1.0pt] (7.18,5.88)--(7.18,5.61)
+    .. controls (7.28,5.67) and (7.34,5.66) .. (7.40,5.61)
+    .. controls (7.46,5.66) and (7.54,5.67) .. (7.62,5.61)--(7.62,5.88);
+  \draw[white,line width=.75pt] (7.40,5.88)--(7.40,5.61);
+
+  % Grounding icon: shield with a check.
+  \draw[white,line width=1.1pt] (10.72,5.98)--(10.91,5.91)--(10.89,5.70)
+    .. controls (10.86,5.59) and (10.79,5.55) .. (10.72,5.51)
+    .. controls (10.65,5.55) and (10.58,5.59) .. (10.55,5.70)--(10.53,5.91)--cycle;
+  \draw[white,line width=1.0pt] (10.63,5.75)--(10.70,5.68)--(10.82,5.82);
+
+  % Answer icon: completed check in a ring.
+  \draw[white,line width=1.05pt] (13.86,5.77) circle (.20);
+  \draw[white,line width=1.2pt] (13.75,5.77)--(13.83,5.69)--(13.98,5.85);
+
+  % Card titles, descriptions, and numerical cues.
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{9.6}{11}\selectfont,text=careInk]
+    at (0.84,5.12) {Sources};
+  \node[anchor=north west,text width=2.05cm,align=left,
+    font=\sffamily\fontsize{7.5}{9.2}\selectfont,text=careMuted]
+    at (0.84,4.79) {Original turns\\speaker and date};
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{9.6}{11}\selectfont,text=careInk]
+    at (3.98,5.12) {Retrieval};
+  \node[anchor=north west,text width=2.05cm,align=left,
+    font=\sffamily\fontsize{7.5}{9.2}\selectfont,text=careMuted]
+    at (3.98,4.79) {Question-aware\\BM25 top eight};
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{9.6}{11}\selectfont,text=careInk]
+    at (7.12,5.12) {Reader};
+  \node[anchor=north west,text width=2.22cm,align=left,
+    font=\sffamily\fontsize{7.5}{9.2}\selectfont,text=careMuted]
+    at (7.12,4.79) {Answer, citations\\missing searches};
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{9.6}{11}\selectfont,text=careInk]
+    at (10.46,5.12) {Verifier};
+  \node[anchor=north west,text width=2.05cm,align=left,
+    font=\sffamily\fontsize{7.5}{9.2}\selectfont,text=careMuted]
+    at (10.46,4.79) {Visible sources\\person, event, time};
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{9.6}{11}\selectfont,text=careInk]
+    at (13.60,5.12) {Response};
+  \node[anchor=north west,text width=2.13cm,align=left,
+    font=\sffamily\fontsize{7.5}{9.2}\selectfont,text=careMuted]
+    at (13.60,4.79) {Supported answer\\or abstention};
+
+  \foreach \x/\n/\c in {2.82/1/careTeal,5.96/2/careBlue,9.30/3/careViolet,12.44/4/careAmber,15.84/5/careGreen}{
+    \fill[\c!13] (\x,6.02) circle (.18);
+    \node[font=\sffamily\bfseries\fontsize{7}{8}\selectfont,text=\c] at (\x,6.02) {\n};
+  }
+
+  % Primary inference route, with a distinct success edge.
+  \draw[flow] (3.18,5.05)--(3.63,5.05);
+  \draw[flow] (6.32,5.05)--(6.77,5.05);
+  \draw[flow] (9.66,5.05)--(10.11,5.05);
+  \draw[-{Stealth[length=2.4mm,width=1.8mm]},line width=1.25pt,draw=careGreen]
+    (12.80,5.05)--(13.25,5.05);
+  \node[anchor=south,font=\sffamily\bfseries\fontsize{7}{8}\selectfont,text=careGreen]
+    at (13.02,5.18) {valid};
+
+  % Conditional lower route: repair is visually subordinate but explicit.
+  \fill[careAmber!9,rounded corners=8pt] (3.65,0.64) rectangle (13.02,2.97);
+  \draw[careAmber!55,line width=.9pt,rounded corners=8pt] (3.65,0.64) rectangle (13.02,2.97);
+  \fill[careAmber] (4.18,2.55) circle (.25);
+  \draw[white,line width=1.05pt,-{Stealth[length=1.2mm,width=1mm]}]
+    (4.04,2.57) arc[start angle=165,end angle=470,radius=.14];
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{10}{12}\selectfont,text=careInk]
+    at (4.55,2.56) {Evidence repair};
+  \node[anchor=east,font=\sffamily\fontsize{7.4}{9}\selectfont,text=careMuted]
+    at (12.66,2.56) {one additional reader call};
+
+  % Four compact operations, each with its own small pictogram.
+  \foreach \xa/\xb in {3.98/5.95,6.17/8.14,8.36/10.33,10.55/12.52}{
+    \draw[pill] (\xa,1.04) rectangle (\xb,2.17);
+  }
+  \fill[careBlue!14] (4.96,1.91) circle (.15);
+  \draw[careBlue,line width=.9pt] (4.92,1.95) circle (.045);
+  \draw[careBlue,line width=.9pt] (4.95,1.91)--(5.02,1.84);
+  \node[font=\sffamily\bfseries\fontsize{7.4}{8.5}\selectfont,text=careInk]
+    at (4.96,1.58) {Lexical / stem};
+  \node[font=\sffamily\fontsize{6.7}{8}\selectfont,text=careMuted]
+    at (4.96,1.29) {broader pool};
+
+  \fill[careTeal!15] (7.15,1.91) circle (.15);
+  \draw[careTeal,line width=.85pt] (7.09,1.91)--(7.21,1.91)
+    (7.15,1.85)--(7.15,1.97);
+  \node[font=\sffamily\bfseries\fontsize{7.4}{8.5}\selectfont,text=careInk]
+    at (7.15,1.58) {Neighbors};
+  \node[font=\sffamily\fontsize{6.7}{8}\selectfont,text=careMuted]
+    at (7.15,1.29) {same session};
+
+  \fill[careViolet!15] (9.35,1.91) circle (.15);
+  \draw[careViolet,line width=.85pt,rounded corners=1pt]
+    (9.28,1.96) rectangle (9.42,1.87);
+  \draw[careViolet,line width=.7pt] (9.32,1.84)--(9.35,1.87);
+  \node[font=\sffamily\bfseries\fontsize{7.4}{8.5}\selectfont,text=careInk]
+    at (9.35,1.58) {Search queries};
+  \node[font=\sffamily\fontsize{6.7}{8}\selectfont,text=careMuted]
+    at (9.35,1.29) {reader-guided};
+
+  \fill[careRose!15] (11.53,1.91) circle (.15);
+  \draw[careRose,line width=.9pt,-{Stealth[length=.9mm,width=.8mm]}]
+    (11.44,1.87) arc[start angle=205,end angle=505,radius=.09];
+  \node[font=\sffamily\bfseries\fontsize{7.4}{8.5}\selectfont,text=careInk]
+    at (11.53,1.58) {Re-read + check};
+  \node[font=\sffamily\fontsize{6.7}{8}\selectfont,text=careMuted]
+    at (11.53,1.29) {final decision};
+
+  \node[font=\sffamily\bfseries\fontsize{8}{9}\selectfont,text=careMuted] at (6.06,1.60) {$+$};
+  \node[font=\sffamily\bfseries\fontsize{8}{9}\selectfont,text=careMuted] at (8.25,1.60) {$+$};
+  \draw[-{Stealth[length=1.6mm,width=1.2mm]},draw=careMuted,line width=.7pt]
+    (10.35,1.60)--(10.53,1.60);
+
+  \draw[-{Stealth[length=2.4mm,width=1.8mm]},draw=careRose,line width=1.15pt]
+    (11.48,3.66)--(11.48,3.02);
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{7.1}{8}\selectfont,text=careRose]
+    at (11.62,3.36) {gap or invalid};
+  \draw[returnflow] (7.99,2.98)--(7.99,3.65);
+  \node[anchor=east,font=\sffamily\bfseries\fontsize{7.1}{8}\selectfont,text=careBlue]
+    at (7.86,3.34) {expanded evidence};
+
+  \node[anchor=west,font=\sffamily\fontsize{7.3}{9}\selectfont,text=careMuted]
+    at (0.54,0.26) {Gold answers and annotated evidence are used only for evaluation; the archive is never rewritten.};
+\end{tikzpicture}

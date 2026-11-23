@@ -1,0 +1,253 @@
+{
+  "protocol": "care-resource-audit-v1",
+  "care": {
+    "questions": 1986,
+    "calls": 2990,
+    "repairs": 1004,
+    "prompt_tokens": {
+      "total": 3525360,
+      "mean": 1775.1057401812689,
+      "median": 1937.0,
+      "p95": 3399.75,
+      "max": 4089
+    },
+    "completion_tokens": {
+      "total": 121767,
+      "mean": 61.31268882175227,
+      "median": 59.5,
+      "p95": 109.75,
+      "max": 216
+    },
+    "total_tokens": {
+      "total": 3647127,
+      "mean": 1836.4184290030212,
+      "median": 2021.0,
+      "p95": 3505.5,
+      "max": 4203
+    },
+    "first_prompt_tokens": {
+      "total": 1338256,
+      "mean": 673.8449144008057,
+      "median": 670.0,
+      "p95": 801.0,
+      "max": 980
+    },
+    "first_completion_tokens": {
+      "total": 80658,
+      "mean": 40.61329305135952,
+      "median": 39.0,
+      "p95": 59.0,
+      "max": 114
+    },
+    "repair_prompt_tokens_on_repaired": {
+      "total": 2187104,
+      "mean": 2178.390438247012,
+      "median": 2146.0,
+      "p95": 2904.499999999999,
+      "max": 3321
+    },
+    "repair_completion_tokens_on_repaired": {
+      "total": 41109,
+      "mean": 40.94521912350598,
+      "median": 37.5,
+      "p95": 61.0,
+      "max": 170
+    },
+    "max_prompt_tokens_per_call": 3321,
+    "max_total_tokens_per_call": 3387,
+    "prompt_length_squared_sum": 5833115276,
+    "seconds": {
+      "total": 6206.645485007011,
+      "mean": 3.1251991364587166,
+      "median": 3.2893842685001573,
+      "p95": 5.513852295499987,
+      "max": 9.06939011500026
+    }
+  },
+  "relation_temporal": {
+    "questions": 1986,
+    "calls": 3000,
+    "repairs": 1014,
+    "prompt_tokens": {
+      "total": 3545421,
+      "mean": 1785.2069486404835,
+      "median": 2064.0,
+      "p95": 3399.75,
+      "max": 4089
+    },
+    "completion_tokens": {
+      "total": 122113,
+      "mean": 61.48690835850957,
+      "median": 60.0,
+      "p95": 109.75,
+      "max": 216
+    },
+    "total_tokens": {
+      "total": 3667534,
+      "mean": 1846.693856998993,
+      "median": 2153.0,
+      "p95": 3505.5,
+      "max": 4203
+    },
+    "first_prompt_tokens": {
+      "total": 1338256,
+      "mean": 673.8449144008057,
+      "median": 670.0,
+      "p95": 801.0,
+      "max": 980
+    },
+    "first_completion_tokens": {
+      "total": 80658,
+      "mean": 40.61329305135952,
+      "median": 39.0,
+      "p95": 59.0,
+      "max": 114
+    },
+    "repair_prompt_tokens_on_repaired": {
+      "total": 2207165,
+      "mean": 2176.6913214990136,
+      "median": 2146.0,
+      "p95": 2899.499999999999,
+      "max": 3321
+    },
+    "repair_completion_tokens_on_repaired": {
+      "total": 41455,
+      "mean": 40.88264299802761,
+      "median": 37.0,
+      "p95": 61.0,
+      "max": 170
+    },
+    "max_prompt_tokens_per_call": 3321,
+    "max_total_tokens_per_call": 3387,
+    "prompt_length_squared_sum": 5874354187,
+    "seconds": {
+      "total": 6236.890134529001,
+      "mean": 3.140428063710474,
+      "median": 3.378481157499891,
+      "p95": 5.512436235249766,
+      "max": 9.334188661000098
+    }
+  },
+  "sim_retrieval": {
+    "questions": 1986,
+    "calls": 1986,
+    "prompt_tokens": {
+      "total": 2207928,
+      "mean": 1111.7462235649548,
+      "median": 1105.0,
+      "p95": 1360.75,
+      "max": 1596
+    },
+    "completion_tokens": {
+      "total": 24214,
+      "mean": 12.192346424974824,
+      "median": 7.0,
+      "p95": 34.0,
+      "max": 79
+    },
+    "total_tokens": {
+      "total": 2232142,
+      "mean": 1123.9385699899294,
+      "median": 1116.0,
+      "p95": 1381.75,
+      "max": 1615
+    },
+    "prompt_length_squared_sum": 2498053616,
+    "seconds": {
+      "total": 2104.493408519003,
+      "mean": 1.0596643547427003,
+      "median": 0.8047804135000547,
+      "p95": 2.2880824539999765,
+      "max": 7.100130921999948
+    }
+  },
+  "full_context_8k": {
+    "questions": 1986,
+    "calls": 1986,
+    "prompt_tokens": {
+      "total": 15648292,
+      "mean": 7879.30110775428,
+      "median": 7884.0,
+      "p95": 7920.0,
+      "max": 7935
+    },
+    "completion_tokens": {
+      "total": 17118,
+      "mean": 8.619335347432024,
+      "median": 7.0,
+      "p95": 19.0,
+      "max": 214
+    },
+    "total_tokens": {
+      "total": 15665410,
+      "mean": 7887.920443101712,
+      "median": 7893.0,
+      "p95": 7928.0,
+      "max": 8095
+    },
+    "prompt_length_squared_sum": 123299308128,
+    "seconds": {
+      "total": 9422.725834020994,
+      "mean": 4.744574941601709,
+      "median": 4.724826075999999,
+      "p95": 5.3060772707498245,
+      "max": 13.92383136300009
+    }
+  },
+  "no_memory": {
+    "questions": 1986,
+    "calls": 1986,
+    "prompt_tokens": {
+      "total": 135877,
+      "mean": 68.41742195367573,
+      "median": 68.0,
+      "p95": 77.0,
+      "max": 88
+    },
+    "completion_tokens": {
+      "total": 18449,
+      "mean": 9.289526686807653,
+      "median": 9.0,
+      "p95": 18.0,
+      "max": 44
+    },
+    "total_tokens": {
+      "total": 154326,
+      "mean": 77.70694864048339,
+      "median": 77.0,
+      "p95": 89.0,
+      "max": 112
+    },
+    "prompt_length_squared_sum": 9330653,
+    "seconds": {
+      "total": 805.2969598709986,
+      "mean": 0.4054868881525673,
+      "median": 0.369770166999956,
+      "p95": 0.7643709892499828,
+      "max": 3.210276828000019
+    }
+  },
+  "latency_scope": "CARE includes per-question retrieval and model API calls; SimRetrieval excludes corpus embedding and query retrieval; context baselines exclude fixed-context construction. Model setup is excluded from all arms.",
+  "kaggle_receipt_sha256": {
+    "shard_0": {
+      "calls": "b1964f166d9fe2e7651b41b49a1293bd413758f44bb503fa182452c572173ebf",
+      "events": "cb933ffb3362163057549322434bc463bdb260e67bf702026b17660d82e1d255"
+    },
+    "shard_1": {
+      "calls": "a9a85bbcbaaa59879ed352e364ce408025a4d6ca86df0372efa98393d639e28f",
+      "events": "49c8d19bcb0a9b667ab46fd9a89077196a87db8951f81b58128b8c802ac9f082"
+    },
+    "shard_2": {
+      "calls": "eca0664c8bbf05c0a393aa13db03e3c4a617ee128780d2315d180486c7e2a557",
+      "events": "4c77cdfaffeedd58713a9bd49627f6c39d599f3279e2ee1f2f652d414b624414"
+    },
+    "shard_3": {
+      "calls": "4e7024c79fd0723a1cbd20e79a21a7490d5620fb84ca23fd514ad8d8452a09f6",
+      "events": "05bafa25771a363d048873390771a07061ffa781d9234c62f6d6ffc8c3ec9bd5"
+    },
+    "shard_4": {
+      "calls": "125a41c5e8fcb2e15d66490a3fc6c00faccd164e51a80d44f5c40a6c358bc78e",
+      "events": "bec1f414b016aed38c8b43d6c3d562b2a17c07ae50c5bb3a17b76b485496c57f"
+    }
+  }
+}

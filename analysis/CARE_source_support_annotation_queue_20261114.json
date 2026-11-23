@@ -1,0 +1,1782 @@
+[
+  {
+    "audit_id": "00007e3afaa8",
+    "question": "What does John do to supplement his basketball training?",
+    "answer": "Strength training",
+    "cited_turns": [
+      {
+        "source_id": "D8:7",
+        "session_date": "4:29 pm on 21 August, 2023",
+        "speaker": "John",
+        "text": "Thanks! Strength training is important for basketball because it builds muscle, increases power, and prevents injuries. It also helps me become more explosive, which is essential in games. Plus, it boosts my athleticism overall."
+      },
+      {
+        "source_id": "D8:9",
+        "session_date": "4:29 pm on 21 August, 2023",
+        "speaker": "John",
+        "text": "Definitely! Incorporating strength training really changed the game for me, improving my shooting accuracy, agility, and speed. It gave me the upper hand over my opponents and helped me up my game. It gave me the confidence to take on whatever comes my way."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0042d150d9f6",
+    "question": "How does Gina describe the feeling that dance brings?",
+    "answer": "expressing yourself and finding happiness",
+    "cited_turns": [
+      {
+        "source_id": "D9:10",
+        "session_date": "10:33 am on 9 April, 2023",
+        "speaker": "Gina",
+        "text": "Hey Jon! Got your back - dance is awesome for expressing yourself and finding happiness. Here's one of my trophies from a dance contest, nice reminder of the hard work, dedication and joy it brings. [image caption: a photo of a trophy with a glass globe on top]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "00559fb603b8",
+    "question": "What did Gina want her customers to feel in her store?",
+    "answer": "cozy",
+    "cited_turns": [
+      {
+        "source_id": "D3:6",
+        "session_date": "12:48 am on 1 February, 2023",
+        "speaker": "Gina",
+        "text": "Thanks! It took a bit of time but I wanted to make the place look like my own style and make my customers feel cozy. I chose furniture that looks great and is comfy too. The chandelier adds a nice glam feel while matching the style of the store."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "00585b340ea8",
+    "question": "When did Andrew adopt Scout?",
+    "answer": "22 November, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D28:8",
+        "session_date": "9:02 am on 22 November, 2023",
+        "speaker": "Andrew",
+        "text": "It took us a while to decide, but we ended up going with 'Scout' for our pup - it seemed perfect for their adventurous spirit."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0076fbb0ee22",
+    "question": "What did Evan suggest Sam try as a calming hobby?",
+    "answer": "painting",
+    "cited_turns": [
+      {
+        "source_id": "D10:9",
+        "session_date": "9:28 am on 11 September, 2023",
+        "speaker": "Evan",
+        "text": "Hey Sam, painting is super chill for calming down. Wanna give it a try? I can help you get started and recommend some supplies if you're interested. Let me know!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "007b3ce9ae19",
+    "question": "What did Calvin book a flight ticket for on 1st September 2023?",
+    "answer": "Boston",
+    "cited_turns": [
+      {
+        "source_id": "D17:6",
+        "session_date": "9:19 am on 2 September, 2023",
+        "speaker": "Calvin",
+        "text": "Wow, Dave, that's awesome! You should be really proud of yourself for bringing joy to others. I booked a flight ticket to Boston last week! I'm so excited about my upcoming trip to Boston. Look at this! See you soon, buddy! [image caption: a photo of a book with a boarding pass and a boarding pass]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "00e5d4c0504b",
+    "question": "Where are John and his teammates planning to explore on a team trip?",
+    "answer": "Universal Studios",
+    "cited_turns": [
+      {
+        "source_id": "D10:9",
+        "session_date": "2:52 pm on 31 August, 2023",
+        "speaker": "Tim",
+        "text": "Thanks! Excited to try this. Love experimenting with spices. By the way, have you been to Universal Studios? Planning a trip there next month."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0108c2dd5d55",
+    "question": "What are Jolene's favorite books?",
+    "answer": "Sapiens",
+    "cited_turns": [
+      {
+        "source_id": "D4:21",
+        "session_date": "9:48 am on 4 February, 2023",
+        "speaker": "Jolene",
+        "text": "Thanks Deborah! I'm really into this book called \"Sapiens\" - it's a fascinating look at human history and how technology has affected us. It's giving me a lot to think about!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "01929e5cbe07",
+    "question": "Which of Deborah`s family and friends have passed away?",
+    "answer": "Deborah's mother and father",
+    "cited_turns": [
+      {
+        "source_id": "D2:1",
+        "session_date": "9:49 am on 27 January, 2023",
+        "speaker": "Deborah",
+        "text": "Hey Jolene, sorry to tell you this but my dad passed away two days ago. It's been really tough on us all - his sudden death left us all kinda shell-shocked. I'm trying to channel my grief by spending more time with family and cherishing the memories. These moments remind me to live life fully. [image caption: a photo of a woman hugging a woman who is sitting on a couch]"
+      },
+      {
+        "source_id": "D1:5",
+        "session_date": "4:06 pm on 23 January, 2023",
+        "speaker": "Deborah",
+        "text": "It was full of memories, she passed away a few years ago. This is our last photo together. [image caption: a photo of a woman in a wheelchair hugging a woman in a wheelchair]"
+      },
+      {
+        "source_id": "D2:13",
+        "session_date": "9:49 am on 27 January, 2023",
+        "speaker": "Deborah",
+        "text": "That's my old home. I go there now and then for my mom, who passed away. Sitting in that spot by the window gives me peace."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "01b1671f7cfb",
+    "question": "When did Gina design a limited collection of hoodies?",
+    "answer": "21 June, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D16:3",
+        "session_date": "2:15 pm on 21 June, 2023",
+        "speaker": "Gina",
+        "text": "Thanks! This hoodie isn't for sale, it's from my own collection. I made a limited edition line last week to show off my style and creativity - it was tough but worth it! [image caption: a photo of a hoodie with a camouflage print on it]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "01ca8db49dd1",
+    "question": "When did Evan announce his marriage to his extended family?",
+    "answer": "6 January, 2024",
+    "cited_turns": [
+      {
+        "source_id": "D23:1",
+        "session_date": "1:32 pm on 6 January, 2024",
+        "speaker": "Evan",
+        "text": "Hey Sam, guess what? My partner and I told our extended fam about our marriage yesterday – it was so special! We've been totally overwhelmed by all their love and support. [image caption: a photo of a man and a woman standing on a rocky beach]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "01db42be2e32",
+    "question": "When did Caroline go to the LGBTQ support group?",
+    "answer": "8 May, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D1:3",
+        "session_date": "1:56 pm on 8 May, 2023",
+        "speaker": "Caroline",
+        "text": "I went to a LGBTQ support group yesterday and it was so powerful."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "01e3c5391293",
+    "question": "What is the name of Maria's puppy she got two weeks before August 11, 2023?",
+    "answer": "Coco",
+    "cited_turns": [
+      {
+        "source_id": "D30:1",
+        "session_date": "12:10 am on 11 August, 2023",
+        "speaker": "Maria",
+        "text": "Hey John! Long time no talk! Guess what - I got a puppy two weeks ago! Her name's Coco and she's adorable. [image caption: a photo of a white dog laying in the grass with a baseball]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "021a6ef7265d",
+    "question": "What activity did Evan start one year ago?",
+    "answer": "lifting weights",
+    "cited_turns": [
+      {
+        "source_id": "D12:2",
+        "session_date": "3:09 pm on 8 October, 2023",
+        "speaker": "Evan",
+        "text": "Hey Sam, tough news. Yeah, our health can really put a damper on things. I started lifting weights one year ago and it's been a journey. It was a struggle at first, but I'm seeing some gains. You interested in trying it out? [image caption: a photo of a man doing a squat on a machine in a gym]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "02395cee5781",
+    "question": "When Jon is planning to open his dance studio?",
+    "answer": "21 June, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D15:5",
+        "session_date": "10:04 am on 19 June, 2023",
+        "speaker": "Jon",
+        "text": "The official opening night is tomorrow. I'm working hard to make everything just right. Can't wait to see it all come together! [image caption: a photo of a group of young dancers in a dance studio]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "023b1fa02c8c",
+    "question": "When did Jon go to a fair to get more exposure for his dance studio?",
+    "answer": "25 April 2023",
+    "cited_turns": [
+      {
+        "source_id": "D10:1",
+        "session_date": "11:24 am on 25 April, 2023",
+        "speaker": "Jon",
+        "text": "Hi Gina! I just wanted to fill you in on my business. Yesterday, I went to a fair to show off my studio, it was both stressful and great! I got some possible leads, so that was awesome. But overall, I've learned that this biz is no cakewalk and having confidence in yourself is important for making it successful! [image caption: a photo of a group of women performing a dance on a stage]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "029af212305d",
+    "question": "What has John mostly found with the metal detector so far?",
+    "answer": "coins, a gold ring",
+    "cited_turns": [
+      {
+        "source_id": "D2:12",
+        "session_date": "9:26 pm on 20 March, 2022",
+        "speaker": "John",
+        "text": "Mostly just bottle caps, but a couple of times I found coins, and once even a gold ring."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "02d83c2cef15",
+    "question": "What places give Deborah peace?",
+    "answer": "Bali",
+    "cited_turns": [
+      {
+        "source_id": "D6:10",
+        "session_date": "4:12 pm on 22 February, 2023",
+        "speaker": "Deborah",
+        "text": "I've been blessed to travel to a few places and Bali last year was one of my favs. It was a gorgeous island that gave me peace, great for yoga. [image caption: a photo of a swing on a beach with a blue sky]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "02dbb714aea8",
+    "question": "What was Melanie's reaction to her children enjoying the Grand Canyon?",
+    "answer": "Thankfully, they enjoyed the Grand Canyon a lot!",
+    "cited_turns": [
+      {
+        "source_id": "D18:5",
+        "session_date": "6:55 pm on 20 October, 2023",
+        "speaker": "Melanie",
+        "text": "Yeah, you're right, Caroline. Family's super important to me. Especially after the accident, I've thought a lot about how much I need them. They mean the world to me and I'm so thankful to have them. Thankfully, they enjoyed the Grand Canyon a lot! [image caption: a photo of two children standing on a rocky cliff overlooking a canyon]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "02e973dda99d",
+    "question": "When did John have his first firefighter call-out?",
+    "answer": "31 July, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D26:4",
+        "session_date": "1:59 pm on 31 July, 2023",
+        "speaker": "John",
+        "text": "Thanks, Maria! It's been tough, but really rewarding. The training was intense and taxing, but it changed my view on helping others. Last Sunday we had our first call-out, and it was intense. We responded to a situation and our team worked together to help those in need. Seeing their relief was awesome. [image caption: a photo of a firefighter's gear laid out on the floor]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "02f3f0c7bb6c",
+    "question": "How long did Jolene work on the robotics project given to her by her Professor?",
+    "answer": "May 2023",
+    "cited_turns": [
+      {
+        "source_id": "D13:1",
+        "session_date": "3:56 pm on 6 June, 2023",
+        "speaker": "Jolene",
+        "text": "Hey Deborah! Long time no talk - I had lots of stuff going on. Remember the tough engineering project? I finally wrapped that up last month. Look at the result! [image caption: a photo of a solar powered vehicle with a solar panel on the back]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "02f95d309b75",
+    "question": "What special memories does Audrey have with her childhood dog, Max?",
+    "answer": "Taking long walks in the neighborhood, exploring new paths, him sniffing and marking his territory, sharing worries and hopes, and being a great listener.",
+    "cited_turns": [
+      {
+        "source_id": "D13:10",
+        "session_date": "3:52 pm on 27 July, 2023",
+        "speaker": "Audrey",
+        "text": "Max and I would take long walks in the neighborhood when I was a kid. We explored new paths, him sniffing and marking his territory. We grew really close, and I shared my worries and hopes with him. He was a great listener, always there for me. Those days are some of my favorite memories. "
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0345cc8b2939",
+    "question": "How long have Mel and her husband been married?",
+    "answer": "5 years",
+    "cited_turns": [
+      {
+        "source_id": "D3:16",
+        "session_date": "7:55 pm on 9 June, 2023",
+        "speaker": "Melanie",
+        "text": "5 years already! Time flies- feels like just yesterday I put this dress on! Thanks, Caroline! [image caption: a photo of a bride in a wedding dress holding a bouquet]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "037aa12ea0fe",
+    "question": "Where did Dave take a stunning photo of a waterfall?",
+    "answer": "Japan",
+    "cited_turns": [
+      {
+        "source_id": "D30:13",
+        "session_date": "10:54 am on 17 November, 2023",
+        "speaker": "Dave",
+        "text": "I totally agree, nature really can boost our spirits in tough times. Also, here's a picture I snapped last week! It's a peaceful scene with rocks and a waterfall. Pretty cool, huh? [image caption: a photo of a waterfall flowing over rocks and boulders]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "03ba9358bb80",
+    "question": "When did Melanie go on a hike after the roadtrip?",
+    "answer": "20 October, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D18:17",
+        "session_date": "6:55 pm on 20 October, 2023",
+        "speaker": "Melanie",
+        "text": "Thanks, Caroline! Yup, we just did it yesterday! The kids loved it and it was a nice way to relax after the road trip."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "03e5fbaa2ef9",
+    "question": "What kind of subjects does Evan enjoy painting?",
+    "answer": "landscapes",
+    "cited_turns": [
+      {
+        "source_id": "D8:20",
+        "session_date": "6:17 pm on 19 August, 2023",
+        "speaker": "Evan",
+        "text": "I love painting landscapes. Nature's beauty captivates me and brings me peace. Here's one of my recent works. [image caption: a photo of a painting of a sunset over the ocean]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "040ed132cbc0",
+    "question": "What was Sam limiting himself to on his new diet?",
+    "answer": "ginger snaps",
+    "cited_turns": [
+      {
+        "source_id": "D23:15",
+        "session_date": "1:32 pm on 6 January, 2024",
+        "speaker": "Evan",
+        "text": "Thanks, Sam! We're having a family get-together tonight and enjoying some homemade lasagna. Super excited! By the way, I've started a new diet—limiting myself to just two ginger snaps a day. What's on your menu tonight?\t"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "04552907b976",
+    "question": "How did the flood impact the homes in John's old area?",
+    "answer": "Many homes were ruined",
+    "cited_turns": [
+      {
+        "source_id": "D23:1",
+        "session_date": "6:29 pm on 7 July, 2023",
+        "speaker": "John",
+        "text": "Maria, since we talked, it's been tough. My old area was hit by a nasty flood last week. The infrastructure wasn't great so lots of homes were ruined. It's reminding me we need to fix things up in our community."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "04b64d8566ea",
+    "question": "What new diet and lifestyle change did Sam adopt over time?",
+    "answer": "new diet and exercise routine",
+    "cited_turns": [
+      {
+        "source_id": "D9:1",
+        "session_date": "10:18 am on 27 August, 2023",
+        "speaker": "Sam",
+        "text": "Hey Evan! Exciting news: I started a new diet and exercise routine last Monday and it's made a huge difference. I feel great! What about you, what changes have you made recently?"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "05a7df46e86d",
+    "question": "Which type of pizza did Audrey suggest trying first to someone new to Italian cuisine?",
+    "answer": "California or salmon roll",
+    "cited_turns": [
+      {
+        "source_id": "D25:8",
+        "session_date": "10:14 am on 24 October, 2023",
+        "speaker": "Audrey",
+        "text": "Definitely try a California or salmon roll first when trying sushi - they're easier. Mix it up with different sauces and dips too - it makes it more tasty. Enjoy and let me know how it goes! [image caption: a photo of a long plate of sushi with sauce on it]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "05d9fea1cc6e",
+    "question": "When did John first organize a charity tournament with his friends?",
+    "answer": "8 May, 2022",
+    "cited_turns": [
+      {
+        "source_id": "D10:4",
+        "session_date": "12:45 am on 8 May, 2022",
+        "speaker": "John",
+        "text": "Nope, not a new game. We put together a tournament for our favorite game, CS:GO. Lots showed up and we made a bunch of money for charity!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "060c9fdf690c",
+    "question": "Does Calvin want to expand his brand?",
+    "answer": "Yes",
+    "cited_turns": [
+      {
+        "source_id": "D12:11",
+        "session_date": "1:12 pm on 3 August, 2023",
+        "speaker": "Calvin",
+        "text": "My plan for now is to expand my brand worldwide and grow my fanbase. I want my music to reach more people and make an impact. Working with artists from around the globe and challenging myself to create special music are goals of mine too. Look at the photo of how I performed with the boys last night, they are great at the music! [image caption: a photo of a band playing on stage with lights on]"
+      },
+      {
+        "source_id": "D1:5",
+        "session_date": "11:53 am on 23 March, 2023",
+        "speaker": "Calvin",
+        "text": "I'm so excited to learn about Japanese culture and get a chance to expand."
+      },
+      {
+        "source_id": "D6:11",
+        "session_date": "11:50 am on 16 May, 2023",
+        "speaker": "Calvin",
+        "text": "Thanks Dave! Super excited for my upcoming performance in Tokyo this month. It's gonna be great to show my music to a whole new crowd and hopefully expand my following!"
+      },
+      {
+        "source_id": "D18:7",
+        "session_date": "10:56 am on 13 September, 2023",
+        "speaker": "Calvin",
+        "text": "Thanks Dave! Lots of cool stuff happening. Next up, a tour - so excited! After that, I'm off to explore and grow my brand. Can't wait to see what the future has in store!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "06fe91cf7a65",
+    "question": "Which game tournaments does John plan to organize besides CS:GO?",
+    "answer": "Fortnite",
+    "cited_turns": [
+      {
+        "source_id": "D18:9",
+        "session_date": "1:45 pm on 6 August, 2022",
+        "speaker": "John",
+        "text": "Also, I can host Fortnite competitions. I have already made some connections that will help me with this. My plan is to gain more experience and perfect my skills to be successful in this field."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "076ed9f672ec",
+    "question": "What filling did Joanna use in the cake she made recently in May 2022?",
+    "answer": "strawberry filling",
+    "cited_turns": [
+      {
+        "source_id": "D10:11",
+        "session_date": "11:54 am on 2 May, 2022",
+        "speaker": "Joanna",
+        "text": "Thanks! It's dairy-free vanilla with strawberry filling and coconut cream frosting. I gotta say, I really like your coconut reccomendation you gave a while back!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "077892d22839",
+    "question": "What type of car did Dave work on during the workshop?",
+    "answer": "Ford Mustang",
+    "cited_turns": [
+      {
+        "source_id": "D21:4",
+        "session_date": "2:44 pm on 4 October, 2023",
+        "speaker": "Dave",
+        "text": "Wow, Calvin, that car looks great! Working on cars really helps me relax, it's therapeutic to see them come back to life. I've been working on that Ford Mustang I found in a junkyard - it was in bad shape, but I knew it had potential."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "079588241cc8",
+    "question": "Who or which organizations have been the beneficiaries of John's charity tournaments?",
+    "answer": "children's hospital",
+    "cited_turns": [
+      {
+        "source_id": "D29:3",
+        "session_date": "12:37 am on 31 October, 2022",
+        "speaker": "John",
+        "text": "Thanks! We all pulled together for a great cause. My gaming pals and I also played Overwatch and Apex Legends. Everyone had a blast raising money for the kids' hospital. The atmosphere was awesome and everyone was so competitive. In the end, we raised a good amount. Feels good to use our love of gaming for good!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "07b2919b0a5f",
+    "question": "When did Jon and Gina decide to collaborate to create dance content?",
+    "answer": "21 July, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D18:15",
+        "session_date": "5:44 pm on 21 July, 2023",
+        "speaker": "Gina",
+        "text": "Let's create some cool content and manage your social media accounts."
+      },
+      {
+        "source_id": "D18:13",
+        "session_date": "5:44 pm on 21 July, 2023",
+        "speaker": "Gina",
+        "text": "Yeah Jon, marketing is key for getting your dance studio noticed. Instagram and TikTok can help you reach a younger crowd. Posting dance clips or content related to dance can help. You could also collaborate with local influencers or dance communities. I could help you with making content or even managing your accounts if you want."
+      },
+      {
+        "source_id": "D18:14",
+        "session_date": "5:44 pm on 21 July, 2023",
+        "speaker": "Jon",
+        "text": "Sounds great. I'd really appreciate your help with making content and managing my social media. Let's get together and make the dance studio look awesome! [image caption: a photo of a room with a mirror and a desk]"
+      },
+      {
+        "source_id": "D18:19",
+        "session_date": "5:44 pm on 21 July, 2023",
+        "speaker": "Gina",
+        "text": "Definitely, Jon! I'm pumped to collaborate with you and make some sweet moves. Together, we can make a difference and show the world what we can do. Let's go for it!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "08f5ee3f1090",
+    "question": "What does Joanna love most about having turtles?",
+    "answer": "Having that picture on my cork board reminds me of the love and encouragement from them every day.",
+    "cited_turns": [
+      {
+        "source_id": "D15:11",
+        "session_date": "2:12 pm on 5 June, 2022",
+        "speaker": "Joanna",
+        "text": "Thanks, Nate! Having that picture on my cork board reminds me of the love and encouragement from them every day."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0905ddfd1daa",
+    "question": "What did Audrey get wtih having so many dogs?",
+    "answer": "Joy",
+    "cited_turns": [
+      {
+        "source_id": "D3:24",
+        "session_date": "4:19 pm on 16 April, 2023",
+        "speaker": "Audrey",
+        "text": "Yay! This'll be awesome! Seeing them all together, having fun and enjoying treats is the best. I can't imagine life without them, they bring so much joy. [image caption: a photography of a dog running with three other dogs in the background]"
+      },
+      {
+        "source_id": "D9:3",
+        "session_date": "1:51 pm on 26 June, 2023",
+        "speaker": "Audrey",
+        "text": "Thanks! They love it - so much space to run and explore, sniffing out new smells. It's awesome to see them having fun."
+      },
+      {
+        "source_id": "D11:20",
+        "session_date": "9:48 am on 8 July, 2023",
+        "speaker": "Audrey",
+        "text": "Yep! They bring me so much joy. Can't get bored at all. [image caption: a photo of two dogs running in a field with a ball in their mouth]"
+      },
+      {
+        "source_id": "D14:4",
+        "session_date": "11:05 am on 4 August, 2023",
+        "speaker": "Audrey",
+        "text": "Thanks! They've come a long way. They have so much fun with it, it's a great physical and mental workout. I take them to the park twice a week for practice - it's been a great bonding experience. [image caption: a photography of a group of dogs sitting on a dirt road]"
+      },
+      {
+        "source_id": "D23:18",
+        "session_date": "4:22 pm on 13 October, 2023",
+        "speaker": "Audrey",
+        "text": "I think i've said this so many times, but I really can't imagine my life without them - my little family. They always make me smile and give lots of love and companionship. Remember I had a tattoo of my four dogs? So I went to the tattoo parlor and got some more drawings on the tattoo. [image caption: a photo of a tattoo of a flower on a wrist]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0960a87f39d3",
+    "question": "What activities does Melanie partake in?",
+    "answer": "Pottery class",
+    "cited_turns": [
+      {
+        "source_id": "D5:4",
+        "session_date": "1:36 pm on 3 July, 2023",
+        "speaker": "Melanie",
+        "text": "Wow, Caroline! That's great! I just signed up for a pottery class yesterday. It's like therapy for me, letting me express myself and get creative. Have you found any activities that make you feel the same way? [image caption: a photo of a person holding a frisbee in their hand]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "09bd642dac72",
+    "question": "What items does John collect?",
+    "answer": "jerseys",
+    "cited_turns": [
+      {
+        "source_id": "D12:18",
+        "session_date": "3:00 pm on 2 October, 2023",
+        "speaker": "John",
+        "text": "That's great Tim! Books and movies make us escape to different places. I like to collect jerseys. [image caption: a photo of a bunch of basketball jerseys laying on a bed]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0a418c59da7e",
+    "question": "What did Caroline do after the road trip to relax?",
+    "answer": "Camping trip",
+    "cited_turns": [
+      {
+        "source_id": "D18:17",
+        "session_date": "6:55 pm on 20 October, 2023",
+        "speaker": "Melanie",
+        "text": "Thanks, Caroline! Yup, we just did it yesterday! The kids loved it and it was a nice way to relax after the road trip."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0a62f6f43ae5",
+    "question": "What is a skill that Audrey learned to take care of her dogs?",
+    "answer": "grooming",
+    "cited_turns": [
+      {
+        "source_id": "D16:2",
+        "session_date": "9:19 pm on 19 August, 2023",
+        "speaker": "Audrey",
+        "text": "Hi Andrew! The cafe sounds great, and the hike pic's great! August's been eventful - I learned a new skill! It was really awesome, making sure they were pampered and happy. I've always loved caring for my pups, and now taking care of their grooming myself makes me closer to them. They look so cute post-grooming!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0aab874c2828",
+    "question": "What does Joanna rely on for cheer and joy?",
+    "answer": "stuffed animals",
+    "cited_turns": [
+      {
+        "source_id": "D24:8",
+        "session_date": "2:01 pm on 21 October, 2022",
+        "speaker": "Joanna",
+        "text": "Tilly helps me stay focused and brings me so much joy. It's amazing how even stuffed animals can do that!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0b0d1e88770e",
+    "question": "In which state is the shelter from which James adopted the puppy?",
+    "answer": "Connecticut",
+    "cited_turns": [
+      {
+        "source_id": "D5:1",
+        "session_date": "9:52 am on 12 April, 2022",
+        "speaker": "James",
+        "text": "Hey John! Long time no chat - I adopted a pup from a shelter in Stamford last week and my days have been so much happier with him in the fam. I named it Ned. Any progress on your gaming goals? [image caption: a photo of a dog and a cat sitting on a dog bed]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0b4919ab3991",
+    "question": "When did Sam start working out at the gym?",
+    "answer": "27 July, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D4:15",
+        "session_date": "10:52 am on 27 July, 2023",
+        "speaker": "Sam",
+        "text": "Starting tomorrow, I will go to the gym and exercise regularly. The sooner I start, the sooner I will see the rewards of this activity."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0b8bbbb0d9cc",
+    "question": "What organization is John teaming up with for his charity work?",
+    "answer": "local organization that helps disadvantaged kids with sports and school",
+    "cited_turns": [
+      {
+        "source_id": "D6:17",
+        "session_date": "1:08 pm on 11 August, 2023",
+        "speaker": "John",
+        "text": "I'm teaming up with a local organization that helps disadvantaged kids with sports and school. I'm hoping to use my platform to have a positive impact on the community and inspire others as well."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0c63c5b49ed2",
+    "question": "How many tournaments has Nate won?",
+    "answer": "3",
+    "cited_turns": [
+      {
+        "source_id": "D10:4",
+        "session_date": "11:54 am on 2 May, 2022",
+        "speaker": "Nate",
+        "text": "Gaming has been my focus - practicing a lot and even winning a few tournaments. Last week I won my second tournament! [image caption: a photo of a woman with purple hair and a black dress]"
+      },
+      {
+        "source_id": "D27:1",
+        "session_date": "8:10 pm on 7 November, 2022",
+        "speaker": "Nate",
+        "text": "Hey Joanna! Hope you’re doing alright. Crazy thing happened - I was in the final of a big Valorant tournament last Saturday, and I won! It was the best feeling to see my name as the champion. Tournaments really bring out strong emotions in me."
+      },
+      {
+        "source_id": "D19:1",
+        "session_date": "10:57 am on 22 August, 2022",
+        "speaker": "Nate",
+        "text": "Woah Joanna, I won an international tournament yesterday! It was wild. Gaming has brought me so much success and now I'm able to make a living at something I'm passionate about - I'm loving it."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0ce9c1d95cb0",
+    "question": "What books has Tim read?",
+    "answer": "The Name of the Wind",
+    "cited_turns": [
+      {
+        "source_id": "D6:8",
+        "session_date": "1:08 pm on 11 August, 2023",
+        "speaker": "Tim",
+        "text": "Thanks! \"The Name of the Wind\" is great. It's a fantasy novel with a great magician and musician protagonist. The world-building and character development are really good. Definitely worth a read if you're looking for something captivating! [image caption: a photo of a book set of three books on a wooden table]"
+      },
+      {
+        "source_id": "D11:24",
+        "session_date": "8:17 pm on 21 September, 2023",
+        "speaker": "Tim",
+        "text": "Yeah! I think you'd love this fantasy novel by Patrick Rothfuss. It's a book that'll take you to a different world. Great for you when you're traveling. Have fun! [image caption: a photography of a book cover with a man in a hooded jacket]"
+      },
+      {
+        "source_id": "D28:17",
+        "session_date": "5:24 pm on 7 January, 2024",
+        "speaker": "Tim",
+        "text": "I'm currently reading a fantasy novel called \"The Name of the Wind\" by Patrick Rothfuss. It's really good!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0d3197ac8e2a",
+    "question": "What event did Maria participate in to show support for veterans' rights?",
+    "answer": "ring-toss tournament",
+    "cited_turns": [
+      {
+        "source_id": "D15:18",
+        "session_date": "7:38 pm on 20 May, 2023",
+        "speaker": "Maria",
+        "text": "Yep, John! Keep going and we'll make a difference! I'm currently planning a ring-toss tournament for the homeless shelter's fundraiser later this month, I can't wait to see the impact it will make. "
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0df158cb5abe",
+    "question": "When did Caroline meet up with her friends, family, and mentors?",
+    "answer": "2023-06-13",
+    "cited_turns": [
+      {
+        "source_id": "D3:11",
+        "session_date": "7:55 pm on 9 June, 2023",
+        "speaker": "Caroline",
+        "text": "Thanks, Mel! My friends, family and mentors are my rocks – they motivate me and give me the strength to push on. Here's a pic from when we met up last week! [image caption: a photo of a family posing for a picture in a yard]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0e51ed4fb1d4",
+    "question": "When was Joanna's second movie script shown on the big screens?",
+    "answer": "7 November, 2022",
+    "cited_turns": [
+      {
+        "source_id": "D25:2",
+        "session_date": "8:16 pm on 25 October, 2022",
+        "speaker": "Joanna",
+        "text": "Hey Nate! Another movie script that I contributed to was shown on the big screen last Sunday for the first time! It was such a surreal experience to see everything come together. I felt a mix of emotions, but overall, it was a satisfying moment. I've been waiting for this for a long time! [image caption: a photo of a box of cards with a quote on it]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0f2ffe3e1b28",
+    "question": "When did Joanna first watch \"Eternal Sunshine of the Spotless Mind?",
+    "answer": "21 January, 2022",
+    "cited_turns": [
+      {
+        "source_id": "D1:18",
+        "session_date": "7:31 pm on 21 January, 2022",
+        "speaker": "Joanna",
+        "text": "Yep, that movie is awesome. I first watched it around 3 years ago. I even went out and got a physical copy! [image caption: a photo of a dvd on a table with a blurry background]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "0fa9fb673198",
+    "question": "What do Deborah and Jolene plan to try when they meet in a new cafe?",
+    "answer": "Try fresh pastries",
+    "cited_turns": [
+      {
+        "source_id": "D26:10",
+        "session_date": "7:39 pm on 8 September, 2023",
+        "speaker": "Jolene",
+        "text": "Wanna meet up at that cafe next Monday? Let's try fresh pastries. [image caption: a photo of a coffee shop with a bunch of coffee machines]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "109fc20c85f0",
+    "question": "What does John like about Lebron James?",
+    "answer": "skills and leadership",
+    "cited_turns": [
+      {
+        "source_id": "D12:20",
+        "session_date": "3:00 pm on 2 October, 2023",
+        "speaker": "John",
+        "text": "Thanks! The Wolves are my team for sure. And LeBron is the man - love his skills and leadership."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "113cb79cb88b",
+    "question": "How long has Jolene been doing yoga?",
+    "answer": "3 years",
+    "cited_turns": [
+      {
+        "source_id": "D13:17",
+        "session_date": "3:56 pm on 6 June, 2023",
+        "speaker": "Jolene",
+        "text": "I've been doing them sporadically for about 3 years now and they've had a real positive effect on me."
+      },
+      {
+        "source_id": "D20:21",
+        "session_date": "9:11 am on 21 August, 2023",
+        "speaker": "Jolene",
+        "text": "Been doing it for 3 years. It's a great way to escape studying and work stress."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1186e0da8851",
+    "question": "What did James learn to make in the chemistry class besides omelette and meringue?",
+    "answer": "dough",
+    "cited_turns": [
+      {
+        "source_id": "D23:15",
+        "session_date": "9:23 pm on 4 September, 2022",
+        "speaker": "James",
+        "text": "At only $10 per class, it's very cheap! Also, I made meringue there and they taught us how to make the dough."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1268429c5f86",
+    "question": "What did Evan start sculpting years ago due to being inspired by a friend's gift?",
+    "answer": "painting",
+    "cited_turns": [
+      {
+        "source_id": "D8:14",
+        "session_date": "6:17 pm on 19 August, 2023",
+        "speaker": "Evan",
+        "text": "Thanks, Sam! It all started when a friend of mine gave me this painting one day, it inspired me a lot and that's when I started painting. And I joined the classes to find like-minded people and show them what I can do, you can always improve your skills. [image caption: a photo of a painting of a forest scene on a easel]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "135d1041279f",
+    "question": "What is one of Tim's favorite crime TV shows, as mentioned on November 11, 2023?",
+    "answer": "That",
+    "cited_turns": [
+      {
+        "source_id": "D17:10",
+        "session_date": "3:36 pm on 11 November, 2023",
+        "speaker": "Tim",
+        "text": "That's amazing! Same here. There's something special about being lost in an awesome fantasy realm and seeing what happens. It's like an escape. \"That\" is one of my favorite fantasy shows. Have you seen it?"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1382a5cc6a79",
+    "question": "What special items did Joanna get for everyone at her gaming party?",
+    "answer": "custom controller decorations",
+    "cited_turns": [
+      {
+        "source_id": "D14:24",
+        "session_date": "5:44 pm on 3 June, 2022",
+        "speaker": "Nate",
+        "text": "Thanks Joanna! I'm sure it'll be a blast. I'm even getting everyone custom controller decorations just for coming!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "14ebc8c35d1f",
+    "question": "What electronic device could Evan gift Sam to help him keep up with his fitness goals?",
+    "answer": "smart watch",
+    "cited_turns": [
+      {
+        "source_id": "D5:9",
+        "session_date": "7:52 pm on 7 August, 2023",
+        "speaker": "Evan",
+        "text": "Thanks Sam! My family motivates me to stay healthy. Well, it helps a lot with my health goals. It tracks my progress really well and serves as a constant reminder to keep going. [image caption: a photo of a person's wrist with a smart watch on it]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "15757aea93a3",
+    "question": "What kind of healthy meals did Sam start eating after getting a health scare?",
+    "answer": "grilled chicken and veggie stir-fry",
+    "cited_turns": [
+      {
+        "source_id": "D8:7",
+        "session_date": "6:17 pm on 19 August, 2023",
+        "speaker": "Sam",
+        "text": "Sure, I'm loving this recipe I found. It's a flavorful and healthy grilled chicken and veggie stir-fry. Wanna give it a go? [image caption: a photo of two bowls of food with chopsticks and sauce]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1706bd7776de",
+    "question": "Which year did Audrey adopt the first three of her dogs?",
+    "answer": "2020",
+    "cited_turns": [
+      {
+        "source_id": "D1:7",
+        "session_date": "1:10 pm on 27 March, 2023",
+        "speaker": "Audrey",
+        "text": "I've had them for 3 years! Their names are Pepper, Precious and Panda. I can't live without my little ones!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "18531a4e2764",
+    "question": "Which two significant life events occur in Evan's life in December 2023 with his partner?",
+    "answer": "Partner's pregnancy, Family reunion planning",
+    "cited_turns": [
+      {
+        "source_id": "D19:1",
+        "session_date": "1:45 pm on 9 December, 2023",
+        "speaker": "Evan",
+        "text": "Hey Sam, hope you're doing good. Wanted to share some amazing news - my partner is pregnant! We're so excited! It's been a while since we had a kiddo around."
+      },
+      {
+        "source_id": "D19:11",
+        "session_date": "1:45 pm on 9 December, 2023",
+        "speaker": "Evan",
+        "text": "Thanks, Sam! Yeah, we're planning a big family reunion next summer. It's going to be a blast and a perfect opportunity to add to our collage."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "18936b6f9904",
+    "question": "When is Andrew going to go hiking with Audrey?",
+    "answer": "2023-08-04",
+    "cited_turns": [
+      {
+        "source_id": "D14:6",
+        "session_date": "11:05 am on 4 August, 2023",
+        "speaker": "Audrey",
+        "text": "It's been tough at times, but overall it's going great. We're all growing together. Check out this pic of us on a trail hike! [image caption: a photography of a woman walking her dogs down a path]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "198e88c9a765",
+    "question": "What are Dave's dreams?",
+    "answer": "Dave's dreams include opening a shop, working on classic cars, and restoring vehicles. His dream of opening a shop was a step towards his other dream of working on classic cars.",
+    "cited_turns": [
+      {
+        "source_id": "D4:3",
+        "session_date": "6:24 pm on 1 May, 2023",
+        "speaker": "Dave",
+        "text": "Thanks, Cal! It's great to see my hard work paying off. Opening this shop was my dream, and I'm really happy to see it getting started. It was a lot of hard work, but it was worth it."
+      },
+      {
+        "source_id": "D4:5",
+        "session_date": "6:24 pm on 1 May, 2023",
+        "speaker": "Dave",
+        "text": "Thanks! Appreciate the support. My dream was to open a shop and it's a step towards my other dream of working on classic cars. I love their design and engineering."
+      },
+      {
+        "source_id": "D13:3",
+        "session_date": "5:22 pm on 11 August, 2023",
+        "speaker": "Dave",
+        "text": "Thanks, Calvin! This is a dream come true for me, as I've always wanted to learn auto engineering and work on building a custom car."
+      },
+      {
+        "source_id": "D22:7",
+        "session_date": "3:13 pm on 8 October, 2023",
+        "speaker": "Dave",
+        "text": "Thanks, Calvin. It's been my goal since I was a kid and it's awesome to be able to do something I love. Restoring things like this can be tough but the feeling of accomplishment it gives is great. Absolutely, I'm loving it."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "199f989c4ad6",
+    "question": "Who did John work with to raise awareness and funds for animal welfare?",
+    "answer": "local organization",
+    "cited_turns": [
+      {
+        "source_id": "D29:10",
+        "session_date": "8:06 pm on 9 August, 2023",
+        "speaker": "John",
+        "text": "Yep, we worked with a local organization that helps victims of domestic abuse. We raised awareness and funds at the event for the cause — it's unfortunate how many people suffer from it."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1a99268cd91d",
+    "question": "What cause did the 5K charity run organized by Maria support?",
+    "answer": "homeless shelter",
+    "cited_turns": [
+      {
+        "source_id": "D10:10",
+        "session_date": "12:24 am on 7 April, 2023",
+        "speaker": "Maria",
+        "text": "Last weekend I did something new that had an impact on me. I participated in a 5K charity run for a homeless shelter. It was awesome being surrounded by people all there for the same cause. There's something special about the energy and sense of unity. It was truly rewarding and reminded me why I'm passionate about charity work."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1da6df936c0d",
+    "question": "When was Jolene in Bogota?",
+    "answer": "4 February, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D4:33",
+        "session_date": "9:48 am on 4 February, 2023",
+        "speaker": "Jolene",
+        "text": "Here's a picture I took on vacation last summer in Bogota. It was so beautiful and calming watching the sunset over the water. It definitely made me appreciate nature's calming power. [image caption: a photo of a person walking on the beach with a surfboard]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1ee8244500f6",
+    "question": "What is Tim trying out to improve his strength and flexibility after recovery from ankle injury?",
+    "answer": "Yoga",
+    "cited_turns": [
+      {
+        "source_id": "D20:2",
+        "session_date": "9:52 am on 1 December, 2023",
+        "speaker": "John",
+        "text": "Hi Tim! Congrats on your success! Keep it up, you're doing great! I'm also trying out yoga to get a little extra strength and flexibility. It's challenging but worth it. [image caption: a photo of a white wall with a black lettering that says 30 positive suites]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "1f4ff0d97f32",
+    "question": "What fields would Caroline be likely to pursue in her educaton?",
+    "answer": "Mental health and counseling",
+    "cited_turns": [
+      {
+        "source_id": "D4:13",
+        "session_date": "10:37 am on 27 June, 2023",
+        "speaker": "Caroline",
+        "text": "I'm still figuring out the details, but I'm thinking of working with trans people, helping them accept themselves and supporting their mental health. Last Friday, I went to an LGBTQ+ counseling workshop and it was really enlightening. They talked about different therapeutic methods and how to best work with trans people. Seeing how passionate these pros were about making a safe space for people like me was amazing."
+      },
+      {
+        "source_id": "D7:7",
+        "session_date": "4:33 pm on 12 July, 2023",
+        "speaker": "Caroline",
+        "text": "I struggled with mental health, and support I got was really helpful. It made me realize how important it is for others to have a support system. So, I started looking into counseling and mental health career options, so I could help other people on their own journeys like I was helped."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "200c8b2e4974",
+    "question": "What are Melanie's pets' names?",
+    "answer": "Luna and Oliver",
+    "cited_turns": [
+      {
+        "source_id": "D7:18",
+        "session_date": "4:33 pm on 12 July, 2023",
+        "speaker": "Melanie",
+        "text": "Luna and Oliver! They are so sweet and playful - they really liven up the house! Just got some new shoes, too! [image caption: a photo of a person wearing pink sneakers on a white rug]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "2151034c9fc5",
+    "question": "When did John get his degree?",
+    "answer": "2023-04-01",
+    "cited_turns": [
+      {
+        "source_id": "D9:4",
+        "session_date": "9:36 am on 2 April, 2023",
+        "speaker": "John",
+        "text": "Thanks, Maria! It was quite a journey, but definitely worth it. I graduated last week!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "22677aa73e81",
+    "question": "What kind of healthy food suggestions has Evan given to Sam?",
+    "answer": "grilled chicken and veggie stir-fry",
+    "cited_turns": [
+      {
+        "source_id": "D8:7",
+        "session_date": "6:17 pm on 19 August, 2023",
+        "speaker": "Sam",
+        "text": "Sure, I'm loving this recipe I found. It's a flavorful and healthy grilled chicken and veggie stir-fry. Wanna give it a go? [image caption: a photo of two bowls of food with chopsticks and sauce]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "22ba308cce14",
+    "question": "What did Calvin recently get that is a \"masterpiece on canvas\"?",
+    "answer": "Ferrari",
+    "cited_turns": [
+      {
+        "source_id": "D23:16",
+        "session_date": "9:39 am on 15 October, 2023",
+        "speaker": "Calvin",
+        "text": "C'mon, remember how great you are! Keep going for those dreams. You got this! You know what Dave? Last week, I got a new Ferrari! It's a masterpiece on wheels. Excited for thrilling rides and unforgettable journeys! Perhaps a photo of this unique beauty will lift your mood. [image caption: a photography of a black sports car parked in front of a building]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "238214c8fcad",
+    "question": "What dance activity did Evan and his partner try in a recent weekend?",
+    "answer": "snowshoeing",
+    "cited_turns": [
+      {
+        "source_id": "D24:9",
+        "session_date": "12:17 am on 10 January, 2024",
+        "speaker": "Evan",
+        "text": "Yeah, they were understanding, which was great. But it's a good reminder to be more careful. We all make mistakes, but it's important to learn from them. Speaking of, my partner and I tried snowshoeing this weekend. It was part of a new adventure for us and surprisingly fun."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "239a0dd38391",
+    "question": "When did Deborah`s mother pass away?",
+    "answer": "2022",
+    "cited_turns": [
+      {
+        "source_id": "D1:5",
+        "session_date": "4:06 pm on 23 January, 2023",
+        "speaker": "Deborah",
+        "text": "It was full of memories, she passed away a few years ago. This is our last photo together. [image caption: a photo of a woman in a wheelchair hugging a woman in a wheelchair]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "283d8cbc4841",
+    "question": "When did Dave see Aerosmith perform live?",
+    "answer": "26 March, 2023",
+    "cited_turns": [
+      {
+        "source_id": "D2:12",
+        "session_date": "4:45 pm on 26 March, 2023",
+        "speaker": "Dave",
+        "text": "I finally saw them live and it was such an amazing experience! He was jamming out to one of their hits. Check out this epic picture of them! [image caption: a photo of two people on stage with guitars and a microphone]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "296a5d0b79b7",
+    "question": "What did Nate make for one of the ladies at his writing club?",
+    "answer": "a bookmark with a plant on top of it",
+    "cited_turns": [
+      {
+        "source_id": "D22:18",
+        "session_date": "11:15 am on 6 October, 2022",
+        "speaker": "Nate",
+        "text": "Awesome! I know encouragement is what got me so far in my gameing career, so I figured why not share the love."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "29b91f007cf7",
+    "question": "How does Calvin describe his process of adding acoustic elements to his songs?",
+    "answer": "Adding electronic elements to my songs gives them a fresh vibe. It's been an exciting process of self-discovery and growth!",
+    "cited_turns": [
+      {
+        "source_id": "D11:6",
+        "session_date": "6:38 pm on 21 July, 2023",
+        "speaker": "Calvin",
+        "text": "Thanks, Dave! It feels great having my own space to work in. I've been experimenting with different genres lately, pushing myself out of my comfort zone. Adding electronic elements to my songs gives them a fresh vibe. It's been an exciting process of self-discovery and growth!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "2ab3871f32cc",
+    "question": "What type of instrument does Caroline play?",
+    "answer": "Guitar",
+    "cited_turns": [
+      {
+        "source_id": "D15:19",
+        "session_date": "3:19 pm on 28 August, 2023",
+        "speaker": "Caroline",
+        "text": "Guitar's mostly my thing. Playing it helps me get my emotions out. [image caption: a photo of a guitar on display in a store]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "360c69f2b575",
+    "question": "How was Tim's experience in New York City?",
+    "answer": "Amazing. Everywhere you go there's something new and exciting. Exploring the city and trying all the restaurants was awesome. It's a must-visit!",
+    "cited_turns": [
+      {
+        "source_id": "D9:8",
+        "session_date": "6:59 pm on 26 August, 2023",
+        "speaker": "John",
+        "text": "Thanks! It was amazing. Everywhere you go there's something new and exciting. Exploring the city and trying all the restaurants was awesome. It's a must-visit!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "365057854b7c",
+    "question": "What kind of yoga for building core strength might John benefit from?",
+    "answer": "Core strength yoga",
+    "cited_turns": [
+      {
+        "source_id": "D20:8",
+        "session_date": "9:52 am on 1 December, 2023",
+        "speaker": "John",
+        "text": "Here's a photo of me in this pose. It's a good way to work out your legs and core. Give it a shot! [image caption: a photography of a man doing a yoga pose on a blue mat]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "3bfc16ec14bb",
+    "question": "What suggestions did Evan give for high-impact exercises?",
+    "answer": "Swimming, yoga, and walking",
+    "cited_turns": [
+      {
+        "source_id": "D24:17",
+        "session_date": "12:17 am on 10 January, 2024",
+        "speaker": "Evan",
+        "text": "I got it from a nearby restaurant. As for low-impact exercises, swimming, yoga, and walking are good options."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "3d20de21268b",
+    "question": "Which country do Calvin and Dave want to meet in?",
+    "answer": "Japan",
+    "cited_turns": [
+      {
+        "source_id": "D15:4",
+        "session_date": "11:06 am on 22 August, 2023",
+        "speaker": "Calvin",
+        "text": "Thanks, Dave! I had the opportunity to meet Frank Ocean at a music festival in Tokyo and we clicked. We've been speaking and sharing ideas we arranged a meeting and recorded a song in the studio at my mansion - it's been great!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "40d45e738455",
+    "question": "What challenges does Sam face in his quest for a healthier lifestyle, and how does he address them?",
+    "answer": "Work stress and lack of motivation",
+    "cited_turns": [
+      {
+        "source_id": "D20:8",
+        "session_date": "6:48 pm on 17 December, 2023",
+        "speaker": "Sam",
+        "text": "Yeah, I'm struggling with my weight and it's affecting my confidence. I feel like I can't overcome all the challenges with my weight, I keep lacking motivation. [image caption: a photo of a beach with a few people walking on it]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "4a77e683b5b2",
+    "question": "What might John's degree be in?",
+    "answer": "policymaking",
+    "cited_turns": [
+      {
+        "source_id": "D9:6",
+        "session_date": "9:36 am on 2 April, 2023",
+        "speaker": "John",
+        "text": "Thanks! I'm considering going into policymaking because of my degree and my passion for making a positive impact. There are many opportunities to make improvements."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "4d4b3715f2fe",
+    "question": "Which major holiday season conincides with Evan's wedding?",
+    "answer": "December 2023",
+    "cited_turns": [
+      {
+        "source_id": "D16:24",
+        "session_date": "9:13 pm on 9 November, 2023",
+        "speaker": "Evan",
+        "text": "Awesome, let's do it! Let's plan it for next month, I'm already excited about exploring it together!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "5629f4ed9932",
+    "question": "In what country was Jolene during summer 2022?",
+    "answer": "Colombia",
+    "cited_turns": [
+      {
+        "source_id": "D4:33",
+        "session_date": "9:48 am on 4 February, 2023",
+        "speaker": "Jolene",
+        "text": "Here's a picture I took on vacation last summer in Bogota. It was so beautiful and calming watching the sunset over the water. It definitely made me appreciate nature's calming power. [image caption: a photo of a person walking on the beach with a surfboard]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "587b1acc5804",
+    "question": "Does Evan live close to a beach or mountains?",
+    "answer": "beach",
+    "cited_turns": [
+      {
+        "source_id": "D24:21",
+        "session_date": "12:17 am on 10 January, 2024",
+        "speaker": "Evan",
+        "text": " By the way there are plenty of other low-impact exercises that can be fun. Going on beach sunsets is one of my favorites - good for exercise and totally calming. [image caption: a photo of a woman standing on a beach at sunset]"
+      },
+      {
+        "source_id": "D17:22",
+        "session_date": "7:30 pm on 21 November, 2023",
+        "speaker": "Evan",
+        "text": "Yeah, it really is. So serene and calming. [image caption: a photography of a person walking on a beach at sunset]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "5e2992b384f4",
+    "question": "Is Deborah married?",
+    "answer": "Yes",
+    "cited_turns": [
+      {
+        "source_id": "D28:11",
+        "session_date": "3:09 pm on 15 September, 2023",
+        "speaker": "Deborah",
+        "text": "That beach is super special to me. It's where I got married and discovered my love for surfing. It's always filled with joy and peace."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "6227cedc558f",
+    "question": "What kind of job is Joanna beginning to preform the duties of because of her movie scripts?",
+    "answer": "movie script writer",
+    "cited_turns": [
+      {
+        "source_id": "D26:1",
+        "session_date": "3:56 pm on 4 November, 2022",
+        "speaker": "Joanna",
+        "text": "Wow, Nate, I'm on fire! I just set up meetings with movie producers — my dreams are comin' true!"
+      },
+      {
+        "source_id": "D27:6",
+        "session_date": "8:10 pm on 7 November, 2022",
+        "speaker": "Joanna",
+        "text": "I am writing another movie script! It's a love story with lots of challenges. I've put lots of hard work into it and I'm hoping to get it on the big screen."
+      },
+      {
+        "source_id": "D27:10",
+        "session_date": "8:10 pm on 7 November, 2022",
+        "speaker": "Joanna",
+        "text": "Creating stories and watching them come alive gives me happiness and fulfillment. Writing has been such a blessing for me."
+      },
+      {
+        "source_id": "D28:8",
+        "session_date": "5:54 pm on 9 November, 2022",
+        "speaker": "Joanna",
+        "text": "Yup! I worked hard on another script and eventually created a plan for getting it made into a movie. It was a ton of work but satisfying. I pitched it to some producers yesterday and they really liked it. It gave me a big confidence boost!"
+      },
+      {
+        "source_id": "D29:1",
+        "session_date": "12:06 am on 11 November, 2022",
+        "speaker": "Joanna",
+        "text": "Nate, can you believe it? I'm finally filming my own movie from the road-trip script! [image caption: a photo of a person holding a clap board with a dog sleeping in a dog bed]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "63d133564f86",
+    "question": "Which country did James book tickets for in July 2022?",
+    "answer": "Greenland",
+    "cited_turns": [
+      {
+        "source_id": "D17:22",
+        "session_date": "9:49 am on 22 July, 2022",
+        "speaker": "James",
+        "text": "Everything went great! In addition, I even managed to get out to another country. The city of Nuuk, if you know. I stayed there quite a bit, but at least I had one more country to add to my bucket list!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "64a2d0d04e70",
+    "question": "Which US state was Sam travelling in during October 2023?",
+    "answer": "Nevada",
+    "cited_turns": [
+      {
+        "source_id": "D13:14",
+        "session_date": "4:07 pm on 14 October, 2023",
+        "speaker": "Sam",
+        "text": "We're traveling through Lake Tahoe! I heard it's great for kayaking."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "7aa4576c0aba",
+    "question": "In what country did Jolene buy snake Seraphim?",
+    "answer": "Paris",
+    "cited_turns": [
+      {
+        "source_id": "D2:24",
+        "session_date": "9:49 am on 27 January, 2023",
+        "speaker": "Jolene",
+        "text": "I bought it a year ago in Paris."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "86f0d81cf450",
+    "question": "Are John and James fans of the same football team?",
+    "answer": "Liverpool",
+    "cited_turns": [
+      {
+        "source_id": "D13:12",
+        "session_date": "4:30 pm on 13 June, 2022",
+        "speaker": "James",
+        "text": "Of course, they played well! As I like to say, there is no sport better than football, no club better than Liverpool! I don't miss a single match of theirs!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "a64c77a273fe",
+    "question": "In what country did Jolene's mother buy her the pendant?",
+    "answer": "Paris",
+    "cited_turns": [
+      {
+        "source_id": "D1:8",
+        "session_date": "4:06 pm on 23 January, 2023",
+        "speaker": "Jolene",
+        "text": "Staying connected is super important. Do you have something to remember her by? This pendant reminds me of my mother, she gave it to me in 2010  in Paris. [image caption: a photo of a heart shaped pendant with a bird on it]"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "c232972ee4e2",
+    "question": "Does Deborah live close to the beach or the mountains?",
+    "answer": "beach",
+    "cited_turns": [
+      {
+        "source_id": "D28:11",
+        "session_date": "3:09 pm on 15 September, 2023",
+        "speaker": "Deborah",
+        "text": "That beach is super special to me. It's where I got married and discovered my love for surfing. It's always filled with joy and peace."
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "dc63f5c75995",
+    "question": "What would be a good hobby related to his travel dreams for Tim to pick up?",
+    "answer": "Reading about travel destinations and cultures",
+    "cited_turns": [
+      {
+        "source_id": "D26:12",
+        "session_date": "3:35 pm on 26 December, 2023",
+        "speaker": "Tim",
+        "text": "It's true. Facing challenges can be tough, but it can make us stronger. I just visited a travel agency to see what the requirements would be for my next dream trip."
+      },
+      {
+        "source_id": "D29:9",
+        "session_date": "1:41 pm on 12 January, 2024",
+        "speaker": "Tim",
+        "text": "I'm proud of researching visa requirements for countries I want to visit. It feels like taking initiative is a step towards making my travel dreams a reality!"
+      },
+      {
+        "source_id": "D4:11",
+        "session_date": "4:17 pm on 2 August, 2023",
+        "speaker": "Tim",
+        "text": "Books can really inspire and help us keep our dreams alive. Keep it up!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  },
+  {
+    "audit_id": "e2ae8dc3ab3b",
+    "question": "What additional country did James visit during his trip to Canada?",
+    "answer": "Greenland",
+    "cited_turns": [
+      {
+        "source_id": "D17:22",
+        "session_date": "9:49 am on 22 July, 2022",
+        "speaker": "James",
+        "text": "Everything went great! In addition, I even managed to get out to another country. The city of Nuuk, if you know. I stayed there quite a bit, but at least I had one more country to add to my bucket list!"
+      }
+    ],
+    "claim_support": "",
+    "speaker_time_consistent": "",
+    "annotator_note": ""
+  }
+]

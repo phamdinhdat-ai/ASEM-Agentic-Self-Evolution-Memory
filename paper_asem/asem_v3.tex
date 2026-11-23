@@ -1,0 +1,586 @@
+\documentclass[11pt]{article}
+
+% Manuscript v3 (draft, 17 Nov 2026). Every number below comes from a saved
+% run; see Appendix A for the file behind each one. Items marked \pending{...}
+% have NOT been run yet and must be filled or removed before any submission.
+\usepackage[margin=1in]{geometry}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\emergencystretch=2em
+
+\newcommand{\care}{\textsc{CARE}}
+\newcommand{\evolve}{\textsc{ASEM-Evolve}}
+\newcommand{\pending}[1]{\textcolor{red}{\textbf{[PENDING: #1]}}}
+
+\title{When Does a Second Read Help?\\
+Answer-Time Repair, Open Embedders, and Guarded Memory Evolution\\
+for Long-Horizon Conversational QA}
+\author{Anonymous authors}
+\date{Draft v3}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Long-horizon conversational agents answer from histories that exceed their
+context window. A common remedy is a bounded reader that may search again when
+its first answer lacks support. We study such a reader, \care{}, which answers
+from immutable, source-addressed turns and allows at most one repair read, and
+we ask what limits it. On all 1,986 LoCoMo questions with a fixed Qwen3-8B
+reader, repair raises the aggregate score by 0.0667 but reverses 46 correct
+refusals; on all 500 LongMemEval cleaned-oracle questions it raises a diagnostic
+answerable F1 from 0.348 to 0.374 while correct abstentions fall from 21/30 to
+16/30. The same reader still refuses 16.7\% of answerable LoCoMo questions after
+repair. Four further findings shape the design space. First, replacing the
+MiniLM dense control with the open Qwen3-Embedding-0.6B reverses the earlier
+lexical advantage at the retrieval level: annotated-evidence recall at eight
+turns rises from 0.539 (BM25) to 0.617, and dense wins in all ten LoCoMo
+conversations. Second, the refusals that repair destroys resist verification:
+fourteen label-free trace features reach at most 0.60 AUC, and a Qwen3-8B yes/no
+verifier lowers the net repair gain from +133.1 to +125.1 score points because
+it never flags an unsupported premise. Third, most remaining LongMemEval errors
+are reader-side aggregation failures: widening the evidence bundle raises
+multi-session session recall from 0.74 to 0.93 on a 30-question probe without
+changing F1. Fourth, the repair gate's risk term never triggers repair on its own,
+and its speaker and event checks almost never fire outside LoCoMo. These results
+motivate \evolve{}, a two-layer memory in which an immutable archive remains the
+only citation source while a versioned derived layer is changed by guarded,
+code-checked operators. We implement and unit-test the operators and
+pre-register the evaluation; the evolution experiments themselves are not yet
+run, and we make no claim that memory evolution improves accuracy.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+An agent that talks with a user over months must answer questions whose
+evidence is scattered across sessions, may have been updated, and may be
+attributed to the wrong person by a careless reader. Two families of systems
+address this. \emph{Write-time} systems extract, link and consolidate memories
+as the conversation arrives~\cite{packer2023memgpt,chhikara2025mem0,amem2025,memoryr12025,cao2026higmem}.
+\emph{Read-time} systems keep the original history and decide, per question,
+what to read~\cite{du2026memr3,wang2026cuemem,liu2026livectx,chen2026justmem,yu2026lazymem}.
+A bounded corrective reader sits between them: it answers from a small bundle,
+reports what evidence is missing, and is allowed one more read~\cite{jiang2023active,asai2023selfrag,yan2024crag}.
+
+Our earlier manuscript introduced such a reader, \care{} (Conditional Answer
+Repair with Source-Anchored Evidence), and showed that under an 8K budget it
+outperforms a same-reader dense control on LoCoMo~\cite{maharana2024locomo}.
+This version asks a different question: \emph{what limits a bounded repair
+reader, and which of those limits can be removed by changing what is stored
+rather than how it is read?} We answer with a set of controlled diagnostics on
+two benchmarks and one fixed open-weights reader.
+
+\paragraph{Findings.}
+\begin{enumerate}
+  \item \textbf{The repair trade-off replicates.} On LoCoMo and on all 500
+  LongMemEval cleaned-oracle questions~\cite{wu2024longmemeval}, repair
+  improves answerable questions and costs correct refusals
+  (Section~\ref{sec:tradeoff}). The reader also refuses many answerable
+  questions, a cost the earlier manuscript did not report.
+  \item \textbf{A modern open embedder reverses the retrieval comparison.}
+  With Qwen3-Embedding-0.6B~\cite{zhang2025qwen3embedding}, dense retrieval
+  recovers more annotated evidence than BM25 on both benchmarks and in every
+  LoCoMo conversation (Section~\ref{sec:retrieval}). The earlier
+  ``sparse beats dense'' conclusion depended on a weak encoder.
+  \item \textbf{Lost refusals are hard to verify.} Neither cheap trace features
+  nor a same-model yes/no verifier separates correct repairs from repairs that
+  answer an unsupported question (Section~\ref{sec:verify}).
+  \item \textbf{The remaining error is mostly aggregation.} On multi-session
+  questions, more recall does not yield more correct answers
+  (Section~\ref{sec:errors}).
+\end{enumerate}
+
+\paragraph{Design.}
+Findings 3 and 4 point away from further read-time tuning and toward storing
+structure that a small reader cannot recompute reliably: versioned attribute
+values, explicit links across sessions, and guarded updates. Section~\ref{sec:evolve}
+describes \evolve{}, which keeps \care{}'s immutable archive as the only
+citation source and evolves a separate derived layer through operators whose
+preconditions are checked in code.
+
+\paragraph{Status of each claim.}
+Findings 1--4 are measured on saved runs. The \evolve{} operators are
+implemented and unit-tested. The evolution protocol is pre-registered but not
+yet executed; Section~\ref{sec:evolve} marks every missing result.
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Write-time memory.}
+MemGPT pages information between context and external storage~\cite{packer2023memgpt}.
+Mem0 extracts and consolidates memories~\cite{chhikara2025mem0}. A-Mem builds
+linked notes and revises their attributes~\cite{amem2025}; Memory-R1 learns
+write operations with reinforcement learning~\cite{memoryr12025}. HiGMem keeps
+a two-level event--turn memory whose event summaries are refreshed as new turns
+arrive, and lets an LLM choose which linked turns to read~\cite{cao2026higmem}.
+These systems change what is stored; none, to our knowledge, separates an
+immutable citation archive from an evolving derived layer with code-checked
+operator guards.
+
+\paragraph{Read-time memory access.}
+MemR$^3$ tracks evidence gaps while routing among retrieval, reflection and
+answering~\cite{du2026memr3}. CueMem and LiveCtx rebuild query-specific
+context from original turns~\cite{wang2026cuemem,liu2026livectx}. JustMem
+extracts atomic memory cards once per session and selects, per query, a lookup,
+a broadened composition, or a replay of source conversations; it does not update
+cards after writing them~\cite{chen2026justmem}. LazyMem defers construction to
+query time, labelling candidate messages keep or drop with a 4B model trained
+by GRPO~\cite{yu2026lazymem}. \care{} is closest to this family; its distinctive
+element is a one-repair ceiling with a reader that names missing evidence.
+
+\paragraph{Corrective and adaptive retrieval.}
+FLARE retrieves again when generation is uncertain~\cite{jiang2023active};
+Self-RAG learns to retrieve and critique~\cite{asai2023selfrag}; Adaptive-RAG
+chooses a retrieval strategy by question complexity~\cite{jeong2024adaptive};
+CRAG grades retrieved evidence and triggers corrective actions~\cite{yan2024crag}.
+Our verifier results (Section~\ref{sec:verify}) concern the step these methods
+share: deciding whether a second read should override the first answer.
+
+\paragraph{Evaluation.}
+LoCoMo provides long two-speaker dialogues with category-labelled
+questions~\cite{maharana2024locomo}; LongMemEval tests multi-session
+reasoning, updates and abstention~\cite{wu2024longmemeval}. Published
+LongMemEval accuracies use model judges and differ in setting; we report a
+diagnostic token F1 that is not comparable to them. Claim-level grounding
+checks such as RAGChecker~\cite{ru2024ragchecker} test a stronger notion of
+support than our citation checks.
+
+\section{The \care{} Read Path}
+\label{sec:care}
+
+A conversation is a sequence of immutable turns
+$s_i=(\mathrm{id}_i,\mathrm{session}_i,t_i,p_i,x_i)$ with session date $t_i$,
+speaker $p_i$ and text $x_i$. For a question $q$, the first pass ranks turns
+with BM25 and serializes the top eight under a 10,000-character cap. A frozen
+reader returns JSON with a short answer $a_1$, cited source IDs $C_1$ and at
+most two searches $Q_1$ for missing evidence. Code then (i) drops citations
+outside the visible bundle, (ii) turns an uncited answer into an abstention,
+and (iii) applies speaker-binding and two event checks (holiday names and
+cessation verbs). Repair is triggered by
+\begin{equation}
+\tau(q)=\mathbf{1}\bigl[r_1 \lor (a_1=\bot \land (Q_1\neq\varnothing \lor \rho(q)))\bigr],
+\label{eq:gate}
+\end{equation}
+where $r_1$ marks an invalid first pass and $\rho$ flags temporal, update,
+cross-speaker or plural-aggregation cues. The repair read unites unstemmed and
+stemmed BM25 hits, session neighbours and hits for the proposed searches,
+restores conversation order, applies the same cap and calls the reader once
+more. Each question costs $1+\tau(q)$ model calls. Full details are in the
+earlier manuscript; nothing in this section changed.
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\paragraph{Benchmarks.}
+\emph{LoCoMo:} ten conversations, 5,882 turns, 1,986 questions in five
+categories (282, 321, 96, 841 and 446 questions). We follow the category names
+used by A-Mem and HiGMem~\cite{amem2025,cao2026higmem}: 1 multi-hop, 2 temporal,
+3 open-domain, 4 single-hop, 5 adversarial (unsupported premise). The earlier
+manuscript labelled categories 1 and 4 as single-hop and conversational; 60\%
+of category-1 references are comma-separated lists, consistent with multi-hop,
+and the official scorer averages per-item F1 for that category. This mapping
+should still be confirmed against the benchmark's own documentation.
+\emph{LongMemEval cleaned oracle:} 500 questions over the annotated relevant
+sessions only (948 sessions, 10,960 turns), including 30 abstention questions.
+Because the oracle setting supplies the relevant sessions, it tests the reader
+far more than retrieval.
+
+\paragraph{Models.}
+The reader is Qwen3-8B~\cite{yang2025qwen3} at a pinned revision, half precision
+on two T4 GPUs through vLLM, 8,192-token window, temperature zero, non-thinking
+mode, at most 224 generated tokens. The dense encoder is Qwen3-Embedding-0.6B
+at a pinned revision, fp16, last-token pooling, instruction-prefixed queries
+and documents of at most 1,024 tokens (no LoCoMo turn and one LongMemEval turn
+were truncated). Every model is open-weights; no proprietary API is used.
+
+\paragraph{Metrics.}
+LoCoMo uses the benchmark scorer: per-item F1 for category 1, stemmed-token F1
+for categories 2--4, and a refusal phrase match for category 5; the aggregate
+is the mean per-question score. For LongMemEval we report a \emph{diagnostic}
+normalized token F1 on answerable questions and phrase-based abstention on the
+30 \texttt{\_abs} questions; this is not the official judged accuracy.
+Annotated-evidence recall is the fraction of gold evidence IDs in the top-$k$
+ranking or visible bundle; gold IDs never enter inference.
+
+\paragraph{Statistics.}
+LongMemEval questions have independent histories, so we bootstrap questions.
+LoCoMo has ten conversations; we report per-conversation outcomes where they
+matter, because percentile intervals from ten clusters are optimistic.
+
+\section{Findings}
+\label{sec:findings}
+
+\subsection{Repair trades refusals for answers on both benchmarks}
+\label{sec:tradeoff}
+
+\begin{table}[t]
+\centering
+\caption{First pass versus conditional repair with the same reader. LoCoMo
+values are the benchmark aggregate; LongMemEval values are diagnostic F1 on
+answerable questions. Refusal rate counts answerable questions that receive an
+abstention.}
+\label{tab:tradeoff}
+\small
+\begin{tabular}{llrrrr}
+\toprule
+Benchmark & Policy & Score & Correct refusals & Refused answerable & Calls \\
+\midrule
+LoCoMo (1,986) & First pass & 0.4588 & 374/446 & 630/1,540 (40.9\%) & 1,986 \\
+               & Repair (\care{}) & 0.5256 & 328/446 & 257/1,540 (16.7\%) & 2,990 \\
+LongMemEval (500) & First pass & 0.348 & 21/30 & 195/470 (41.5\%) & 500 \\
+                  & Repair & 0.374 & 16/30 & 156/470 (33.2\%) & 716 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:tradeoff} shows the same pattern on both benchmarks. On LoCoMo,
+repair raises the aggregate by 0.0667 (conversation-cluster interval
+[0.0503, 0.0848]); 279 answerable questions improve, none decline, and 46 of
+446 correct refusals are lost. On LongMemEval, the answerable F1 rises by
+0.026 (question bootstrap interval [0.014, 0.040]); 19 questions improve, none
+decline, and 5 of 21 correct abstentions are lost with none gained.
+
+Two quantities absent from the earlier manuscript matter as much as the
+aggregate. First, the reader refuses many answerable questions: 16.7\% of
+answerable LoCoMo questions remain refused after repair, and 33.2\% on
+LongMemEval. Second, a policy that always refuses scores 446/1,986 = 0.2246 on
+the LoCoMo aggregate, above the window-limited full-context baseline of the
+earlier study (0.1961). Aggregate scores that mix answer F1 with refusal accuracy
+should therefore be read with this floor in mind.
+
+\paragraph{Repair is much less effective outside LoCoMo.}
+On LoCoMo, 419 of 1,004 repairs (42\%) turn a refusal into an answer. On
+LongMemEval, 39 of 195 repaired answerable questions (20\%) receive an answer,
+and only 11 of those 39 reach F1 $\geq$ 0.5. The precision of repaired answers
+(0.28) is far below that of first-pass answers that needed no repair (0.63,
+$n=275$).
+
+\paragraph{Repair can lower source recall.}
+On LongMemEval, the share of annotated answer sessions in the visible bundle
+falls after repair for multi-session (0.917 to 0.835) and temporal questions
+(0.961 to 0.910). The expanded pool is restored to conversation order and cut
+at the same character cap, so turns from later sessions can be dropped. We have
+not isolated this mechanism.
+
+\subsection{The gate's extra checks rarely act}
+\label{sec:gate}
+
+In the complete LoCoMo trace, every one of the 1,004 repairs is triggered by an
+invalid first pass (137) or a non-empty search request (867); none is triggered
+by the risk term $\rho$ alone. In Eq.~\eqref{eq:gate}, $\rho$ therefore never
+changed a decision on this dataset. The speaker and event checks are written
+for named two-speaker dialogue: among the 500 LongMemEval questions, none names
+a holiday or a speaker label and one contains a cessation verb. Outside
+LoCoMo, the operative check is the citation requirement.
+
+\subsection{An open embedder reverses the retrieval comparison}
+\label{sec:retrieval}
+
+\begin{table}[t]
+\centering
+\caption{Recall of annotated evidence in the top-$k$ ranking (no reader
+involved). LoCoMo: 1,531 answerable questions with evidence IDs; LongMemEval:
+470 answerable questions, turn-level \texttt{has\_answer} labels. Hybrid is
+reciprocal-rank fusion of unstemmed BM25 and dense ($k_{\mathrm{RRF}}=60$).}
+\label{tab:retrieval}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+ & \multicolumn{4}{c}{$k=8$} & \multicolumn{2}{c}{$k=18$} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-7}
+Benchmark & BM25 & BM25-stem & Dense & Hybrid & BM25 & Dense \\
+\midrule
+LoCoMo & 0.539 & 0.578 & \textbf{0.617} & 0.612 & 0.624 & \textbf{0.725} \\
+LongMemEval & 0.837 & 0.846 & \textbf{0.926} & 0.911 & 0.941 & \textbf{0.988} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The earlier manuscript found that BM25 beats dense MiniLM-L6-v2 retrieval at
+eight turns (source recall 0.5353 versus 0.4576) and concluded that sparse
+selection was the better first bundle. Table~\ref{tab:retrieval} replaces the
+encoder with Qwen3-Embedding-0.6B. Dense recall at eight turns now exceeds
+BM25 on LoCoMo (0.617 versus 0.539) and LongMemEval (0.926 versus 0.837), and
+dense beats BM25 in all ten LoCoMo conversations (per-conversation gains
+from +0.006 to +0.151). Fusion does not beat dense alone overall.
+
+\begin{table}[t]
+\centering
+\caption{Recall at eight turns by question type.}
+\label{tab:retrieval-type}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Type & $n$ & BM25 & Dense & Hybrid \\
+\midrule
+LoCoMo 1 multi-hop & 281 & 0.225 & \textbf{0.378} & 0.328 \\
+LoCoMo 2 temporal & 320 & 0.648 & \textbf{0.754} & 0.720 \\
+LoCoMo 3 open-domain & 89 & 0.238 & \textbf{0.368} & 0.329 \\
+LoCoMo 4 single-hop & 841 & 0.634 & 0.671 & \textbf{0.695} \\
+\midrule
+LongMemEval knowledge-update & 72 & 0.912 & \textbf{0.975} & 0.961 \\
+LongMemEval multi-session & 121 & 0.670 & \textbf{0.858} & 0.818 \\
+LongMemEval temporal-reasoning & 127 & 0.827 & \textbf{0.910} & 0.890 \\
+LongMemEval single-session-user & 64 & 0.953 & \textbf{1.000} & 0.984 \\
+LongMemEval single-session-assistant & 56 & \textbf{0.982} & 0.929 & \textbf{0.982} \\
+LongMemEval single-session-preference & 30 & 0.861 & \textbf{0.989} & 0.972 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The largest gains fall on the question types that need several pieces of
+evidence: LoCoMo multi-hop (0.225 to 0.378) and LongMemEval multi-session
+(0.670 to 0.858), as Table~\ref{tab:retrieval-type} shows. These are recall
+results only. We therefore ran the full matched-reader comparison with the
+Qwen3-Embedding-0.6B top-8 as first bundle, keeping \care{}'s prompt, checks and
+repair gate. Without repair, the dense first pass beats BM25 end to end (0.4730
+versus 0.4588; paired $+0.0142$, conversation-cluster interval $[+0.0062,+0.0228]$,
+9 of 10 conversations). With repair it scores 0.5169 against \care{}'s 0.5256
+($-0.0087$, interval $[-0.0183,+0.0013]$, 3 of 10 conversations): answerable F1 is
+equal (0.4640 versus 0.4648) and \care{} keeps 16 more correct refusals. The dense
+system is better on multi-hop questions (0.3005 versus 0.2609) and uses fewer calls
+(2,813 versus 2,990). Repair adds less on top of the dense bundle ($+0.0439$) than on
+top of BM25 ($+0.0667$), consistent with a lexical repair expansion that complements a
+lexical first bundle more.
+
+\subsection{Lost refusals resist verification}
+\label{sec:verify}
+
+If a verifier could reject the repairs that answer unsupported questions while
+keeping the useful ones, repair would lose its abstention cost. We study the
+419 LoCoMo repairs that turn a first-pass refusal into an answer: 373 on
+answerable questions (279 improve the score, 94 tie) and 46 on unsupported
+questions, each of which loses a correct refusal. Accepting every flip adds
+133.1 score points to the first-pass total, which is \care{}'s result. A perfect
+verifier would add 179.1, a ceiling of +0.023 aggregate over \care{}.
+
+\paragraph{Label-free trace features fail.}
+We computed fourteen features available at inference, in two groups. Ten
+describe the repair trace: number of searches, number of citations, whether a
+citation is new relative to the first bundle and the fraction that are new,
+number of new candidates, number of risk cues, answer length, numeric answer,
+answer--question overlap and prompt length; their AUC for separating answerable
+from unsupported flips lies between 0.48 and 0.60. Four measure lexical
+coverage: coverage of the question's content words by the cited turns and by the
+first bundle, the number of content words, and the absence of citations; their
+AUC lies between 0.41 and 0.56. Coverage by the cited turns has AUC 0.46: wrong
+flips cite turns that share \emph{more} words with the question. The reader appears
+to cite a lexically related turn that does not establish the premise.
+
+\paragraph{A same-model yes/no verifier fails.}
+We asked Qwen3-8B, with the same pinned weights, whether the cited turns support
+the proposed answer, offering three labels. It labelled 362 flips SUPPORTED, 57
+NOT\_SUPPORTED and none PREMISE\_UNSUPPORTED. Accepting only SUPPORTED flips
+keeps 325 of 373 answerable flips and catches 9 of 46 unsupported ones; the net
+gain falls from +133.1 to +125.1, an aggregate of about 0.5215 instead of 0.5256.
+The verifier is worse than no verifier because it never recognises an
+unsupported premise, the exact failure it was meant to catch.
+
+\paragraph{A quote-grounded verifier.}
+We pre-registered a second verifier that must copy an exact premise quote and
+an exact answer quote from the cited turns; code checks both quotes, and a flip
+is accepted only if the verdict is SUPPORTED and both quotes are valid
+(rule R3, thinking mode). Its success criterion is a net gain above +133.1.
+It fails, with +90.6. In thinking mode the verifier labels 149 flips
+PREMISE\_UNSUPPORTED and catches 35 of 46 unsupported flips, but it also rejects
+185 of 373 useful ones. Across six scored configurations (two modes, four
+acceptance rules) no rule beats accepting every flip; the best exploratory rule,
+which rejects only PREMISE\_UNSUPPORTED verdicts, still loses 16.8 points.
+
+\subsection{Where the remaining errors are}
+\label{sec:errors}
+
+\begin{table}[t]
+\centering
+\caption{LongMemEval diagnostic F1 by question type (first pass / repair) and
+first-pass refusal rate on answerable questions. $n$ counts all questions of the
+type, including abstention questions; F1 and refusal rate use answerable ones.}
+\label{tab:lme-type}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Type & $n$ & First & Repair & Refused (first) \\
+\midrule
+single-session-user & 70 & 0.829 & 0.860 & 8\% \\
+single-session-assistant & 56 & 0.676 & 0.755 & 12\% \\
+knowledge-update & 78 & 0.541 & 0.555 & 15\% \\
+temporal-reasoning & 133 & 0.190 & 0.220 & 51\% \\
+multi-session & 133 & 0.075 & 0.082 & 69\% \\
+single-session-preference & 30 & 0.009 & 0.014 & 77\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:lme-type} locates the deficit in multi-session and temporal
+questions. Preference questions have rubric-style references that token F1
+cannot score, so their near-zero value says little about the system.
+
+\paragraph{More evidence does not fix aggregation.}
+A paired probe on 30 LongMemEval questions (12 multi-session, 9 temporal, 2
+knowledge-update, 2 single-session-user, 5 abstention) compared three arms with
+the same reader: the \care{} first bundle; a wider bundle (top 20 turns, 20,000
+characters); and the wider bundle with a reader prompt that does not instruct
+abstention on partial evidence. Widening raised multi-session session recall
+from 0.74 to 0.93 and left answerable F1 unchanged (0.259 in both). The
+relaxed prompt cut refusals from 60\% to 44\% but turned refusals into wrong
+numbers (for example 350000 for a reference of \$25,000), left F1 at 0.250 and
+lowered correct abstentions from 4/5 to 3/5. No multi-session question was
+answered correctly in any arm. The probe is small and diagnostic, but it points
+to counting, summing and ordering across turns as the bottleneck for an 8B
+non-thinking reader.
+
+\paragraph{Question dates help little.}
+The LongMemEval runner had not passed \texttt{question\_date} to the reader. A
+paired rerun of all 133 temporal questions reproduced the saved baseline exactly
+(first pass 0.190, repair 0.220) and showed that adding the date raises repair
+F1 by 0.0136 (10 questions better, 9 worse) and lowers refusals from 44\% to
+40\%. The omission was a configuration error but does not explain the temporal
+deficit.
+
+\section{\evolve{}: Guarded Evolution of a Derived Memory Layer}
+\label{sec:evolve}
+
+The findings suggest that a bounded reader fails where answers must be
+\emph{assembled}: counts across sessions, the current value of an attribute
+that changed, or the order of two events. A small reader can see every piece and
+still fail to combine them. Write-time structure can do that combination once,
+in code, and expose it to the reader. The risk is that write-time memory
+silently drifts or fabricates, which is why \care{} kept only raw turns.
+\evolve{} is designed to obtain the first without the second.
+
+\subsection{Two layers}
+
+\emph{The archive} holds original turns and is append-only; it is the only
+source a final answer may cite. \emph{The derived layer} holds attribute notes
+$(\text{subject},\text{attribute},\text{value},\text{sources},\text{valid\_from},\text{version},\text{status})$,
+typed links, and clusters. Every note cites archive turns, every change is
+logged, and the derived layer can be rebuilt from the archive.
+
+\subsection{Guarded operators}
+
+\begin{table}[t]
+\centering
+\caption{Operators of the derived layer and the guards checked in code before
+any change is applied. ADD, UPDATE and LINK are implemented and unit-tested;
+the others are specified.}
+\label{tab:ops}
+\small
+\begin{tabular}{p{1.6cm}p{5.2cm}p{6.6cm}}
+\toprule
+Operator & Purpose & Guard (rejected writes are logged, not applied) \\
+\midrule
+ADD & New attribute value & Cited turn exists; quote is an exact substring of it; value is a substring of the quote; no current note for the same key \\
+UPDATE & Value changed over time & Same key has a current note; new evidence is not older than its \texttt{valid\_from}; value differs; old version kept as \emph{superseded} \\
+LINK & Temporal, entity or causal edge & Kind in a closed set; no self-link; notes share an archive session or a cited turn \\
+SPLIT / MERGE & Fix conflated or duplicated notes & Each part keeps its own source span; paraphrases are not counted as independent sources \\
+PRUNE & Drop unused notes from the index & Never touches the archive; reversible \\
+REORG & Re-cluster the layout & Previous layout stored for comparison and rollback \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ops} lists the operators. ADD, UPDATE and LINK are implemented
+in the released code with fifteen unit tests covering archive immutability,
+fabricated quotes, values absent from the quote, out-of-order updates,
+unchanged values, version history, link guards, the audit log, and parsing of
+both benchmarks' session-date formats (raw date strings are not chronologically
+ordered in LoCoMo, so the update guard compares parsed dates).
+
+\subsection{Signals for self-directed evolution}
+
+Evolution is \emph{self}-directed only if no gold label drives it. The
+candidate signals are those the read path already produces: a repair that finds
+evidence after a refusal (a gap to fill), an invalid citation (a note to split
+or update), two supported but conflicting values (a version to create), and
+retrieval use of a note in accepted answers (a utility to raise by an
+exponential moving average). Section~\ref{sec:verify} is a warning: on LoCoMo
+the most natural signal, ``repair found an answer'', is right for answerable
+questions and wrong for unsupported ones, and neither cheap features nor a
+yes/no verifier can tell them apart. \evolve{} therefore must not write on a
+repair signal until a verifier passes a pre-registered test on development data.
+
+\subsection{Pre-registered evaluation}
+
+The protocol streams sessions in date order and asks questions at fixed
+checkpoints, on LongMemEval-S (full histories) as the test set and on LoCoMo
+for development only. Arms: static archive (\care{}), append-only notes, full
+evolution, evolution with each operator removed, and evolution driven by random
+signals. Metrics: answerable F1 and correct abstentions per checkpoint;
+stale-value, contradiction and duplicate rates in the derived layer; derived
+layer size; write and read calls. Hypotheses: (H1) at equal read budget,
+evolution beats the static archive on knowledge-update and multi-session
+questions; (H2) label-free signals choose operators better than random ones;
+(H3) contradiction and stale-value rates stay bounded as the stream grows. The
+code and protocol will be frozen and tagged before the test run.
+Results: \pending{H1--H3 on LongMemEval-S streams}.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What is supported.}
+A bounded repair reader buys answer coverage with abstention accuracy on two
+benchmarks, and leaves many answerable questions refused. A current open
+embedder recovers more evidence than BM25, so the earlier preference for sparse
+selection should not be generalised. The abstention cost of repair is not
+removed by cheap features or a same-model yes/no check. On LongMemEval, the
+remaining error is dominated by aggregation, not access.
+
+\paragraph{What is not.}
+We do not show that memory evolution improves accuracy; those experiments are
+pending. The dense first bundle wins end to end only without repair; with repair
+it is statistically indistinguishable from \care{} on this data. The
+LongMemEval metric is a diagnostic token F1 in the oracle setting, not the
+official judged accuracy on full histories. LoCoMo was used to develop \care{},
+so its numbers are development results, and an independent audit of LoCoMo's
+answer key has been reported that we have not yet incorporated. All results use
+a single reader model.
+
+\paragraph{Why this matters for memory design.}
+Read-time systems such as JustMem and LazyMem avoid irreversible compression;
+write-time systems such as HiGMem update summaries online~\cite{chen2026justmem,yu2026lazymem,cao2026higmem}.
+Our diagnostics suggest a narrower role for writing: not compressing the
+history, but storing the few derived facts that a small reader cannot combine
+on its own, under guards that keep every stored fact traceable to an archive
+turn.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We revisited a bounded repair reader for long-horizon conversational memory.
+Repair helps answerable questions and hurts abstention on two benchmarks; an
+open embedder overturns the earlier retrieval comparison; the refusals that
+repair destroys cannot be recovered by the checks we tried; and the residual
+error is aggregation. These findings motivate \evolve{}, a guarded two-layer
+memory whose operators are implemented and whose evaluation is pre-registered.
+
+\bibliographystyle{plain}
+\bibliography{asem}
+
+\appendix
+\section{Provenance of Reported Numbers}
+\label{app:provenance}
+
+{\footnotesize
+\begin{tabular}{>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{11.5cm}}
+\toprule
+Result & Source \\
+\midrule
+LoCoMo \care{} traces, flips, over-refusal, gate triggers & \texttt{build/care/relation\_full/shard-*/\allowbreak .../report.json} (arm \texttt{bridge\_v2}) \\
+LongMemEval 500 & \texttt{kaggle\_outputs/\allowbreak longmemeval\_20261116/\allowbreak shard-\{0..4\}} \\
+Retrieval recall & \texttt{analysis/\allowbreak CARE\_embed\_retrieval\_qwen3\_0p6b\_20261117.json}; embeddings from kernel \texttt{asem-care-embed-qwen3-0-6b} \\
+Label-free features & \texttt{analysis/\allowbreak ASEM\_Evolve\_flip\_signals\_20261116.txt}, \texttt{...coverage\_signal\_20261116.txt} \\
+Yes/no verifier & \texttt{analysis/\allowbreak ASEM\_Evolve\_verifier\_result\_20261117.md} \\
+30-question probe & \texttt{kaggle\_outputs/\allowbreak probe\_20261116} \\
+Question-date rerun & \texttt{kaggle\_outputs/\allowbreak qdate\_20261117} \\
+\evolve{} operators & \texttt{asem/evolve/}, \texttt{tests/test\_evolve\_p1.py} \\
+\bottomrule
+\end{tabular}}
+
+\end{document}

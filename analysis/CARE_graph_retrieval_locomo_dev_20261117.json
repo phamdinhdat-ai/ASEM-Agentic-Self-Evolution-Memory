@@ -1,0 +1,74 @@
+{
+  "benchmark": "locomo",
+  "k": 8,
+  "config": {
+    "knn": 5,
+    "w_next": 1.0,
+    "w_sem": 1.0,
+    "w_entity": 0.5,
+    "w_session": 0.3,
+    "w_community": 0.3,
+    "entity_max_df": 0.05,
+    "seeds": 5,
+    "alpha": 0.5,
+    "iterations": 40,
+    "louvain_seed": 20261117
+  },
+  "n_questions": 1531,
+  "seconds": 68.2,
+  "graph_stats_mean": {
+    "turns": 588.2,
+    "entities": 92.6,
+    "sessions": 27.2,
+    "communities": 10.3,
+    "semantic_edges": 2286.8,
+    "nodes": 718.3,
+    "edges": 4350.5
+  },
+  "recall": {
+    "dense": 0.6171711963042018,
+    "ppr": 0.6050230406693735,
+    "mix_0.3": 0.6136830534271552,
+    "mix_0.5": 0.616845474502705,
+    "mix_0.7": 0.6184189778426432,
+    "community": 0.41513346461178974
+  },
+  "by_type": {
+    "dense": {
+      "multi-hop": 0.3783123423786469,
+      "open-domain": 0.36797752808988765,
+      "single-hop": 0.6714229092350376,
+      "temporal": 0.7536458333333333
+    },
+    "ppr": {
+      "multi-hop": 0.3715235530322625,
+      "open-domain": 0.3854923992068738,
+      "single-hop": 0.6648830757035274,
+      "temporal": 0.7138020833333333
+    },
+    "mix_0.3": {
+      "multi-hop": 0.38015396655123196,
+      "open-domain": 0.3911103767349637,
+      "single-hop": 0.6690447879508521,
+      "temporal": 0.73515625
+    },
+    "mix_0.5": {
+      "multi-hop": 0.3878941800743636,
+      "open-domain": 0.3911103767349637,
+      "single-hop": 0.6714229092350376,
+      "temporal": 0.7372395833333333
+    },
+    "mix_0.7": {
+      "multi-hop": 0.3919316313538079,
+      "open-domain": 0.38670411985018727,
+      "single-hop": 0.672017439556084,
+      "temporal": 0.7408854166666667
+    },
+    "community": {
+      "multi-hop": 0.21999763103434203,
+      "open-domain": 0.2631086142322097,
+      "single-hop": 0.44490685691636933,
+      "temporal": 0.5505208333333333
+    }
+  }
+}

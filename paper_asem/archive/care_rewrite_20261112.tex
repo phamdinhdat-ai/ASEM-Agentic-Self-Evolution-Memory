@@ -1,0 +1,547 @@
+\documentclass[11pt]{article}
+
+% Standalone manuscript. The earlier draft depended on an ICLR style file that
+% is not present in this repository; this version compiles as a standard article.
+\usepackage[margin=1in]{geometry}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\emergencystretch=2em
+
+\newcommand{\care}{\textsc{CARE}}
+\newcommand{\botans}{\bot}
+\newcommand{\gold}{\mathcal{G}}
+\newcommand{\sources}{\mathcal{S}}
+
+\title{\care: Conditional Answer Repair with Source-Anchored Evidence\\
+for Long-Horizon Conversational Memory}
+\author{Anonymous authors}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Long-horizon conversational question answering is often framed as a problem
+of learning what an agent should store. Yet a more immediate failure arises
+when the original conversation is available in external storage but the
+answering model receives the wrong evidence, loses speaker or temporal
+attribution, or sees only a truncated context. We present \care{} (Conditional
+Answer Repair with Evidence), a source-anchored read path that preserves
+immutable, addressable conversation turns. It combines inexpensive sparse
+retrieval with a reader that returns an answer, supporting source identifiers,
+and targeted searches for missing evidence. Deterministic checks on source
+membership and selected person, event, and temporal constraints trigger a
+single broader retrieval-and-answer pass only when needed. On all 1,986
+questions from ten LoCoMo conversations, using the same pinned Qwen3-8B
+answer model, \care{} obtains a LoCoMo aggregate score of 0.5256, compared
+with 0.4069 for dense similarity retrieval over original turns, 0.1961 for
+an 8K-window context baseline, and 0.0774 without memory. Its raw
+BERTScore F1 is 0.9088. The paired aggregate gain over dense retrieval is
+0.1187 (conversation-cluster bootstrap 95\% interval: [0.0837, 0.1503]);
+\care{} also raises annotated-evidence recall from 0.5753 to 0.7033.
+A post-hoc coverage analysis qualifies the context result: the 8K baseline
+retains only 25.8\% of turns and no annotated answer evidence for 1,060
+answerable questions, but outperforms \care{} when all annotated evidence
+remains visible. These findings identify conditional, source-aware reading
+as a useful component of agent memory while delimiting the claim: this
+experiment does not establish an advantage over untruncated full context
+or demonstrate learned self-evolution of stored memories.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+An agent that answers questions about months of conversation faces a
+selection problem. Its historical record can be longer than the model's
+working context; a fact relevant to the current question may have occurred
+in an early session, whereas a recent exchange may be lexically similar but
+refer to a different person or event. LoCoMo was designed to expose such
+long-range conversational failures across sessions, temporal references,
+and questions with unsupported premises~\cite{maharana2024locomo}. The
+usual responses are to extend the context window or to write a compact
+external memory. Both still require the answer model to see, identify, and
+use the correct evidence at the moment of answering.
+
+Research on long-term agent memory has proposed atomic notes, learned write
+operations, dynamic links, value-aware retrieval, and runtime utility
+updates. These mechanisms concern how a memory \emph{store} should evolve.
+The experiments in this paper isolate a complementary prerequisite:
+\emph{How can an agent recover a supportable answer from an immutable
+multi-session record under a bounded reading context?} A learned memory
+writer can help only if the downstream reader preserves the identity of the
+person, event, time, and source that make an answer valid. Conversely,
+compressing or rewriting a source may erase details needed for a later
+question. We therefore study the read path over original turns and reserve
+claims about self-evolving stores for future experiments.
+
+Our answer is \care{}, a conditional read-and-repair procedure. Each turn is
+an addressable source with its session date and speaker. A first reader call
+uses a small sparsely retrieved bundle and emits both a concise answer and
+source identifiers. If the answer lacks an admissible citation, contradicts
+simple person or event checks, or explicitly identifies an evidence gap,
+\care{} expands the candidate set using lexical, stemmed, and local-neighbor
+views, then asks the reader once more. This design makes provenance part of
+the inference contract. It avoids paying for broad evidence on every
+question, while giving the reader a bounded opportunity to repair a narrow
+first pass.
+
+The empirical result is also conditional. On a complete, same-backbone
+1,986-question comparison, \care{} improves the LoCoMo aggregate score over
+dense turn retrieval by 0.1187. It makes 2,990 answer-model calls for 1,986
+questions, including 1,004 repair calls. However, an 8K context baseline
+performs better than \care{} on the subset whose annotated answer sources
+fit inside its retained context. Its poor overall score is strongly
+associated with losing earlier evidence, not evidence that direct reading
+is intrinsically inferior. This distinction matters when positioning a
+memory method against long-context models.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+  \item We formulate and implement a \emph{source-anchored conditional read
+  path}: immutable turns, explicit citation identifiers, bounded first-pass
+  retrieval, deterministic support checks, and one risk-gated repair pass.
+  The contribution is an answer-time memory interface, rather than an
+  unmeasured learned writer or a new backbone model.
+  \item We provide a full matched-backbone evaluation against question-only,
+  8K context, and dense raw-turn retrieval baselines on all 1,986 LoCoMo
+  questions, reporting the task-specific score, BERTScore, annotated-evidence
+  recall, per-category behavior, and model-call counts.
+  \item We conduct a source-coverage-conditioned context analysis. It shows
+  where an 8K context baseline fails because annotated evidence is outside
+  the window and where direct reading succeeds when evidence is visible.
+  \item We report a negative relation-and-temporal extension result and
+  distinguish complete comparisons from earlier partial graph and BM25
+  cohorts. This narrows the experimentally supported claim and identifies
+  the next controls needed to study self-evolving memory.
+\end{enumerate}
+
+\section{Related Work and Research Position}
+\label{sec:related}
+
+Retrieval-augmented generation accesses external text at answer time rather
+than relying solely on model parameters~\cite{lewis2020rag}. The quality of
+an answer can therefore depend separately on retrieval coverage and on the
+reader's ability to use retrieved passages. For multi-session agents,
+MemGPT uses a hierarchy of context and external memory to manage a limited
+working window~\cite{packer2023memgpt}. Mem0 explores extraction,
+consolidation, retrieval, and a graph-enhanced variant for long-term agent
+memory~\cite{chhikara2025mem0}. A-Mem creates structured, dynamically linked
+notes and revises contextual attributes as new information arrives
+~\cite{amem2025}. Memory-R1 learns write operations and an answering policy
+with reinforcement learning~\cite{memoryr12025}. These systems motivate the
+broader ASEM draft's concern with persistent memory organization.
+
+\care{} investigates a complementary design point. It leaves original turns
+immutable and places adaptation in the \emph{read operation}: source-aware
+retrieval, an answer that carries admissible citations, and conditional
+evidence repair. This is distinct from claiming that a graph, write policy,
+or learned utility estimate produced the observed gain. It is also distinct
+from a conventional dense top-$k$ reader, which retrieves semantically close
+turns but does not ask for missing-source searches or validate person and
+event bindings. The distinction is operational rather than a claim that no
+prior work has considered evidence-grounded answers.
+
+LoCoMo provides a useful setting because its annotated questions refer to
+long, multi-session conversations and include unanswerable questions
+~\cite{maharana2024locomo}. We use its answer annotations and source IDs
+only for post-hoc evaluation. BERTScore~\cite{zhang2020bertscore} complements
+the task metric by measuring textual semantic overlap; it cannot determine
+whether an answer is supported by a conversation.
+
+\section{Problem Setting}
+\label{sec:setting}
+
+Let a conversation be a sequence of original turns
+\begin{equation}
+\sources = (s_1,\ldots,s_N),\qquad
+s_i=(\mathrm{id}_i,\mathrm{session}_i,t_i,p_i,x_i),
+\label{eq:source}
+\end{equation}
+where $t_i$ is the session date, $p_i$ the speaker, and $x_i$ the turn text
+with an available image caption appended as text. The source identifier
+$\mathrm{id}_i$ is unique within a conversation. A question $q$ asks for a
+short answer $a$ or the abstention symbol $\botans$ if the premise lacks
+support. The reader has a bounded prompt window $W$, so a source-selection
+procedure must produce a visible bundle $B(q)\subseteq\sources$ before
+generation. The objective is to maximize answer quality while retaining
+source provenance and limiting model calls.
+
+This setting does not learn a write policy, update note embeddings, or train
+a utility function.
+All methods in the main comparison receive the same raw conversation history
+from which to construct their answer context; their mechanisms for selecting
+that context differ.
+
+\section{Method: Conditional Source-Anchored Reading}
+\label{sec:method}
+
+\subsection{Immutable Source Index and Cheap First Pass}
+
+For each conversation, \care{} indexes every turn by its source ID, session,
+speaker, and text. A BM25-style sparse score ranks full turns against the
+question, and the initial bundle contains the eight highest-ranked turns.
+The ranking is deterministic, with source order breaking ties. The retained
+source record preserves who spoke and when, which is essential for questions
+containing first-person pronouns or relative dates. A first answer call sees
+the question and a compact serialization of these original turns, rather
+than an LLM-generated summary whose source binding may be lost.
+
+\subsection{An Answer Contract That Exposes Gaps}
+
+The reader returns a JSON object
+\begin{equation}
+(a,C,Q)=R_{\theta}(q,B),
+\label{eq:reader}
+\end{equation}
+where $a$ is the proposed short answer, $C$ is a list of supporting source
+IDs, and $Q$ contains at most two short searches for missing evidence. A
+supported answer should cite visible turns; an unsupported premise should
+produce ``No information available.'' The prompt asks the reader to check
+the named person, event, and time before answering and to resolve relative
+dates only when an explicit session date supports the calculation.
+
+The returned citation is an \emph{audit handle}, not a proof of entailment.
+\care{} verifies that every cited ID is visible and applies deterministic
+checks to guard against assigning a speaker's first-person claim to another
+named person, confusing explicit event anchors, or citing a turn that lacks
+a requested cessation event. These checks reject some readily identifiable
+failures; they cannot certify all semantic relations. If a generated object
+is malformed or a supported answer has no admissible citation, the answer
+is converted to abstention for that pass.
+
+\subsection{Risk-Gated Evidence Expansion}
+
+Let $V(q,a,C,B)$ be the result of the parse, visibility, and source-binding
+checks above. A second pass is triggered by
+\begin{equation}
+\tau(q)=\mathbf{1}\!\left[
+\neg V(q,a,C,B_1)\ \lor\
+\bigl(a=\botans\ \land\ (Q\neq\varnothing\ \lor\ \rho(q,B_1))\bigr)
+\right],
+\label{eq:gate}
+\end{equation}
+where $\rho$ is a simple risk flag for temporal or multi-person wording and
+update cues. When $\tau=1$, \care{} assembles a broader source pool from
+the top 18 lexical turns, stemmed sparse ranking, neighbors of leading
+turns within the same session, and searches proposed by the first reader.
+The expanded reader is given a correction to check direct evidence for the
+person, event, and time in the question. Both passes use original turns;
+the visible evidence serialization is capped at 10,000 characters. The
+procedure makes at most two answer-model calls per question.
+
+\subsection{Relation-and-Temporal Extension}
+
+Explicit links and temporal consistency are recurring goals in long-term
+memory research. We therefore evaluate a conservative extension that adds relation and
+temporal proof checks to the same read path. It is an empirical ablation,
+not a component of the main \care{} result. The extension changes only 15
+of 1,986 answers and does not improve the aggregate score. Reporting this
+negative result avoids attributing gains to additional structure that the
+complete experiment does not support.
+
+\section{Experimental Design}
+\label{sec:experiments}
+
+\subsection{Dataset and Fixed Inference Configuration}
+
+We evaluate question answering on the ten LoCoMo conversations available in
+the locked dataset~\cite{maharana2024locomo}: 5,882 conversation turns and
+1,986 questions. The question categories contain 282 single-hop, 321
+temporal, 96 commonsense/inference, 841 conversational-context, and 446
+adversarial or unsupported-premise questions. The adapter passes text,
+session dates, speaker labels, and existing image captions. The experiment
+does not process image pixels and should not be presented as a multimodal
+benchmark result.
+
+All primary arms use Qwen3-8B~\cite{yang2025qwen3} at the pinned repository
+revision \texttt{b968826d9c46dd60\allowbreak 66d109eabc625518\allowbreak 8de91218}, served with
+vLLM on two NVIDIA T4 GPUs. The context window is 8,192 tokens; decoding
+uses temperature zero, a maximum of 224 answer tokens, and Qwen's
+non-thinking mode. Five shards contain whole conversations. The same 1,986
+question IDs and scorer are verified before merging each arm, and all arms
+finish without inference errors.
+
+\subsection{Baselines}
+
+\paragraph{NoMemory.} The backbone sees the question without the historical
+conversation. Its earlier baseline prompt requests a best guess when
+uncertain; this affects unsupported-premise questions.
+
+\paragraph{FullContext-8K.} The reader receives dated original turns. For
+each conversation, a fixed, query-independent context keeps the first five
+turns and the longest recent suffix that fits the 8K budget after reserving
+answer tokens. This is a \emph{window-limited} context baseline, not a model
+that sees the entire multi-session transcript.
+
+\paragraph{SimRetrieval.} A pinned
+\texttt{sentence-transformers/all-MiniLM-L6-v2} encoder embeds original
+dated turns and the question. Mean-pooled, $\ell_2$-normalized vectors
+retrieve the top 18 turns by cosine similarity, with a 10,000-character
+evidence cap. The answer model is called once. This is a raw-turn dense
+retrieval control; it does not reproduce the older project's note-writing
+SimRetrieval implementation.
+
+\paragraph{Historical graph and BM25 controls.} Earlier Qwen3-8B graph,
+source-hybrid, and BM25 runs are used only on their available, exactly
+paired question IDs. They are not part of the full four-arm table because
+the old graph run completed only 746 overlapping questions and the BM25
+checkpoint only 1,128; prompts and budgets also differ.
+
+\subsection{Metrics and Statistical Comparison}
+
+We implement the LoCoMo answer scorer: category 1 averages the best
+stemmed-token F1 for each comma-separated reference item; categories 2--4
+use stemmed-token F1, with the category-3 reference truncated before a
+semicolon; category 5 assigns one if the response contains one of the
+benchmark's accepted refusal phrases (``no information available'' or
+``not mentioned'') and zero otherwise. The \emph{aggregate LoCoMo score}
+averages these category-specific values; it is not token F1 on all items.
+We report answerable and category-5 groups separately.
+
+We also report raw BERTScore F1 and its baseline-rescaled variant. Both use
+the same \texttt{roberta-large} revision, layer 17, no IDF, and identical
+reference policy across arms~\cite{zhang2020bertscore}. The main tables
+show raw F1. Annotated-evidence recall is the fraction of gold source IDs
+present in the visible answer bundle, averaged over answerable questions.
+For paired LoCoMo differences we resample the ten conversations, rather
+than individual questions, 10,000 times and report percentile 95\%
+intervals. These intervals describe this public, small-cluster cohort; they
+are not evidence of performance on an independent held-out population.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Full Same-Backbone Comparison}
+
+\begin{table}[t]
+\centering
+\caption{Complete LoCoMo comparison on 1,986 identical questions. The
+aggregate mixes token-based scores for categories 1--4 with binary
+refusal accuracy for category 5. BERTScore is raw F1.}
+\label{tab:main}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Method & Aggregate & Answerable F1 & Refusal correct & BERTScore F1 \\
+\midrule
+NoMemory & 0.0774 & 0.0998 & 0/446 & 0.8776 \\
+FullContext-8K & 0.1961 & 0.2406 & 19/446 & 0.8912 \\
+SimRetrieval (raw turns) & 0.4069 & 0.3124 & 327/446 & 0.8896 \\
+\care{} Bridge v2 & \textbf{0.5256} & \textbf{0.4648} & 328/446 & \textbf{0.9088} \\
+Relation+Temporal extension & 0.5251 & 0.4603 & \textbf{334/446} & 0.9083 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:main} shows a 0.1187 aggregate advantage for \care{} over
+raw-turn dense retrieval, with a conversation-cluster 95\% interval of
+[0.0837, 0.1503]. The answerable difference is 0.1524
+([0.1287, 0.1770]). The difference on category-5 refusal is one question
+(328 versus 327), with a cluster interval for the accuracy difference that
+includes zero. Thus the main observed benefit over dense retrieval is in
+answering supported questions. \care{} reaches 0.7033 annotated-evidence
+recall versus 0.5753 for dense retrieval. Its conditional repair requires
+2,990 model calls for 1,986 questions, 50.6\% more than the single-call
+baselines. The relation-and-temporal extension makes 3,000 calls and
+changes 15 answers, lowering the aggregate from 0.5256 to 0.5251.
+
+The NoMemory and FullContext-8K refusal scores need particular care:
+NoMemory was prompted to guess, whereas \care{} and SimRetrieval were
+instructed to abstain when evidence was missing. The category-5 gap
+therefore partly reflects the answer contract. BERTScore also must not
+substitute for refusal accuracy: it measures semantic overlap with a
+standard ``Not mentioned'' reference even if the response is not a valid
+benchmark refusal.
+
+\subsection{Performance by Question Type}
+
+\begin{table}[t]
+\centering
+\caption{Category-specific LoCoMo scores. Category 5 is binary refusal
+accuracy; other cells follow the benchmark's token-based scorer.}
+\label{tab:category}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Category & $n$ & NoMemory & FullContext-8K & SimRetrieval & \care{} \\
+\midrule
+Single-hop (1) & 282 & 0.0966 & 0.2353 & 0.2283 & \textbf{0.2609} \\
+Temporal (2) & 321 & 0.0336 & 0.2367 & 0.3019 & \textbf{0.4415} \\
+Commonsense (3) & 96 & 0.1256 & \textbf{0.2014} & 0.1263 & 0.1647 \\
+Conversational (4) & 841 & 0.1232 & 0.2484 & 0.3658 & \textbf{0.5763} \\
+Unsupported (5) & 446 & 0.0000 & 0.0426 & 0.7332 & \textbf{0.7354} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The largest \care{} gains over dense retrieval occur on temporal and
+conversational-context questions. This pattern is consistent with a benefit
+from finding and binding old source turns, although the read prompt and
+validation rules differ and the experiment does not isolate either factor.
+Category 3 remains a weakness: FullContext-8K scores 0.2014 versus 0.1647
+for \care{}. In the older paired graph cohort, the previous graph reader
+also does better than \care{} on category-1 list questions and on refusal
+accuracy. These exceptions rule out a claim of uniform superiority.
+
+\subsection{The Context-Coverage Crossover}
+
+The 8K baseline retains 1,515 of 5,882 turns across the ten conversations
+(25.8\%); all conversations are truncated, with per-conversation retention
+between 21.9\% and 43.9\%. Its mean server-reported prompt length is
+approximately 7,879 tokens, close to the configured window. All 1,986
+completions stop normally, so its low score is not a generation-length
+failure. Dense retrieval uses approximately 1,112 prompt tokens per
+question on average, and NoMemory approximately 68. We do not report a
+comparable total prompt-token cost for \care{} because its per-call token
+receipts were not retained in the merged artifact.
+
+To distinguish evidence availability from answer quality, we reconstruct
+the fixed FullContext-8K selection and compare it to LoCoMo's annotated
+source IDs \emph{after} inference. Among 1,540 answerable questions, nine
+have malformed or absent source IDs and four lack annotations; we exclude
+these 13 from the coverage-conditioned table. The resulting 1,527
+questions are partitioned into all, partial, or no annotated sources
+retained by the 8K context.
+
+\begin{table}[t]
+\centering
+\caption{Answerable score conditioned on post-hoc annotated-source
+coverage in the fixed 8K context. Source annotations are diagnostic and
+were never available to a model during inference.}
+\label{tab:coverage}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Annotated sources in 8K & $n$ & FullContext-8K & SimRetrieval & \care{} \\
+\midrule
+All retained & 337 & \textbf{0.5926} & 0.3344 & 0.4939 \\
+Partly retained & 130 & \textbf{0.3242} & 0.1941 & 0.2152 \\
+None retained & 1,060 & 0.1191 & 0.3211 & \textbf{0.4892} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When all annotated sources remain visible, FullContext-8K exceeds \care{}
+by 0.0987 F1; the paired cluster interval for \care{} minus context is
+[-0.1378, -0.0620]. When no annotated source remains, \care{} exceeds the
+context baseline by 0.3701 ([0.3309, 0.4079]). This crossover is a central
+result: source-directed memory access is valuable when a bounded context
+omits answer evidence, while direct reading can be stronger when the
+evidence fits. An annotation may be incomplete; ``no annotated source''
+does not prove that every alternative supporting phrase is absent.
+
+\subsection{Earlier Incomplete Comparisons}
+
+Earlier Qwen3-8B graph and BM25 predictions were rescored and paired by
+exact question ID, but their runs did not cover the full set. On 746
+overlapping questions, \care{} scores 0.5188 versus 0.3786 for the old graph
+reader and 0.3467 for the source-hybrid reader. On 1,128 overlapping
+questions it scores 0.4912 versus 0.1372 for the old BM25 reader.
+These are cohort-specific, whole-pipeline comparisons; differing prompts,
+budgets, and refusal wording prevent an isolated architecture claim.
+The previous graph and source-hybrid readers correctly refuse more
+category-5 questions than \care{} within their 156-question overlap.
+
+An earlier full 1,986-question FullContext result used Qwen3-4B and a
+different scoring protocol; its reported 0.3485 F1 should not be placed in
+Table~\ref{tab:main}. A separate earlier Qwen3-8B FullContext attempt
+exceeded a 4,096-token evidence allowance and did not produce usable
+answers. Neither is evidence about the quality of an untruncated
+Qwen3-8B FullContext reader under the present evaluation contract.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What the experiments support.}
+The evidence supports a practical claim about the \emph{read path}:
+explicit source handles, speaker and date preservation, and a conditional
+chance to search again can improve answer quality under an 8K budget.
+The gain over dense retrieval is paired on every question and accompanied
+by higher annotated-source recall. It is obtained without training or
+changing Qwen3-8B parameters. The context-coverage crossover sharpens this
+claim: the method's comparative advantage is strongest when the relevant
+source is outside a fixed context window.
+
+\paragraph{What remains unproven.}
+The evaluation does not establish that \care{} is better than a model that
+reads all 5,882 turns, nor does it identify how much of the gain comes from
+sparse retrieval, the reader's citation contract, the abstention phrase,
+or the second call in isolation. The dense control and \care{} have
+different answer prompts. The NoMemory prompt's best-guess instruction
+especially confounds unsupported-question comparisons. Category-5 scoring
+checks specific phrases, and BERTScore is not a factual verifier. The ten
+public conversations were also used during method development, so these
+scores are not an independent generalization test.
+
+\paragraph{Relation to evolving memory stores.}
+Multi-attribute notes, learned write decisions, bidirectional links, and
+value-aware retrieval remain plausible ways to
+improve a long-term store. The present full experiment does not exercise
+those mechanisms. It instead identifies a source-anchored reader that could
+serve as their evaluation-preserving front end: a future writer can propose
+compressed memories while the original turn IDs remain available for
+verification and repair. Claims that memory \emph{self-evolution} caused
+the reported improvement would require a controlled write-path ablation
+on fresh conversations.
+
+\paragraph{Next decisive experiments.}
+The strongest context control would run the same Qwen3-8B reader with a
+window large enough to retain every turn and an aligned refusal contract.
+A shared-reader ablation should then vary only the candidate selector
+(dense, sparse, and conditional repair), holding prompt and evidence
+budget fixed. Finally, fresh histories, real image inputs, category-3
+reasoning, list aggregation, and prompt-token accounting are needed for
+a broader quality and efficiency claim.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\care{} turns long-term conversation access into a bounded, source-aware
+answering procedure. On a complete 1,986-question LoCoMo comparison with
+the same Qwen3-8B backbone, it improves the aggregate task score from
+0.4069 for dense raw-turn retrieval to 0.5256, while using a second
+answer-model call only when an initial answer or its evidence is at risk.
+The accompanying context audit shows why such a reader helps: an 8K fixed
+history loses most annotated answer evidence, whereas direct context
+reading can be better whenever that evidence remains visible. This is a
+measured contribution to the read stage of agent memory and a concrete
+foundation for future, separately evaluated self-evolving stores.
+
+\appendix
+\section{Reproducibility and Score Provenance}
+\label{app:reproducibility}
+
+The locked LoCoMo JSON used in this study has SHA-256 checksum
+\texttt{79fa87e90f040813\allowbreak 43b8c8debecb80a9\allowbreak a6842b76a7aa537d\allowbreak c9fdf651ea698ff4}.
+The full \care{}, context, and similarity-retrieval merged reports are
+stored at \path{build/care/relation_full_merged.json},
+\path{build/care/context_baselines_merged.json}, and
+\path{build/care/sim_retrieval_merged.json}. Post-hoc BERTScore results
+are stored at corresponding \path{*_bertscore.json} paths. Exact question
+ID and answer coverage, score recomputation, model revisions, and
+BERTScore input hashes are validated by the merge and summary scripts.
+The analysis of annotated-source visibility and cluster intervals is
+reproducible with \path{scripts/summarize_care_overview.py}; its
+machine-readable output is
+\path{analysis/ASEM_CARE_overview_20261112_data.json}.
+
+The answer model was pinned to \texttt{Qwen/Qwen3-8B} revision
+\texttt{b968826d9c46dd60\allowbreak 66d109eabc625518\allowbreak 8de91218}.
+SimRetrieval used \texttt{all-MiniLM-L6-v2} revision
+\texttt{1110a243fdf4706b\allowbreak 3f48f1d95db1a4f5\allowbreak 529b4d41}.
+BERTScore used \texttt{roberta-large} revision
+\texttt{722cf37b1afa9454\allowbreak edce342e7895e588\allowbreak b6ff1d59}, layer 17,
+without IDF. The full BERTScore reference for category 5 was
+``Not mentioned''; category-3 references were truncated before the first
+semicolon. Nine answerable questions with invalid source annotations
+and four without source annotations were excluded only from the
+coverage-conditioned analysis, not from the benchmark score.
+
+\bibliographystyle{plain}
+\bibliography{asem}
+\end{document}

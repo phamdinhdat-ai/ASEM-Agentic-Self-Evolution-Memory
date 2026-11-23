@@ -1,0 +1,326 @@
+{
+  "protocol": "care-ablation-v1",
+  "benchmark": "locomo",
+  "n": 1986,
+  "arms": {
+    "first_pass": {
+      "score": 0.4588360878346916,
+      "answerable": 0.3488626431426607,
+      "correct_refusals": 374,
+      "refusal_n": 446,
+      "refused_answerable": 629,
+      "calls_alone": 1986,
+      "tokens_per_q": 714.4486404833837,
+      "repairs": 0
+    },
+    "care": {
+      "score": 0.5255809327544485,
+      "answerable": 0.46480761847424334,
+      "correct_refusals": 328,
+      "refusal_n": 446,
+      "refused_answerable": 257,
+      "calls_alone": 2989,
+      "tokens_per_q": 1834.8625377643505,
+      "repairs": 1003
+    },
+    "no_cite_req": {
+      "score": 0.5143355483972817,
+      "answerable": 0.4678379215045464,
+      "correct_refusals": 301,
+      "refusal_n": 446,
+      "refused_answerable": 245,
+      "calls_alone": 2984,
+      "tokens_per_q": 1829.366565961732,
+      "repairs": 998
+    },
+    "no_binding": {
+      "score": 0.42757062371694915,
+      "answerable": 0.4721787394167929,
+      "correct_refusals": 122,
+      "refusal_n": 446,
+      "refused_answerable": 226,
+      "calls_alone": 2858,
+      "tokens_per_q": 1698.7517623363544,
+      "repairs": 872
+    },
+    "no_event": {
+      "score": 0.5245738834090307,
+      "answerable": 0.46480761847424334,
+      "correct_refusals": 326,
+      "refusal_n": 446,
+      "refused_answerable": 257,
+      "calls_alone": 2988,
+      "tokens_per_q": 1833.5377643504532,
+      "repairs": 1002
+    },
+    "no_checks": {
+      "score": 0.42656357437153125,
+      "answerable": 0.4721787394167929,
+      "correct_refusals": 120,
+      "refusal_n": 446,
+      "refused_answerable": 226,
+      "calls_alone": 2857,
+      "tokens_per_q": 1697.4269889224572,
+      "repairs": 871
+    },
+    "gate_always": {
+      "score": 0.522939542792117,
+      "answerable": 0.44841424154879495,
+      "correct_refusals": 348,
+      "refusal_n": 446,
+      "refused_answerable": 329,
+      "calls_alone": 3972,
+      "tokens_per_q": 2853.714501510574,
+      "repairs": 1986
+    },
+    "repair_expand_only": {
+      "score": 0.5288592958847136,
+      "answerable": 0.4722821828747022,
+      "correct_refusals": 323,
+      "refusal_n": 446,
+      "refused_answerable": 233,
+      "calls_alone": 2989,
+      "tokens_per_q": 1825.7724068479356,
+      "repairs": 1003
+    },
+    "repair_retry_only": {
+      "score": 0.4586682462771219,
+      "answerable": 0.34994489422491176,
+      "correct_refusals": 372,
+      "refusal_n": 446,
+      "refused_answerable": 622,
+      "calls_alone": 2989,
+      "tokens_per_q": 1082.9521651560926,
+      "repairs": 1003
+    },
+    "repair_no_search": {
+      "score": 0.5262358633661811,
+      "answerable": 0.46500287314625693,
+      "correct_refusals": 329,
+      "refusal_n": 446,
+      "refused_answerable": 258,
+      "calls_alone": 2989,
+      "tokens_per_q": 1762.4526686807653,
+      "repairs": 1003
+    }
+  },
+  "contrasts_vs_care": {
+    "no_cite_req": {
+      "mean": -0.011245384357166833,
+      "ci95": [
+        -0.016781083142639205,
+        -0.006086817235303539
+      ],
+      "ci_bonferroni": [
+        -0.01862314291692823,
+        -0.0043270665472993144
+      ],
+      "better": 7,
+      "worse": 28,
+      "clusters_better": 0,
+      "clusters_total": 10,
+      "verdict": "contributes (removing it lowers the score)"
+    },
+    "no_binding": {
+      "mean": -0.09801030903749937,
+      "ci95": [
+        -0.1127223977298198,
+        -0.08245346378447077
+      ],
+      "ci_bonferroni": [
+        -0.11887164326188718,
+        -0.07614014906415509
+      ],
+      "better": 18,
+      "worse": 211,
+      "clusters_better": 0,
+      "clusters_total": 10,
+      "verdict": "contributes (removing it lowers the score)"
+    },
+    "no_event": {
+      "mean": -0.0010070493454179255,
+      "ci95": [
+        -0.0023596035865974517,
+        0.0
+      ],
+      "ci_bonferroni": [
+        -0.002944062806673209,
+        0.0
+      ],
+      "better": 0,
+      "worse": 2,
+      "clusters_better": 0,
+      "clusters_total": 10,
+      "verdict": "not needed (within +/-0.01)"
+    },
+    "no_checks": {
+      "mean": -0.0990173583829173,
+      "ci95": [
+        -0.11437733491438115,
+        -0.08291444698938844
+      ],
+      "ci_bonferroni": [
+        -0.12080781568970546,
+        -0.07642456222032538
+      ],
+      "better": 18,
+      "worse": 213,
+      "clusters_better": 0,
+      "clusters_total": 10,
+      "verdict": "contributes (removing it lowers the score)"
+    },
+    "gate_always": {
+      "mean": -0.0026413899623315986,
+      "ci95": [
+        -0.01337328683371129,
+        0.007001959511261882
+      ],
+      "ci_bonferroni": [
+        -0.018079261402152918,
+        0.01009850981836469
+      ],
+      "better": 203,
+      "worse": 206,
+      "clusters_better": 5,
+      "clusters_total": 10,
+      "verdict": "inconclusive"
+    },
+    "repair_expand_only": {
+      "mean": 0.0032783631302651254,
+      "ci95": [
+        -0.00318046266486346,
+        0.008869306719810795
+      ],
+      "ci_bonferroni": [
+        -0.006331879426365811,
+        0.010745746621355594
+      ],
+      "better": 45,
+      "worse": 24,
+      "clusters_better": 7,
+      "clusters_total": 10,
+      "verdict": "inconclusive"
+    },
+    "repair_retry_only": {
+      "mean": -0.06691268647732661,
+      "ci95": [
+        -0.08621934417188352,
+        -0.0494496423797276
+      ],
+      "ci_bonferroni": [
+        -0.09262190287431629,
+        -0.04447766819904522
+      ],
+      "better": 47,
+      "worse": 281,
+      "clusters_better": 0,
+      "clusters_total": 10,
+      "verdict": "contributes (removing it lowers the score)"
+    },
+    "repair_no_search": {
+      "mean": 0.0006549306117325542,
+      "ci95": [
+        -0.0038344485118473543,
+        0.004879473971934495
+      ],
+      "ci_bonferroni": [
+        -0.005812211055479391,
+        0.006283840072782827
+      ],
+      "better": 31,
+      "worse": 28,
+      "clusters_better": 5,
+      "clusters_total": 10,
+      "verdict": "not needed (within +/-0.01)"
+    }
+  },
+  "decomposition": {
+    "repair_retry_only": {
+      "score": 0.4586682462771219,
+      "share_of_repair_gain": -0.0025146744706875833
+    },
+    "repair_expand_only": {
+      "score": 0.5288592958847136,
+      "share_of_repair_gain": 1.049117847740997
+    },
+    "care": {
+      "score": 0.5255809327544485,
+      "share_of_repair_gain": 1.0
+    }
+  },
+  "by_type": {
+    "multi-hop": {
+      "n": 282,
+      "first_pass": 0.15910739511569766,
+      "care": 0.2608996093316993,
+      "no_cite_req": 0.2608996093316993,
+      "no_binding": 0.26226739048671455,
+      "no_event": 0.2608996093316993,
+      "no_checks": 0.26226739048671455,
+      "gate_always": 0.2909740803785618,
+      "repair_expand_only": 0.26641274219151556,
+      "repair_retry_only": 0.16147146130955112,
+      "repair_no_search": 0.26164671886212904
+    },
+    "temporal": {
+      "n": 321,
+      "first_pass": 0.3715499453817211,
+      "care": 0.44149752981528684,
+      "no_cite_req": 0.43838226501777905,
+      "no_binding": 0.44201674061487145,
+      "no_event": 0.44149752981528684,
+      "no_checks": 0.44201674061487145,
+      "gate_always": 0.4070075476617533,
+      "repair_expand_only": 0.45520469492432103,
+      "repair_retry_only": 0.3715499453817211,
+      "repair_no_search": 0.43890147581736366
+    },
+    "open-domain": {
+      "n": 96,
+      "first_pass": 0.10012686965811966,
+      "care": 0.16468949164261665,
+      "no_cite_req": 0.16468949164261665,
+      "no_binding": 0.1751061583092833,
+      "no_event": 0.16468949164261665,
+      "no_checks": 0.1751061583092833,
+      "gate_always": 0.12041865830928332,
+      "repair_expand_only": 0.18131997241783426,
+      "repair_retry_only": 0.10012686965811966,
+      "repair_no_search": 0.16317757763070265
+    },
+    "single-hop": {
+      "n": 841,
+      "first_pass": 0.4322241059005455,
+      "care": 0.5763366758030883,
+      "no_cite_req": 0.5830746861082806,
+      "no_binding": 0.5879884538044502,
+      "no_event": 0.5763366758030883,
+      "no_checks": 0.5879884538044502,
+      "gate_always": 0.5544513999063921,
+      "repair_expand_only": 0.5810448797933588,
+      "repair_retry_only": 0.43341316654263823,
+      "repair_no_search": 0.5776071685329299
+    },
+    "adversarial": {
+      "n": 446,
+      "first_pass": 0.8385650224215246,
+      "care": 0.7354260089686099,
+      "no_cite_req": 0.6748878923766816,
+      "no_binding": 0.273542600896861,
+      "no_event": 0.7309417040358744,
+      "no_checks": 0.26905829596412556,
+      "gate_always": 0.7802690582959642,
+      "repair_expand_only": 0.7242152466367713,
+      "repair_retry_only": 0.8340807174887892,
+      "repair_no_search": 0.7376681614349776
+    }
+  },
+  "reproducibility": {
+    "compared": 1986,
+    "identical_answers": 1985,
+    "all_identical": false
+  },
+  "physical_calls": 6545,
+  "bonferroni_level": 0.99375,
+  "margin": 0.01
+}

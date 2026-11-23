@@ -1,0 +1,221 @@
+% CARE architecture. All coordinates are on an explicit 18 cm by 8.6 cm grid.
+% The first and second reader calls are separate so every arrow has one meaning.
+% Required TikZ libraries: arrows.meta, calc.
+\definecolor{caInk}{RGB}{34,51,69}
+\definecolor{caMuted}{RGB}{91,109,125}
+\definecolor{caRule}{RGB}{199,211,221}
+\definecolor{caTeal}{RGB}{34,133,129}
+\definecolor{caBlue}{RGB}{57,110,174}
+\definecolor{caViolet}{RGB}{102,91,164}
+\definecolor{caAmber}{RGB}{176,121,52}
+\definecolor{caCoral}{RGB}{184,88,91}
+\definecolor{caGreen}{RGB}{53,129,95}
+
+\begin{tikzpicture}[x=1cm,y=1cm,line cap=round,line join=round,
+  flow/.style={-{Stealth[length=2.1mm,width=1.45mm]},draw=caInk!73,line width=.9pt},
+  repair/.style={-{Stealth[length=2.1mm,width=1.45mm]},draw=caCoral,line width=.95pt},
+  finish/.style={-{Stealth[length=2.1mm,width=1.45mm]},draw=caGreen,line width=.95pt},
+  icon/.style={circle,fill=white,draw=#1,line width=1.05pt,
+    minimum size=9.2mm,inner sep=0pt},
+  chip/.style={rounded corners=5pt,fill=white,draw=caRule,
+    line width=.65pt,inner xsep=5pt,inner ysep=2.3pt,
+    font=\sffamily\fontsize{6.9}{8}\selectfont,text=caMuted}]
+
+  % Three headings on one baseline; thin rules indicate domains without
+  % enclosing the flow in overlapping background shapes.
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{8.1}{10}\selectfont,
+    text=caTeal] at (.38,8.25) {SOURCE RECORD};
+  \draw[caTeal!55,line width=.8pt] (.38,8.03)--(2.72,8.03);
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{8.1}{10}\selectfont,
+    text=caBlue] at (3.38,8.25) {PASS 1: COMPACT EVIDENCE};
+  \draw[caBlue!50,line width=.8pt] (3.38,8.03)--(10.84,8.03);
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{8.1}{10}\selectfont,
+    text=caAmber] at (11.55,8.25) {SOURCE CHECK \& RESPONSE};
+  \draw[caAmber!50,line width=.8pt] (11.55,8.03)--(17.68,8.03);
+
+  % Main-row nodes are centered at y=7.0 with generous, fixed gaps.
+  \node[icon=caTeal] (source) at (1.23,7.00) {};
+  \draw[caTeal,line width=.8pt] (1.08,7.17)--(1.38,7.17)
+    (1.08,7.05)--(1.38,7.05)
+    (1.08,6.93)--(1.30,6.93);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (1.23,6.23) {Original turns};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (1.23,5.80) {ID / date / speaker};
+
+  \node[icon=caBlue] (rank) at (4.05,7.00) {};
+  \draw[caBlue,line width=1pt] (3.99,7.06) circle (.15);
+  \draw[caBlue,line width=1pt] (4.10,6.95)--(4.27,6.78);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (4.05,6.23) {Sparse ranker};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (4.05,5.80) {BM25 / eight turns};
+
+  \node[icon=caBlue] (bundle) at (6.83,7.00) {};
+  \draw[caBlue!55,line width=.7pt,rounded corners=.5pt]
+    (6.72,6.93) rectangle (7.07,7.22);
+  \draw[caBlue,line width=.8pt,rounded corners=.5pt,fill=white]
+    (6.60,6.80) rectangle (6.97,7.11);
+  \draw[caBlue,line width=.6pt] (6.66,7.02)--(6.87,7.02)
+    (6.66,6.92)--(6.85,6.92);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (6.83,6.23) {Visible bundle $B_1$};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (6.83,5.80) {$\leq$10k source chars};
+
+  \node[icon=caViolet] (readerone) at (9.60,7.00) {};
+  \draw[caViolet,line width=.85pt] (9.37,7.14)
+    .. controls (9.47,7.17) and (9.54,7.14) .. (9.60,7.10)
+    .. controls (9.66,7.14) and (9.73,7.17) .. (9.83,7.14);
+  \draw[caViolet,line width=.85pt] (9.37,7.14)--(9.37,6.86)
+    .. controls (9.48,6.90) and (9.54,6.89) .. (9.60,6.86)
+    .. controls (9.66,6.89) and (9.72,6.90) .. (9.83,6.86)--(9.83,7.14);
+  \draw[caViolet,line width=.55pt] (9.60,7.10)--(9.60,6.86);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (9.60,6.23) {Reader $R_\theta$};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (9.60,5.80) {answer / IDs / $Q_1$};
+
+  \node[icon=caAmber] (gateone) at (12.50,7.00) {};
+  \draw[caAmber,line width=.9pt] (12.50,7.25)--(12.73,7.13)--(12.69,6.91)
+    .. controls (12.64,6.79) and (12.56,6.76) .. (12.50,6.72)
+    .. controls (12.44,6.76) and (12.36,6.79) .. (12.31,6.91)
+    --(12.27,7.13)--cycle;
+  \draw[caAmber,line width=.8pt] (12.40,7.00)--(12.47,6.93)--(12.61,7.08);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (12.50,6.23) {Grounding gate};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (12.50,5.80) {ID / speaker / event};
+
+  % The terminal is shared by both passes.
+  \node[icon=caGreen] (terminal) at (16.08,4.94) {};
+  \draw[caGreen,line width=1pt] (15.87,4.94)--(16.00,4.82)--(16.27,5.09);
+  \node[font=\sffamily\bfseries\fontsize{8.4}{10}\selectfont,
+    text=caInk] at (16.08,4.16) {Final response};
+  \node[font=\sffamily\fontsize{7.0}{8.4}\selectfont,
+    text=caMuted] at (16.08,3.88) {answer or abstention};
+
+  % Small interface labels stay above their owning modules.
+  \node[chip,draw=caViolet!48,text=caViolet] at (8.88,7.72) {$a_1$};
+  \node[chip,draw=caViolet!48,text=caViolet] at (9.60,7.72) {$C_1$};
+  \node[chip,draw=caViolet!48,text=caViolet] at (10.32,7.72) {$Q_1$};
+  \node[chip,draw=caAmber!48,text=caAmber] at (11.45,7.72) {IDs in $B$};
+  \node[chip,draw=caAmber!48,text=caAmber] at (12.85,7.72) {speaker};
+  \node[chip,draw=caAmber!48,text=caAmber] at (14.40,7.72) {event / time};
+
+  % Question is separate from the immutable store. Its route approaches the
+  % ranker from the lower-left, leaving the label beneath the ranker clear.
+  \node[rounded corners=9pt,fill=caBlue!8,draw=caBlue!65,line width=.75pt,
+    minimum width=1.47cm,minimum height=.50cm,
+    font=\sffamily\bfseries\fontsize{8}{9.5}\selectfont,
+    text=caBlue] (question) at (2.37,5.11) {Question $q$};
+
+  % Main path: one arrow per interface, with no edges crossing a node.
+  \draw[flow] (source.east) .. controls (2.15,7.22) and (3.18,7.22)
+    .. (rank.west);
+  \draw[flow,draw=caBlue] (question.north)
+    .. controls (2.50,6.15) and (3.05,6.77)
+    .. (3.63,6.79);
+  \draw[flow] (rank.east) .. controls (4.98,7.21) and (5.87,7.21)
+    .. (bundle.west);
+  \draw[flow] (bundle.east) .. controls (7.74,7.21) and (8.65,7.21)
+    .. (readerone.west);
+  \draw[flow] (readerone.east) .. controls (10.55,7.21) and (11.58,7.21)
+    .. (gateone.west);
+
+  % Accepted answer or terminal abstention: the first green path ends at the
+  % top of the single terminal. The red route runs well below all labels.
+  \draw[finish] (gateone.east)
+    .. controls (14.10,7.12) and (15.58,6.06)
+    .. (16.08,5.41);
+  \node[font=\sffamily\bfseries\fontsize{7.1}{8.4}\selectfont,
+    text=caGreen,fill=white,inner sep=1pt] at (15.06,6.52) {stop};
+
+  \draw[repair] (12.84,6.70)
+    .. controls (13.15,6.67) and (13.68,6.67)
+    .. (13.97,6.67)
+    .. controls (14.45,6.28) and (14.29,5.39)
+    .. (13.69,4.54)
+    --(1.95,4.54)
+    .. controls (1.82,3.83) and (2.02,3.00)
+    .. (3.59,2.62);
+  \node[font=\sffamily\bfseries\fontsize{7.3}{8.6}\selectfont,
+    text=caCoral,fill=white,inner xsep=4pt,inner ysep=1pt]
+    at (8.52,4.54) {invalid \quad or \quad abstain + ($Q_1$ or risk)};
+
+  % Second pass. Its own reader and gate make the bounded two-call policy
+  % explicit; the original source remains the authority for both bundles.
+  \node[anchor=west,font=\sffamily\bfseries\fontsize{8.1}{10}\selectfont,
+    text=caCoral] at (2.33,3.99) {PASS 2 \; CONDITIONAL EVIDENCE REPAIR};
+  \draw[caCoral!55,line width=.8pt] (2.33,3.78)--(13.64,3.78);
+
+  \node[chip,draw=caCoral!42,text=caCoral,inner xsep=3pt]
+    at (3.20,3.33) {lexical 18};
+  \node[chip,draw=caCoral!42,text=caCoral,inner xsep=3pt]
+    at (4.77,3.33) {stem 18};
+  \node[chip,draw=caCoral!42,text=caCoral,inner xsep=3pt]
+    at (6.25,3.33) {neighbors};
+  \node[chip,draw=caCoral!42,text=caCoral,inner xsep=3pt]
+    at (7.73,3.33) {search $\leq 2$};
+
+  \node[icon=caCoral] (expand) at (4.05,2.62) {};
+  \fill[caCoral] (3.90,2.72) circle (.045);
+  \fill[caCoral] (4.21,2.72) circle (.045);
+  \fill[caCoral] (4.05,2.47) circle (.045);
+  \draw[caCoral,line width=.75pt] (3.94,2.68)--(4.02,2.52)
+    (4.16,2.68)--(4.08,2.52) (3.95,2.72)--(4.16,2.72);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (4.05,1.85) {Candidate union};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (4.05,1.42) {same original turns $S$};
+
+  \node[icon=caBlue] (bundletwo) at (6.83,2.62) {};
+  \draw[caBlue!55,line width=.7pt,rounded corners=.5pt]
+    (6.72,2.55) rectangle (7.07,2.84);
+  \draw[caBlue,line width=.8pt,rounded corners=.5pt,fill=white]
+    (6.60,2.42) rectangle (6.97,2.73);
+  \draw[caBlue,line width=.6pt] (6.66,2.64)--(6.87,2.64)
+    (6.66,2.54)--(6.85,2.54);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (6.83,1.85) {Visible bundle $B_2$};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (6.83,1.42) {same 10k-character cap};
+
+  \node[icon=caViolet] (readertwo) at (9.60,2.62) {};
+  \draw[caViolet,line width=.85pt] (9.37,2.76)
+    .. controls (9.47,2.79) and (9.54,2.76) .. (9.60,2.72)
+    .. controls (9.66,2.76) and (9.73,2.79) .. (9.83,2.76);
+  \draw[caViolet,line width=.85pt] (9.37,2.76)--(9.37,2.48)
+    .. controls (9.48,2.52) and (9.54,2.51) .. (9.60,2.48)
+    .. controls (9.66,2.51) and (9.72,2.52) .. (9.83,2.48)--(9.83,2.76);
+  \draw[caViolet,line width=.55pt] (9.60,2.72)--(9.60,2.48);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (9.60,1.85) {Reader $R_\theta$};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (9.60,1.42) {one corrective re-read};
+
+  \node[icon=caAmber] (gatetwo) at (12.50,2.62) {};
+  \draw[caAmber,line width=.9pt] (12.50,2.87)--(12.73,2.75)--(12.69,2.53)
+    .. controls (12.64,2.41) and (12.56,2.38) .. (12.50,2.34)
+    .. controls (12.44,2.38) and (12.36,2.41) .. (12.31,2.53)
+    --(12.27,2.75)--cycle;
+  \draw[caAmber,line width=.8pt] (12.40,2.62)--(12.47,2.55)--(12.61,2.70);
+  \node[font=\sffamily\bfseries\fontsize{8.3}{10}\selectfont,
+    text=caInk] at (12.50,1.85) {Grounding gate};
+  \node[font=\sffamily\fontsize{7.1}{8.4}\selectfont,
+    text=caMuted] at (12.50,1.42) {same checks / then stop};
+
+  \draw[flow] (expand.east) .. controls (4.96,2.83) and (5.88,2.83)
+    .. (bundletwo.west);
+  \draw[flow] (bundletwo.east) .. controls (7.74,2.83) and (8.65,2.83)
+    .. (readertwo.west);
+  \draw[flow] (readertwo.east) .. controls (10.55,2.83) and (11.58,2.83)
+    .. (gatetwo.west);
+  \draw[finish] (gatetwo.east)
+    .. controls (14.12,2.59) and (14.55,4.94)
+    .. (15.62,4.94);
+
+  \node[font=\sffamily\fontsize{7.0}{8.4}\selectfont,
+    text=caMuted] at (9.03,.58)
+    {Original turns remain unchanged; benchmark answers and source labels enter only evaluation.};
+\end{tikzpicture}

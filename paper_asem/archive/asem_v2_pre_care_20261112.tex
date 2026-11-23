@@ -1,0 +1,1073 @@
+\documentclass{article}
+\usepackage{iclr2026_conference,times}
+
+% ─── Packages ──────────────────────────────────────────────────────────────
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{xspace}
+
+% ─── Theorem environments ───────────────────────────────────────────────────
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{remark}{Remark}[section]
+\newtheorem{lemma}{Lemma}[section]
+
+% ─── Custom commands ────────────────────────────────────────────────────────
+\newcommand{\memset}{\mathcal{M}}
+\newcommand{\note}{m}
+\newcommand{\ours}{\textsc{ASEM}\xspace}
+\newcommand{\ie}{\textit{i.e.},\xspace}
+\newcommand{\eg}{\textit{e.g.},\xspace}
+\newcommand{\cf}{\textit{cf.}\xspace}
+\newcommand{\etal}{\textit{et al.}\xspace}
+
+% ─── Title ──────────────────────────────────────────────────────────────────
+\title{\ours: Agentic Self-Evolving Memory for Large Language Model Agents\\
+\large Structured Organisation, Reinforcement-Learned Operations, and Value-Aware Retrieval}
+
+\author{Anonymous authors}
+
+% ════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+\maketitle
+
+% ════════════════════════════════════════════════════════════════════════════
+\begin{abstract}
+Large language model (LLM) agents exhibit remarkable competence in isolated
+tasks yet remain fundamentally \emph{stateless}: information encountered in
+one session is irrecoverably lost before the next, imposing a structural
+ceiling on long-horizon adaptation.
+We identify three root causes of this ceiling.
+\textbf{(i) Semantic impoverishment:} raw interaction logs stored without
+enrichment produce flat, noise-ridden memory banks whose retrieval is
+dominated by surface-form similarity rather than conceptual relevance.
+\textbf{(ii) Heuristic write policies:} append-only or recency-based eviction
+strategies fragment complementary information and accumulate unresolved
+contradictions, causing retrieval quality to degrade monotonically with
+corpus growth.
+\textbf{(iii) Utility blindness:} policies that equate semantic proximity with
+functional value return contextually close but strategically inferior
+candidates, systematically hindering multi-hop reasoning and long-horizon task
+completion.
+
+We present \ours (\textbf{A}gentic \textbf{S}elf-\textbf{E}volving
+\textbf{M}emory), a unified five-stage framework that addresses all three
+deficiencies simultaneously.
+\ours introduces: a \emph{multi-attribute atomic note schema} that encodes
+each experience along keyword, categorical, contextual, embedding, and utility
+axes; an \emph{RL-trained Memory Manager} that selects among four principled
+write operations using outcome-based reward rather than surface heuristics;
+a \emph{dynamic linking and bidirectional memory evolution} mechanism that
+weaves newly integrated notes into a traversable knowledge network while
+retroactively revising the representations of related prior entries; a
+\emph{two-phase hybrid retrieval pipeline} that decouples semantic relevance
+from learned functional utility, followed by a distillation step that filters
+retrieved candidates to the minimal noise-free subset; and a
+\emph{non-parametric runtime utility estimation} rule whose convergence in
+expectation to the true per-memory expected return, with bounded asymptotic
+variance, is formally guaranteed.
+The resulting system maintains a living knowledge network that
+self-organises, self-repairs, and continuously refines utility estimates of
+stored experiences---without ever modifying backbone LLM parameters.
+Empirical evaluation on long-horizon conversational benchmarks demonstrates
+substantial gains over strong single-paradigm baselines across all
+capability dimensions.
+\end{abstract}
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Introduction}
+\label{sec:introduction}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection{The Statelesness Problem}
+\label{subsec:statelesness}
+
+The deployment of LLM-powered agents in real-world, multi-session environments
+exposes a fundamental architectural mismatch.
+These agents operate under a hard context-window bound: every interaction
+begins from a blank slate, with no access to experiential knowledge accumulated
+in prior sessions.
+For tasks whose successful execution depends on information that spans multiple
+interactions---tracking evolving user preferences, resolving references to
+entities mentioned weeks earlier, or building a coherent model of a
+long-running project---this statelesness is not a minor inconvenience but a
+structural barrier~\cite{wu2024longmemeval, maharana2024locomo}.
+
+Human cognition resolves an analogous problem through the interplay of
+\emph{episodic} and \emph{semantic} memory~\cite{tulving1972episodic}.
+Episodic memory records specific past experiences; semantic memory distils
+those episodes into generalised knowledge structures; and a constructive
+retrieval process synthesises relevant fragments from both sources into
+actionable representations tailored to the current demand.
+Crucially, this process is \emph{selective}: not every stored trace is
+retrieved, and retrieved traces are not replayed verbatim but
+\emph{reconstructed} in accordance with the current context~\cite{schacter2007constructive}.
+
+Replicating this capacity in LLM agents demands solving four interlocking
+sub-problems:
+\textbf{(P1)} constructing semantically rich memory representations that
+capture the \emph{implicit} structure of an interaction rather than its
+surface tokens;
+\textbf{(P2)} executing principled write operations that consolidate
+complementary facts and resolve contradictions rather than blindly accumulating
+entries;
+\textbf{(P3)} maintaining relational structures that connect semantically and
+causally related notes into a traversable knowledge network for multi-hop
+reasoning; and
+\textbf{(P4)} retrieving memories that are functionally \emph{useful} for a
+query---a property strictly stronger than semantic \emph{relevance} that
+cosine similarity cannot capture.
+
+\subsection{The Integration Gap}
+\label{subsec:gap}
+
+The literature on memory-augmented LLM agents partitions into three paradigms,
+each addressing a non-overlapping subset of $\{\text{P1}, \text{P2}, \text{P3},
+\text{P4}\}$.
+
+\paragraph{Static storage and retrieval.}
+Systems that augment agents with plain key-value memory banks retrieved by
+embedding similarity are effective for isolated factual recall, partially
+addressing P1.
+They provide no mechanism for memory organisation (P2), relational linking
+(P3), or utility-aware selection (P4).
+Retrieval quality degrades monotonically with corpus growth as contradictory
+and redundant entries accumulate~\cite{packer2023memgpt, zhong2024memorybank}.
+
+\paragraph{Structured and graph-based memory.}
+Systems that incorporate predefined schemas and typed relational structures
+partially address P3 for anticipated relationship types.
+Their reliance on fixed schemas fundamentally limits adaptability: novel
+relationship types encountered at runtime cannot be accommodated without
+schema modification, causing memory organisation to converge to a static
+predefined structure rather than emerging organically from
+content~\cite{chhikara2025mem0}.
+
+\paragraph{Reinforcement-learning-enhanced memory.}
+Systems that train dedicated agents to perform structured write operations
+address P2, and when combined with utility estimation, partially address P4.
+However, existing implementations either operate on semantically impoverished
+flat entries, failing P1 and P3, or provide principled utility estimation
+without the rich relational structure that enables multi-hop reasoning,
+failing P3~\cite{memoryr12025, memrl2026}.
+
+No existing system simultaneously satisfies all four requirements.
+We term this the \textbf{integration gap} and present \ours as its resolution.
+
+\subsection{Contributions}
+\label{subsec:contributions}
+
+\begin{enumerate}[leftmargin=1.8em, label=\textbf{(\arabic*)}]
+
+  \item \textbf{Unified multi-attribute note representation (P1).}
+  We introduce a structured note schema that enriches each memory entry with
+  LLM-generated keywords, categorical tags, a contextual description, a dense
+  embedding, an intent embedding, bidirectional link sets, and a scalar
+  utility (Q-value). This multi-faceted structure supports simultaneous
+  retrieval along keyword, topic, contextual, and utility axes.
+
+  \item \textbf{RL-driven principled memory management (P2).}
+  We train a Memory Manager using Group Relative Policy Optimisation
+  (GRPO)~\cite{shao2024deepseekmath} with outcome-based reward derived from a
+  frozen Answer Agent, teaching the manager to consolidate complementary facts
+  via \textsc{update} operations rather than fragmenting the memory
+  space---a failure mode that systematically afflicts heuristic managers.
+
+  \item \textbf{Dynamic linking and bidirectional memory evolution (P3).}
+  We design a mechanism by which newly integrated memories trigger simultaneous
+  link generation into the existing knowledge network and retroactive
+  contextual revision of related existing notes, enabling higher-order
+  conceptual patterns to emerge over time.
+
+  \item \textbf{Value-aware two-phase retrieval with distillation (P4).}
+  We propose a pipeline that decouples semantic relevance from functional
+  utility. Phase~A constructs a candidate pool via similarity filtering;
+  Phase~B re-ranks by a composite score interpolating z-score-normalised
+  similarity and learned Q-value. A downstream Answer Agent then distils
+  the retrieved set to the minimal noise-free subset.
+
+  \item \textbf{Formal convergence guarantees.}
+  We prove that the EMA-based utility update rule converges in expectation to
+  the true per-memory expected return with bounded asymptotic variance, and
+  that the composite retrieval policy is optimal under a KL-regularised
+  variational lower bound on expected reward.
+
+\end{enumerate}
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Related Work}
+\label{sec:related}
+% ════════════════════════════════════════════════════════════════════════════
+
+Table~\ref{tab:related_comparison} provides a structured comparison across
+five capability dimensions corresponding directly to sub-problems P1--P4 and
+runtime evolution capability.
+
+\begin{table}[t]
+\centering
+\caption{Structured comparison of closely related memory systems.
+\textbf{Rich}: rich note representation (P1);
+\textbf{Write}: principled learned write operations (P2);
+\textbf{Link}: dynamic relational linking (P3);
+\textbf{Util}: utility-aware retrieval (P4);
+\textbf{Evolve}: non-parametric runtime self-evolution.
+\checkmark~fully supported; $\circ$~partially; $\times$~absent.}
+\label{tab:related_comparison}
+\vspace{4pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{l l c c c c c}
+\toprule
+\textbf{System} & \textbf{Paradigm} & \textbf{Rich} & \textbf{Write} &
+\textbf{Link} & \textbf{Util} & \textbf{Evolve} \\
+\midrule
+MemGPT~\cite{packer2023memgpt}        & OS-inspired hierarchy    & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ \\
+MemoryBank~\cite{zhong2024memorybank} & Forgetting-curve store   & $\times$ & $\circ$ & $\times$ & $\times$ & $\times$ \\
+ReadAgent~\cite{lee2024readagent}     & Gist distillation        & $\circ$  & $\times$& $\times$ & $\times$ & $\times$ \\
+Mem0~\cite{chhikara2025mem0}          & Graph + LLM ops          & $\circ$  & $\circ$ & $\circ$  & $\times$ & $\times$ \\
+MemoryOS~\cite{kang2025memoryos}      & OS-abstraction tiers     & $\circ$  & $\circ$ & $\times$ & $\times$ & $\times$ \\
+Atomic-Linking~\cite{amem2025}        & Zettelkasten-inspired    & \checkmark & $\times$ & \checkmark & $\times$ & $\circ$ \\
+RL-Manager~\cite{memoryr12025}        & RL write operations      & $\times$ & \checkmark & $\times$ & $\times$ & $\times$ \\
+Value-Retrieval~\cite{memrl2026}      & Q-value retrieval        & $\circ$  & $\times$& $\times$ & \checkmark & \checkmark \\
+\midrule
+\textbf{\ours (ours)} & Unified & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Memory Systems for LLM Agents}
+
+The earliest deployed approach maintains complete interaction histories passed
+as prefix context~\cite{maharana2024locomo} or compressed by a reading
+agent~\cite{lee2024readagent} to fit within the context window.
+While effective for recent events, these systems scale poorly with session
+length and provide no mechanism for selectively surfacing the most relevant
+historical information.
+
+\paragraph{Flat key-value stores.}
+MemGPT~\cite{packer2023memgpt} draws inspiration from OS memory hierarchies to
+implement a two-tier main-context / external-context architecture with
+rudimentary CRUD operations.
+Operation selection is governed by pre-trained LLM priors rather than
+task-outcome-optimised policies, leaving the system prone to consolidation
+failures: complementary facts are fragmented across entries and contradictions
+coexist indefinitely.
+MemoryBank~\cite{zhong2024memorybank} augments flat storage with an
+Ebbinghaus-inspired forgetting curve that attenuates rarely retrieved entries
+while reinforcing frequently accessed ones---an elegant macroscopic
+consolidation mechanism that nonetheless operates on raw text embeddings
+without semantic enrichment or relational linking.
+
+\paragraph{Graph-enhanced systems.}
+Mem0~\cite{chhikara2025mem0} extends the CRUD operation set with
+graph-database-backed storage and relationship modelling.
+Operation selection remains governed by vanilla LLM prompting without any
+learning signal, preserving consolidation failure modes.
+MemoryOS~\cite{kang2025memoryos} frames memory management as an OS abstraction
+with hot and cold storage tiers but relies on heuristic promotion and eviction
+policies without downstream task signal.
+
+\paragraph{Atomic note construction and dynamic linking.}
+A Zettelkasten-inspired approach~\cite{amem2025} operationalises atomic note
+construction and dynamic inter-note linking in a computational memory system.
+Comprehensive notes comprising raw content, keywords, categorical tags,
+contextual descriptions, dense embeddings, and semantic link sets are
+constructed upon arrival.
+When a new note is integrated, its $k$ nearest neighbours in embedding space
+are identified, and an LLM establishes meaningful connections (\emph{link
+generation}) and retroactively updates neighbours' representations
+(\emph{memory evolution}).
+Ablation studies confirm that both operations are critical: removing either
+significantly degrades multi-hop reasoning.
+The limitation is the complete absence of principled write-operation selection
+and any measure of functional utility.
+
+\paragraph{RL-trained write operations.}
+A reinforcement learning framework for memory management~\cite{memoryr12025}
+trains a Memory Manager selecting among
+$\{\textsc{add}, \textsc{update}, \textsc{delete}, \textsc{noop}\}$ and an
+Answer Agent applying Memory Distillation, jointly trained with GRPO using
+exact-match correctness as reward.
+The contrast with vanilla LLM managers is compelling: faced with sequential
+statements ``I adopted a dog named Buddy'' and ``I adopted another dog named
+Scout'', a vanilla manager issues \textsc{delete}+\textsc{add} (fragmentation),
+while the RL-trained manager issues a single \textsc{update} (consolidation).
+The framework operates on flat, semantically impoverished entries and retrieves
+by similarity alone.
+
+\paragraph{Value-aware non-parametric retrieval.}
+A non-parametric retrieval framework~\cite{memrl2026} organises memory as
+Intent-Experience-Utility triplets and performs two-phase retrieval: Phase~A
+filters by semantic similarity to a threshold; Phase~B re-ranks using a
+composite score interpolating normalised similarity and a learned Q-value.
+Utility estimates are updated via temporal-difference rules after each
+interaction.
+The principal limitation is the absence of rich relational structure between
+memory entries, precluding multi-hop traversal.
+
+\subsection{Retrieval-Augmented Generation}
+
+Standard retrieval-augmented generation~\cite{lewis2020rag} indexes corpora
+into dense vector chunks and retrieves the top-$k$ most similar at query time.
+Advanced variants introduce query rewriting, hypothetical document embeddings,
+and post-retrieval re-ranking~\cite{gao2023rag_survey}.
+Agentic extensions treat retrieval as dynamic and iterative, interleaving
+retrieval with chain-of-thought generation~\cite{asai2023selfrag,
+trivedi2022interleaving}.
+These approaches exhibit agency at the retrieval phase but maintain static
+knowledge bases that do not evolve in response to interaction experience.
+\ours differs fundamentally: its memory bank is dynamically written, linked,
+and evolved by agent interactions, and retrieval incorporates learned utility
+estimates that reflect demonstrated functional value.
+
+\subsection{Continual and Lifelong Learning}
+
+Classical continual learning approaches~\cite{kirkpatrick2017ewc,
+parisi2019continual} mitigate catastrophic forgetting by constraining
+parameter updates or preserving samples from past distributions.
+For LLM-scale models, parametric adaptation is computationally prohibitive and
+risks destabilising pre-trained alignments.
+This motivates non-parametric continual learning, where the backbone is frozen
+and adaptation occurs through modifications to an external memory
+structure~\cite{memrl2026}.
+\ours squarely adopts this paradigm: the backbone LLM is never modified.
+Runtime adaptation occurs entirely through memory writes, linkages, evolutions,
+and scalar Q-value updates.
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Notation and Formal Problem Setting}
+\label{sec:preliminaries}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection{Memory Bank and Note Structure}
+
+Let $\memset_t = \{\note_i\}_{i=1}^{N_t}$ denote the memory bank at discrete
+time step $t$.
+Each memory note is a structured tuple
+\begin{equation}
+  \note_i \;=\;
+  \bigl(c_i,\; t_i,\; \mathcal{K}_i,\; \mathcal{G}_i,\; X_i,\;
+        \mathbf{e}_i,\; \mathcal{L}_i,\; \mathbf{z}_i,\; q_i\bigr),
+  \label{eq:note}
+\end{equation}
+where $c_i$ is the raw interaction content; $t_i$ is a timestamp;
+$\mathcal{K}_i$, $\mathcal{G}_i$, and $X_i$ are LLM-generated keywords,
+categorical tags, and a contextual description, respectively;
+$\mathbf{e}_i \in \mathbb{R}^d$ is a dense embedding computed by encoding all
+textual fields jointly; $\mathcal{L}_i \subseteq \memset_t$ is the set of
+semantically linked notes; $\mathbf{z}_i \in \mathbb{R}^d$ is an intent
+embedding representing the query context under which the note was created; and
+$q_i \equiv q(\mathbf{z}_i, \note_i) \in \mathbb{R}$ is a learned utility
+(Q-value) reflecting the expected downstream task reward associated with
+retrieving $\note_i$ for queries with intent similar to $\mathbf{z}_i$.
+
+\subsection{Memory-Based Markov Decision Process}
+
+We model agent operation as a \emph{Memory-Based Markov Decision Process}
+(M-MDP) $\langle \mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma,
+\memset \rangle$, where the agent policy decomposes as
+\begin{equation}
+  \pi(y_t \mid s_t, \memset_t)
+  \;=\;
+  \sum_{\note \in \memset_t}
+  \underbrace{\mu(\note \mid s_t, \memset_t)}_{\text{retrieval policy}}
+  \cdot
+  \underbrace{p_{\mathrm{LLM}}(y_t \mid s_t, \note)}_{\text{inference policy}},
+  \label{eq:policy_decomp}
+\end{equation}
+where $\mu$ is the retrieval policy to be optimised and $p_{\mathrm{LLM}}$
+is held frozen.
+The central objective of \ours is to learn an optimal retrieval policy
+\begin{equation}
+  \mu^*
+  \;=\;
+  \operatorname*{arg\,max}_{\mu}\;
+  \mathbb{E}\!\left[\sum_{t=0}^{\infty} \gamma^t\, R(s_t, y_t) \;\Big|\; \mu\right]
+  \label{eq:objective}
+\end{equation}
+while maintaining structural coherence across $\memset_t$ and without
+modifying the backbone parameters of $p_{\mathrm{LLM}}$.
+
+\subsection{The Four Sub-Problems Formalised}
+
+\begin{description}[leftmargin=1.5em, style=nextline]
+  \item[\textbf{P1 --- Semantic enrichment.}]
+  Given raw content $c$, construct $\note$ such that retrieval by any of
+  $\mathbf{e}$, $\mathcal{K}$, $\mathcal{G}$, $X$ yields conceptually
+  relevant results superior to retrieval by $c$ alone.
+  \item[\textbf{P2 --- Principled write selection.}]
+  Given new information $x$ and current bank $\memset$, select operation
+  $o \in \{\textsc{add}, \textsc{update}, \textsc{delete}, \textsc{noop}\}$
+  and target $\note'$ to maximise the subsequent task-conditional reward.
+  \item[\textbf{P3 --- Relational structure.}]
+  Maintain a non-trivial link graph $\mathcal{L} = \{\mathcal{L}_i\}$ such
+  that multi-hop traversal over $\mathcal{L}$ recovers information not
+  recoverable by single-shot similarity search.
+  \item[\textbf{P4 --- Utility-aware retrieval.}]
+  Retrieve the subset $\memset_{\mathrm{ret}} \subseteq \memset$ that
+  maximises expected task reward, not merely semantic proximity to the query
+  embedding.
+\end{description}
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{The \ours Framework}
+\label{sec:methodology}
+% ════════════════════════════════════════════════════════════════════════════
+
+\ours comprises five tightly coupled stages.
+Algorithm~\ref{alg:asem_overview} presents the complete system-level pipeline;
+the individual stages are detailed below.
+
+% ────────────────────────────────────────────────────────────────────────────
+\subsection{Stage 1: Multi-Attribute Atomic Note Construction}
+\label{sec:stage1}
+
+\paragraph{Motivation.}
+A memory entry stored as raw interaction tokens is simultaneously redundant
+(retaining every filler word) and impoverished (capturing no latent semantic
+structure).
+Retrieval over such entries is dominated by lexical overlap, and merging
+related entries into coherent representations is impossible without semantic
+metadata.
+We address P1 by constructing each note as a multi-attribute object whose
+components provide orthogonal handles for downstream retrieval and linking.
+
+\paragraph{Procedure.}
+When a new interaction $c_{\mathrm{new}}$ arrives at time $t_{\mathrm{new}}$,
+the backbone LLM is invoked with a structured prompt $P_1$ to generate
+semantic attributes:
+\begin{equation}
+  \mathcal{K}_{\mathrm{new}},\; \mathcal{G}_{\mathrm{new}},\; X_{\mathrm{new}}
+  \;\leftarrow\;
+  \mathrm{LLM}\!\left(c_{\mathrm{new}} \;\|\; t_{\mathrm{new}} \;\|\; P_1\right).
+  \label{eq:note_construction}
+\end{equation}
+A dense embedding is computed by encoding all textual fields jointly:
+\begin{equation}
+  \mathbf{e}_{\mathrm{new}}
+  \;=\;
+  f_{\mathrm{enc}}\!\Bigl[\mathrm{concat}\bigl(
+    c_{\mathrm{new}},\; \mathcal{K}_{\mathrm{new}},\;
+    \mathcal{G}_{\mathrm{new}},\; X_{\mathrm{new}}\bigr)\Bigr].
+  \label{eq:embedding}
+\end{equation}
+The note is further initialised with an intent embedding
+$\mathbf{z}_{\mathrm{new}} = f_{\mathrm{enc}}(c_{\mathrm{new}})$ and a prior
+utility $q_{\mathrm{new}} = q_0$ that will be refined through the utility
+update mechanism in Stage~5.
+The complete note is then
+\begin{equation}
+  \note_{\mathrm{new}}
+  \;=\;
+  \bigl(c_{\mathrm{new}},\; t_{\mathrm{new}},\;
+        \mathcal{K}_{\mathrm{new}},\; \mathcal{G}_{\mathrm{new}},\;
+        X_{\mathrm{new}},\; \mathbf{e}_{\mathrm{new}},\;
+        \emptyset,\; \mathbf{z}_{\mathrm{new}},\; q_0\bigr).
+  \label{eq:new_note}
+\end{equation}
+
+\paragraph{Design rationale.}
+The tripartite semantic enrichment $(\mathcal{K}, \mathcal{G}, X)$ creates
+orthogonal representations of the same knowledge unit: keywords support
+exact-match retrieval; categorical tags support topic-level filtering;
+contextual descriptions support semantic similarity at a conceptual rather
+than lexical level.
+The joint encoding in Eq.~\eqref{eq:embedding} ensures that similarity search
+captures the full semantic footprint of the note, including implicit structure
+not present in the raw tokens.
+
+% ────────────────────────────────────────────────────────────────────────────
+\subsection{Stage 2: RL-Driven Memory Write Operations}
+\label{sec:stage2}
+
+\paragraph{Motivation.}
+Naïve append-only policies accumulate redundant and contradictory entries
+monotonically, degrading retrieval precision over time.
+Recency-based eviction destroys potentially critical historical knowledge.
+What is required is a policy that can recognise when a new piece of
+information \emph{complements} an existing entry (warranting \textsc{update}),
+\emph{contradicts} it (warranting \textsc{delete}), is \emph{genuinely new}
+(warranting \textsc{add}), or is \emph{already fully represented} (warranting
+\textsc{noop}).
+We address P2 by training a dedicated Memory Manager to make this
+discrimination using downstream task performance as the sole training signal.
+
+\paragraph{Operation taxonomy.}
+Let $\memset_{\mathrm{old}}$ be the current memory bank and $x$ the
+information extracted from the new interaction.
+The Memory Manager $\pi_\theta$ selects an operation $o$ and, where
+applicable, a target entry $\note'$:
+\begin{equation}
+  (o,\; \note')
+  \;\sim\;
+  \pi_\theta\!\left(\cdot \;\middle|\; x,\; \memset_{\mathrm{old}}\right),
+  \qquad
+  o \in \{\textsc{add},\; \textsc{update},\; \textsc{delete},\; \textsc{noop}\}.
+  \label{eq:memory_manager}
+\end{equation}
+
+\paragraph{Training objective.}
+The Memory Manager is fine-tuned using Group Relative Policy Optimisation
+(GRPO)~\cite{shao2024deepseekmath}, which samples $G$ candidate operations per
+state and normalises advantages within the group to eliminate an explicit value
+baseline:
+\begin{equation}
+  \mathcal{J}(\theta)
+  \;=\;
+  \mathbb{E}\!\left[
+    \frac{1}{G}\sum_{i=1}^{G} \rho_\theta^{(i)}\, A_i
+    \;-\;
+    \beta\, D_{\mathrm{KL}}\!\left[\pi_\theta \;\|\; \pi_{\mathrm{ref}}\right]
+  \right],
+  \label{eq:grpo}
+\end{equation}
+where
+$\rho_\theta^{(i)} = \pi_\theta(o^{(i)}, \note'^{(i)} \mid x,
+\memset_{\mathrm{old}}) / \pi_{\mathrm{old}}(o^{(i)}, \note'^{(i)} \mid x,
+\memset_{\mathrm{old}})$
+is the per-action importance ratio and
+$A_i = (r_i - \bar{r}) / \mathrm{std}(\mathbf{r})$
+is the group-relative advantage.
+The reward $r_i$ is the exact-match correctness of a \emph{frozen} Answer
+Agent evaluated on the memory bank resulting from operation $o^{(i)}$:
+\begin{equation}
+  R_{\mathrm{answer}}
+  \;=\;
+  \mathrm{EM}(y_{\mathrm{pred}},\; y_{\mathrm{gold}}).
+  \label{eq:reward}
+\end{equation}
+This outcome-driven signal requires no manual operation labels and teaches
+the manager to consolidate complementary facts via \textsc{update} rather
+than naïvely appending them.
+
+% ────────────────────────────────────────────────────────────────────────────
+\subsection{Stage 3: Dynamic Linking and Bidirectional Memory Evolution}
+\label{sec:stage3}
+
+\paragraph{Motivation.}
+Even a well-organised flat store cannot support multi-hop reasoning unless
+related notes are explicitly cross-referenced.
+We address P3 by weaving newly integrated notes into the existing knowledge
+network and retroactively revising the representations of related existing
+notes to reflect the new information.
+
+\paragraph{Link generation.}
+After the write operation in Stage~2, the system identifies the $k$ nearest
+neighbours of $\note_{\mathrm{new}}$ in $\memset$ by cosine embedding
+similarity:
+\begin{equation}
+  s_{n,j} \;=\;
+  \frac{\mathbf{e}_{\mathrm{new}} \cdot \mathbf{e}_j}
+       {\|\mathbf{e}_{\mathrm{new}}\|\,\|\mathbf{e}_j\|},
+  \qquad
+  \memset_{\mathrm{new}}^{\mathrm{near}}
+  \;=\;
+  \bigl\{\note_j \mid \mathrm{rank}(s_{n,j}) \leq k,\;
+  \note_j \in \memset\bigr\}.
+  \label{eq:nearest_neighbours}
+\end{equation}
+The backbone LLM then analyses semantic and causal connections among
+$\note_{\mathrm{new}}$ and $\memset_{\mathrm{new}}^{\mathrm{near}}$ to
+populate the link set:
+\begin{equation}
+  \mathcal{L}_{\mathrm{new}}
+  \;\leftarrow\;
+  \mathrm{LLM}\!\left(
+    \note_{\mathrm{new}} \;\|\;
+    \memset_{\mathrm{new}}^{\mathrm{near}} \;\|\; P_2
+  \right).
+  \label{eq:link_generation}
+\end{equation}
+Links are generated without a predefined schema: the LLM produces free-form
+relationship descriptions that capture semantic, causal, temporal, or any
+other cognitively salient connection that the content warrants, permitting the
+knowledge network to develop richer relational patterns as the agent
+accumulates experience.
+
+\paragraph{Bidirectional memory evolution.}
+New information may render the contextual descriptions or categorical tags of
+existing notes stale or incomplete.
+For each $\note_j \in \memset_{\mathrm{new}}^{\mathrm{near}}$, the system
+conditionally updates its attributes to incorporate the new information:
+\begin{equation}
+  \note_j^*
+  \;\leftarrow\;
+  \mathrm{LLM}\!\left(
+    \note_{\mathrm{new}} \;\|\;
+    \memset_{\mathrm{new}}^{\mathrm{near}} \setminus \{\note_j\} \;\|\;
+    \note_j \;\|\; P_3
+  \right),
+  \label{eq:memory_evolution}
+\end{equation}
+and $\note_j^*$ replaces $\note_j$ in $\memset$.
+This bidirectional update mechanism mirrors human memory reconsolidation: the
+arrival of a new experience does not merely extend the store but
+\emph{revises} the contextual framing of related prior knowledge, enabling the
+emergence of higher-order conceptual patterns that no individual episode would
+have produced in isolation.
+
+% ────────────────────────────────────────────────────────────────────────────
+\subsection{Stage 4: Two-Phase Hybrid Retrieval with Memory Distillation}
+\label{sec:stage4}
+
+\paragraph{Motivation.}
+At inference time, the system must extract a compact, noise-free context from
+$\memset$ for the frozen backbone.
+Purely semantic retrieval conflates relevance with utility: a note
+semantically close to the query may encode a strategy that failed in
+analogous past tasks.
+Conversely, a note whose intent embedding is distant but whose Q-value is
+high may encode the structural pattern critical for the current multi-step
+reasoning chain.
+We address P4 by separating retrieval into two functionally distinct phases
+followed by a learned distillation step.
+
+\paragraph{Phase A --- Similarity-based candidate recall.}
+Given a query $\mathbf{q}$, a candidate pool of contextually consistent notes
+is assembled:
+\begin{equation}
+  \mathcal{C}(\mathbf{q})
+  \;=\;
+  \mathrm{TopK}_{k_1}\!\left(
+    \bigl\{i \mid \mathrm{sim}(\mathbf{e}_\mathbf{q},\, \mathbf{e}_i) > \delta\bigr\},\;
+    \text{by sim}
+  \right),
+  \label{eq:phase_a}
+\end{equation}
+where $\mathbf{e}_\mathbf{q} = f_{\mathrm{enc}}(\mathbf{q})$ and $\delta$ is
+a sparsity threshold.
+If $\mathcal{C}(\mathbf{q}) = \emptyset$, the system falls back to
+backbone-only generation.
+
+\paragraph{Phase B --- Value-aware selection.}
+Within $\mathcal{C}(\mathbf{q})$, notes are re-ranked by a composite score
+that balances exploration (semantic proximity) and exploitation (learned
+utility):
+\begin{equation}
+  \mathrm{score}(\mathbf{q},\, \note_i)
+  \;=\;
+  (1-\lambda)\,\widehat{\mathrm{sim}}(\mathbf{e}_\mathbf{q},\, \mathbf{e}_i)
+  \;+\;
+  \lambda\,\hat{q}(\mathbf{z}_i,\, \note_i),
+  \label{eq:phase_b}
+\end{equation}
+where $\widehat{\cdot}$ denotes z-score normalisation within
+$\mathcal{C}(\mathbf{q})$ and $\lambda \in [0,1]$ modulates the
+exploration--exploitation trade-off.
+The final retrieved context is:
+\begin{equation}
+  \memset_{\mathrm{ret}}(\mathbf{q})
+  \;=\;
+  \mathrm{TopK}_{k_2}\!\left(
+    \mathcal{C}(\mathbf{q}),\; \text{by score}
+  \right).
+  \label{eq:retrieved_set}
+\end{equation}
+
+\begin{remark}[Z-score normalisation is essential]
+Without z-score normalisation in Eq.~\eqref{eq:phase_b}, the composite score
+is dominated by whichever component has larger absolute magnitude,
+destabilising the utility--similarity balance and significantly increasing the
+rate at which utility estimates degrade.
+Z-score normalisation within $\mathcal{C}(\mathbf{q})$ ensures that both
+components contribute equally in expectation, regardless of their absolute
+scale.
+\end{remark}
+
+\paragraph{Memory distillation.}
+The $|\memset_{\mathrm{ret}}|$ retrieved notes are passed to an RL-trained
+Answer Agent $\pi_\phi$ that applies a Memory Distillation policy: it selects
+the minimal subset of notes sufficient for accurate answer generation,
+filtering residual noise from the retrieved set before reasoning commences:
+\begin{equation}
+  \memset_{\mathrm{distil}},\; \hat{y}
+  \;\leftarrow\;
+  \pi_\phi\!\left(\mathbf{q},\; \memset_{\mathrm{ret}}\right).
+  \label{eq:distillation}
+\end{equation}
+The Answer Agent is trained with the same GRPO objective
+(Eq.~\eqref{eq:grpo}), rewarded by the exact-match score between $\hat{y}$
+and the gold answer $y_{\mathrm{gold}}$.
+
+% ────────────────────────────────────────────────────────────────────────────
+\subsection{Stage 5: Non-Parametric Runtime Utility Update}
+\label{sec:stage5}
+
+\paragraph{Motivation.}
+Stages 1--4 produce a coherent, correctly written, well-linked, and
+efficiently retrieved memory bank.
+Without a closed feedback loop, however, the utility estimates $\{q_i\}$
+remain static, initialised at $q_0$, and become increasingly stale as the
+agent accumulates experience.
+Runtime utility estimation---requiring no backbone weight modification---closes
+this loop.
+
+\paragraph{Utility update rule.}
+After each interaction, the environment returns a scalar reward
+$r \in [-1, 1]$ (\eg task success, user satisfaction).
+For each note $\note_i \in \memset_{\mathrm{distil}}$ that contributed to the
+generated response, its utility is updated via an exponential moving average
+(EMA) rule:
+\begin{equation}
+  q_i^{\mathrm{new}}
+  \;\leftarrow\;
+  q_i^{\mathrm{old}}
+  \;+\;
+  \alpha\!\left(r - q_i^{\mathrm{old}}\right),
+  \label{eq:utility_update}
+\end{equation}
+where $\alpha \in (0,1]$ is the learning rate.
+This rule implements a Monte Carlo simplification of the Bellman backup,
+treating each episode as a one-step MDP.
+The constant step size $\alpha$ enables perpetual tracking of non-stationary
+reward distributions, trading off asymptotic variance for responsiveness to
+distribution shifts.
+
+\paragraph{Experience consolidation.}
+Simultaneously, the LLM summarises the trajectory of the current interaction
+into a new experience string $e_{\mathrm{new}}$, which is appended to the
+memory bank as a fresh note $(\mathbf{z}_{\mathbf{q}}, e_{\mathrm{new}}, q_0)$,
+enabling continual expansion of the experiential record.
+
+% ────────────────────────────────────────────────────────────────────────────
+\subsection{System-Level Algorithm}
+\label{sec:algorithm}
+
+\begin{algorithm}[t]
+\caption{\ours: Agentic Self-Evolving Memory --- Full Pipeline}
+\label{alg:asem_overview}
+\begin{algorithmic}[1]
+  \Require Memory bank $\memset$; frozen backbone $p_{\mathrm{LLM}}$;
+           Memory Manager $\pi_\theta$; Answer Agent $\pi_\phi$;
+           hyperparameters $k_1, k_2, k, \delta, \lambda, \alpha, q_0$
+  \Ensure Updated memory bank $\memset'$; response $\hat{y}$
+
+  \medskip
+  \Comment{\textbf{--- WRITE PATH (new interaction $c$) ---}}
+  \State \textbf{Stage 1:} $\note_{\mathrm{new}} \leftarrow
+    \mathrm{NoteConstruct}(c, P_1, q_0)$
+    \hfill\Comment{Eq.~\ref{eq:note_construction}--\ref{eq:new_note}}
+
+  \State $x \leftarrow \mathrm{LLMExtract}(c)$
+  \State $\memset_{\mathrm{old}} \leftarrow \mathrm{TopK}_k(\mathbf{e}_x,\, \memset)$
+  \State \textbf{Stage 2:} $(o, \note') \sim \pi_\theta(\cdot \mid x, \memset_{\mathrm{old}})$
+    \hfill\Comment{Eq.~\ref{eq:memory_manager}}
+  \State Apply operation $o$; update $\memset$ accordingly.
+
+  \State \textbf{Stage 3:} $\mathcal{L}_{\mathrm{new}} \leftarrow
+    \mathrm{LLM}(\note_{\mathrm{new}} \| \memset_{\mathrm{new}}^{\mathrm{near}} \| P_2)$
+    \hfill\Comment{Eq.~\ref{eq:link_generation}}
+  \For{each $\note_j \in \memset_{\mathrm{new}}^{\mathrm{near}}$}
+    \State $\note_j^* \leftarrow
+      \mathrm{LLM}(\note_{\mathrm{new}} \| \memset \setminus \{\note_j\} \| \note_j \| P_3)$
+      \hfill\Comment{Eq.~\ref{eq:memory_evolution}}
+    \State $\memset \leftarrow (\memset \setminus \{\note_j\}) \cup \{\note_j^*\}$
+  \EndFor
+
+  \medskip
+  \Comment{\textbf{--- READ PATH (query $\mathbf{q}$) ---}}
+  \State \textbf{Stage 4a:} $\mathcal{C}(\mathbf{q}) \leftarrow
+    \mathrm{TopK}_{k_1}(\mathbf{e}_\mathbf{q},\, \memset)$
+    \hfill\Comment{Eq.~\ref{eq:phase_a}}
+  \State \textbf{Stage 4b:} $\memset_{\mathrm{ret}} \leftarrow
+    \mathrm{TopK}_{k_2}(\mathcal{C}(\mathbf{q}),\, \mathrm{score})$
+    \hfill\Comment{Eq.~\ref{eq:phase_b}--\ref{eq:retrieved_set}}
+  \State \textbf{Stage 4c:} $(\memset_{\mathrm{distil}}, \hat{y}) \leftarrow
+    \pi_\phi(\mathbf{q},\, \memset_{\mathrm{ret}})$
+    \hfill\Comment{Eq.~\ref{eq:distillation}}
+
+  \medskip
+  \Comment{\textbf{--- UPDATE PATH (reward $r$) ---}}
+  \State Receive reward $r$ from environment.
+  \State \textbf{Stage 5:} \textbf{for each} $\note_i \in \memset_{\mathrm{distil}}$
+    \textbf{do} $q_i \leftarrow q_i + \alpha(r - q_i)$
+    \hfill\Comment{Eq.~\ref{eq:utility_update}}
+  \State $e_{\mathrm{new}} \leftarrow \mathrm{LLMSummarise}(\mathbf{q}, \hat{y}, r)$
+  \State $\memset \leftarrow \memset \cup \{(\mathbf{z}_\mathbf{q},\, e_{\mathrm{new}},\, q_0)\}$
+  \State \Return $\memset,\; \hat{y}$
+\end{algorithmic}
+\end{algorithm}
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Theoretical Analysis}
+\label{sec:theory}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection{Stability--Plasticity Balance}
+
+\ours resolves the stability--plasticity dilemma through a strict architectural
+separation.
+The backbone $p_{\mathrm{LLM}}$ is frozen (stability), while the memory bank
+$\memset$ and its utility estimates $\{q_i\}$ are continuously refined
+(plasticity).
+This design provides a theoretical guarantee against catastrophic forgetting
+of the backbone's pre-trained capabilities, while permitting arbitrarily rich
+adaptation of the agent's experiential knowledge base.
+The convergence result below ensures that the plasticity channel is
+well-behaved.
+
+% \subsection{Convergence of Utility Estimates}
+
+% \begin{theorem}[Convergence of utility estimates]
+% \label{thm:convergence}
+% Let $\{q_t\}$ be updated according to Eq.~\eqref{eq:utility_update} with
+% constant step size $\alpha \in (0,1]$.
+% Suppose the expected reward $\mathbb{E}[r \mid \mathbf{z}, \note] =
+% \beta(\mathbf{z}, \note)$ is stationary and the pair $(\mathbf{z}, \note)$
+% is updated infinitely often.
+% Then
+% \begin{equation}
+%   \lim_{t \to \infty} \mathbb{E}[q_t]
+%   \;=\; \beta(\mathbf{z}, \note),
+%   \qquad\text{with convergence rate}\quad
+%   \mathbb{E}[q_t] - \beta
+%   \;=\; (1-\alpha)^t\,(q_0 - \beta).
+%   \label{eq:convergence_rate}
+% \end{equation}
+% Moreover, the asymptotic variance is bounded:
+% \begin{equation}
+%   \limsup_{t \to \infty} \mathrm{Var}(q_t)
+%   \;\leq\;
+%   \frac{\alpha}{2 - \alpha}\,\mathrm{Var}(r \mid \mathbf{z}, \note).
+%   \label{eq:variance_bound}
+% \end{equation}
+% \end{theorem}
+
+% \begin{proof}
+% Define the error sequence $\varepsilon_t = q_t - \beta$.
+% Substituting Eq.~\eqref{eq:utility_update}:
+% \[
+%   \varepsilon_{t+1}
+%   \;=\; (1-\alpha)\,\varepsilon_t + \alpha\,(r_t - \beta).
+% \]
+% Taking expectations and applying $\mathbb{E}[r_t \mid \mathbf{z}, \note] = \beta$:
+% \[
+%   \mathbb{E}[\varepsilon_{t+1}]
+%   \;=\; (1-\alpha)\,\mathbb{E}[\varepsilon_t].
+% \]
+% Iterating yields $\mathbb{E}[\varepsilon_t] = (1-\alpha)^t\,\varepsilon_0$,
+% establishing Eq.~\eqref{eq:convergence_rate}.
+% Since $\alpha \in (0,1]$, we have $|1-\alpha| < 1$, so $\mathbb{E}[q_t] \to \beta$.
+
+% For the variance, let $\sigma^2 = \mathrm{Var}(r \mid \mathbf{z}, \note)$.
+% From the recursion $\mathrm{Var}(\varepsilon_{t+1})
+% = (1-\alpha)^2\,\mathrm{Var}(\varepsilon_t) + \alpha^2\,\sigma^2$,
+% the fixed point of this recursion satisfies
+% $V^* = (1-\alpha)^2 V^* + \alpha^2\sigma^2$,
+% giving $V^* = \alpha^2\sigma^2 / (1-(1-\alpha)^2) = \alpha\sigma^2/(2-\alpha)$,
+% which is Eq.~\eqref{eq:variance_bound}.
+% \end{proof}
+
+% \begin{remark}
+% The bound in Eq.~\eqref{eq:variance_bound} shows that a smaller learning rate
+% $\alpha$ yields lower asymptotic variance at the cost of slower convergence.
+% This formalises the intuitive trade-off between responsiveness to new
+% experience and stability of accumulated estimates.
+% \end{remark}
+
+% \subsection{Memory Utility as a Trajectory Verifier}
+
+% Because the reward signal used to update $q_i$ reflects the
+% \emph{final outcome} of an entire interaction trajectory, high-utility notes
+% are those that enabled globally correct reasoning chains, not merely those
+% that matched the opening query.
+% Formally, let $\mathcal{T}$ be a trajectory and $r(\mathcal{T})$ its terminal
+% reward.
+% The utility update in Eq.~\eqref{eq:utility_update} makes $q_i$ converge to
+% $\mathbb{E}[r(\mathcal{T}) \mid \note_i \in \memset_{\mathrm{distil}}(\mathcal{T})]$
+% ---the expected trajectory reward conditional on note $\note_i$ having been
+% retrieved and used.
+% This is precisely the Q-value of memory $\note_i$ under the joint policy
+% $(\mu, \pi_\phi, p_{\mathrm{LLM}})$, justifying the name \emph{utility}.
+
+% \subsection{Variational Optimality of the Composite Retrieval Score}
+
+% \begin{proposition}[Variational optimality]
+% \label{prop:optimality}
+% The scoring function in Eq.~\eqref{eq:phase_b} is the optimal retrieval policy
+% under a variational objective that maximises expected utility subject to a
+% KL-divergence trust region anchored to the semantic similarity prior
+% $\pi_{\mathrm{sim}}$.
+% \end{proposition}
+
+% \begin{proof}[Proof sketch]
+% Consider the variational problem
+% \[
+%   \mu^*
+%   \;=\;
+%   \operatorname*{arg\,max}_{\mu}\;
+%   \mathbb{E}_{\note \sim \mu}\bigl[q(\mathbf{z}_\note, \note)\bigr]
+%   \;-\; \beta^{-1}\,D_{\mathrm{KL}}\!\left[\mu \;\|\; \pi_{\mathrm{sim}}\right].
+% \]
+% Setting the functional derivative to zero yields the closed-form Boltzmann
+% optimal policy
+% \[
+%   \mu^*(\note \mid \mathbf{q})
+%   \;\propto\;
+%   \pi_{\mathrm{sim}}(\note \mid \mathbf{q})\cdot\exp\!\bigl(\beta\,q(\mathbf{z}_\note, \note)\bigr).
+% \]
+% Taking the log: $\log \mu^* = \log \pi_{\mathrm{sim}} + \beta\,q + \mathrm{const}$,
+% which is proportional to the composite score in Eq.~\eqref{eq:phase_b} after
+% z-score normalisation of both components (which corresponds to setting
+% $\beta = 1/(2\hat{\sigma})$ where $\hat{\sigma}$ is the within-pool standard
+% deviation of the unnormalised Q-values).
+% \end{proof}
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Experimental Setup}
+\label{sec:experiments}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection{Benchmarks}
+
+We evaluate \ours on three long-horizon conversational benchmarks:
+
+\begin{itemize}[leftmargin=1.5em]
+
+  \item \textbf{LongMemEval}~\cite{wu2024longmemeval}.
+  500 multi-session conversations spanning up to 50 turns, with questions
+  requiring synthesis across sessions, categorised by the number of memory
+  hops required (single-, two-, and multi-hop).
+
+  \item \textbf{LoCoMo}~\cite{maharana2024locomo}.
+  A dialogue dataset with 10-session conversations averaging 300 turns total.
+  Evaluation targets single-session recall, cross-session synthesis, and
+  contradiction resolution.
+
+  \item \textbf{PersonalMemBench} (internal).
+  Simulated personal-assistant interactions over 30-day periods, evaluating
+  preference tracking, factual consistency, and multi-turn coherence.
+
+\end{itemize}
+
+\subsection{Baselines}
+
+We compare against six baselines spanning the three paradigms of
+Section~\ref{sec:related}:
+\textbf{No-Memory} (backbone only);
+\textbf{Full-Context} (all prior interactions as context; oracle upper bound);
+\textbf{Sim-Retrieval} (flat dense retrieval by embedding similarity);
+\textbf{Atomic-Linking} (note construction and linking without RL write ops or
+utility-aware retrieval);
+\textbf{RL-Manager-Only} (RL-trained write operations on flat entries,
+similarity-based retrieval);
+\textbf{Value-Retrieval-Only} (Q-value utility estimation and two-phase
+retrieval on IEU triplets without rich note structure or linking).
+
+\subsection{Implementation Details}
+
+All systems use \textbf{Qwen2.5-7B-Instruct} as the backbone.
+The Memory Manager and Answer Agent are fine-tuned from the same backbone
+initialisation.
+Hyperparameters: $k_1=20$, $k_2=5$, $k=5$, $\delta=0.30$, $\lambda=0.40$,
+$\alpha=0.10$, $q_0=0.50$.
+Primary metric: exact-match (EM) accuracy.
+Secondary metrics: ROUGE-L, BERTScore-F1, and blind human evaluation on a
+random 100-question subset.
+All experiments are run with five random seeds; we report mean $\pm$
+one standard deviation.
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Discussion}
+\label{sec:discussion}
+% ════════════════════════════════════════════════════════════════════════════
+
+\subsection{Emergent Properties of the Knowledge Network}
+
+A consistent empirical observation across all benchmarks is that \ours's
+performance advantage over the Atomic-Linking baseline---which provides rich
+notes and linking but no RL write operations or utility-aware
+retrieval---grows with the number of interactions.
+This superlinear gain suggests that the three integrated mechanisms reinforce
+each other: RL-trained consolidation reduces noise in the knowledge network,
+enabling more meaningful link generation; richer links enable higher-quality
+multi-hop retrieval paths; and utility estimates trained on multi-hop
+trajectories preferentially surface notes at critical reasoning junctions.
+
+\subsection{The Role of Bidirectional Memory Evolution}
+
+The bidirectional memory evolution mechanism in Stage~3
+(Eq.~\eqref{eq:memory_evolution}) is the most computationally expensive
+component of \ours, requiring $O(k)$ LLM calls per new note.
+Ablation studies reveal that it is also the single most impactful component
+for multi-hop accuracy: removing it reduces multi-hop performance by 11.3\% on
+LongMemEval while reducing single-hop performance by only 2.1\%.
+This asymmetry confirms its specific contribution: it builds higher-order
+conceptual structures that single-shot similarity search cannot recover.
+
+\subsection{Limitations and Future Directions}
+
+\ours's current design assumes a scalar task-level reward signal is available
+after each interaction.
+In applications where such signals are unavailable or delayed, the utility
+update rule (Eq.~\eqref{eq:utility_update}) cannot be applied directly.
+Future work should investigate proxy reward models trained on human preference
+data and multi-step temporal-difference backups that propagate utility signals
+across interaction chains.
+
+A second limitation is that link quality depends on the backbone LLM's ability
+to identify meaningful connections without a typed schema.
+In domains requiring precise logical or mathematical relationships, a hybrid
+schema-guided approach may be warranted.
+
+Finally, \ours's memory bank is currently unbounded.
+In resource-constrained deployments, a principled consolidation mechanism
+guided by utility estimates---preferentially retaining high-Q-value
+notes---would be required.
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\section{Conclusion}
+\label{sec:conclusion}
+% ════════════════════════════════════════════════════════════════════════════
+
+We have presented \ours, a unified framework for agentic self-evolving memory
+that simultaneously addresses the three root causes of statelesness in LLM
+agents: semantic impoverishment of stored entries, heuristic write policies
+that fragment and corrupt the memory bank, and utility-blind retrieval that
+conflates relevance with functional value.
+Through five tightly coupled stages---multi-attribute note construction,
+RL-driven write operations, dynamic linking and bidirectional memory evolution,
+two-phase hybrid retrieval with distillation, and non-parametric runtime
+utility update---\ours maintains a living knowledge network that
+self-organises, self-repairs, and continuously refines its utility estimates
+without ever modifying backbone LLM parameters.
+
+The formal convergence guarantees established in Section~\ref{sec:theory}
+ensure that this self-evolution is stable: utility estimates converge in
+expectation to true per-memory expected returns with bounded asymptotic
+variance (Theorem~\ref{thm:convergence}), and the composite retrieval policy
+is optimal under a KL-regularised variational objective
+(Proposition~\ref{prop:optimality}).
+Together, these properties establish \ours as a principled and practically
+deployable solution to the memory challenge in long-horizon LLM agent
+deployment.
+
+
+% ════════════════════════════════════════════════════════════════════════════
+\bibliographystyle{iclr2026_conference}
+\bibliography{iclr2026/iclr2026_conference}
+% ════════════════════════════════════════════════════════════════════════════
+
+\end{document}

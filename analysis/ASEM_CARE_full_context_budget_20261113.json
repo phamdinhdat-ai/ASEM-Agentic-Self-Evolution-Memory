@@ -1,0 +1,84 @@
+{
+  "protocol": "care-full-context-budget-audit-v1",
+  "dataset_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "model": {
+    "repo": "Qwen/Qwen3-8B",
+    "revision": "b968826d9c46dd6066d109eabc6255188de91218"
+  },
+  "selection": "per-conversation question longest under NoMemory tokenizer policy",
+  "tokenizer_validation": "all 1986 reconstructed NoMemory prompt counts match server receipts",
+  "context_validation": "all 10 reconstructed fixed contexts match recorded SHA-256 and metadata",
+  "reserve_tokens": 256,
+  "rows": [
+    {
+      "sample_id": "conv-26",
+      "turns": 419,
+      "questions": 199,
+      "full_prompt_tokens": 23579,
+      "required_window_with_reserve": 23835
+    },
+    {
+      "sample_id": "conv-30",
+      "turns": 369,
+      "questions": 105,
+      "full_prompt_tokens": 18888,
+      "required_window_with_reserve": 19144
+    },
+    {
+      "sample_id": "conv-41",
+      "turns": 663,
+      "questions": 193,
+      "full_prompt_tokens": 35499,
+      "required_window_with_reserve": 35755
+    },
+    {
+      "sample_id": "conv-42",
+      "turns": 629,
+      "questions": 260,
+      "full_prompt_tokens": 31218,
+      "required_window_with_reserve": 31474
+    },
+    {
+      "sample_id": "conv-43",
+      "turns": 680,
+      "questions": 242,
+      "full_prompt_tokens": 35908,
+      "required_window_with_reserve": 36164
+    },
+    {
+      "sample_id": "conv-44",
+      "turns": 675,
+      "questions": 158,
+      "full_prompt_tokens": 34997,
+      "required_window_with_reserve": 35253
+    },
+    {
+      "sample_id": "conv-47",
+      "turns": 689,
+      "questions": 190,
+      "full_prompt_tokens": 34099,
+      "required_window_with_reserve": 34355
+    },
+    {
+      "sample_id": "conv-48",
+      "turns": 681,
+      "questions": 239,
+      "full_prompt_tokens": 33445,
+      "required_window_with_reserve": 33701
+    },
+    {
+      "sample_id": "conv-49",
+      "turns": 509,
+      "questions": 196,
+      "full_prompt_tokens": 26411,
+      "required_window_with_reserve": 26667
+    },
+    {
+      "sample_id": "conv-50",
+      "turns": 568,
+      "questions": 204,
+      "full_prompt_tokens": 32186,
+      "required_window_with_reserve": 32442
+    }
+  ]
+}

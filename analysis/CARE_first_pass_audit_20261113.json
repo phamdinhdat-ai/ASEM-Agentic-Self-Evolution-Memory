@@ -1,0 +1,101 @@
+{
+  "protocol": "saved-first-pass-trace-replay-v1",
+  "dataset": "datasets\\locomo\\locomo10.json",
+  "reports": [
+    "build\\care\\relation_full\\shard-0\\care_relation_full_s0\\results\\report.json",
+    "build\\care\\relation_full\\shard-1\\care_relation_full_s1\\results\\report.json",
+    "build\\care\\relation_full\\shard-2\\care_relation_full_s2\\results\\report.json",
+    "build\\care\\relation_full\\shard-3\\care_relation_full_s3\\results\\report.json",
+    "build\\care\\relation_full\\shard-4\\care_relation_full_s4\\results\\report.json"
+  ],
+  "interpretation": "Within-CARE first versus final answer; not a causal retriever ablation",
+  "all": {
+    "n": 1986,
+    "first_score": 0.4588360878346916,
+    "final_score": 0.5255809327544485,
+    "delta": 0.06674484491975695,
+    "improved": 279,
+    "worsened": 46,
+    "tied": 1661
+  },
+  "repaired_only": {
+    "n": 1004,
+    "first_score": 0.37924519869240986,
+    "final_score": 0.511272352089459,
+    "delta": 0.13202715339704912,
+    "improved": 279,
+    "worsened": 46,
+    "tied": 679
+  },
+  "answerable": {
+    "n": 1540,
+    "first_score": 0.3488626431426607,
+    "final_score": 0.46480761847424334,
+    "delta": 0.11594497533158267,
+    "improved": 279,
+    "worsened": 0,
+    "tied": 1261
+  },
+  "unsupported": {
+    "n": 446,
+    "first_score": 0.8385650224215246,
+    "final_score": 0.7354260089686099,
+    "delta": -0.1031390134529148,
+    "improved": 0,
+    "worsened": 46,
+    "tied": 400
+  },
+  "by_category": {
+    "1": {
+      "n": 282,
+      "first_score": 0.15910739511569766,
+      "final_score": 0.2608996093316993,
+      "delta": 0.10179221421600167,
+      "improved": 66,
+      "worsened": 0,
+      "tied": 216
+    },
+    "2": {
+      "n": 321,
+      "first_score": 0.3715499453817211,
+      "final_score": 0.44149752981528684,
+      "delta": 0.06994758443356575,
+      "improved": 32,
+      "worsened": 0,
+      "tied": 289
+    },
+    "3": {
+      "n": 96,
+      "first_score": 0.10012686965811966,
+      "final_score": 0.16468949164261665,
+      "delta": 0.06456262198449698,
+      "improved": 12,
+      "worsened": 0,
+      "tied": 84
+    },
+    "4": {
+      "n": 841,
+      "first_score": 0.4322241059005455,
+      "final_score": 0.5763366758030883,
+      "delta": 0.14411256990254284,
+      "improved": 169,
+      "worsened": 0,
+      "tied": 672
+    },
+    "5": {
+      "n": 446,
+      "first_score": 0.8385650224215246,
+      "final_score": 0.7354260089686099,
+      "delta": -0.1031390134529148,
+      "improved": 0,
+      "worsened": 46,
+      "tied": 400
+    }
+  },
+  "conversation_cluster_bootstrap_95": [
+    0.050334679868706794,
+    0.08478407472252947
+  ],
+  "bootstrap_seed": 20261113,
+  "bootstrap_draws": 10000
+}

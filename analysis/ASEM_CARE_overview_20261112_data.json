@@ -1,0 +1,321 @@
+{
+  "protocol": "care-overview-context-audit-v1",
+  "dataset_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+  "n_questions": 1986,
+  "n_conversations": 10,
+  "unknown_gold_evidence_ids": [
+    "D",
+    "D10:19",
+    "D21:18 D21:22 D11:15 D11:19",
+    "D22:1 D22:2 D9:10 D9:11",
+    "D30:05",
+    "D4:36",
+    "D8:6; D9:17",
+    "D9:1 D4:4 D4:6",
+    "D:11:26"
+  ],
+  "malformed_evidence_questions": [
+    "conv-26:37",
+    "conv-42:58",
+    "conv-42:88",
+    "conv-43:18",
+    "conv-47:38",
+    "conv-49:31",
+    "conv-49:38",
+    "conv-49:46",
+    "conv-50:69"
+  ],
+  "retention": {
+    "conv-26": {
+      "total_turns": 419,
+      "kept_turns": 138,
+      "fraction": 0.32935560859188545,
+      "n_questions": 199
+    },
+    "conv-30": {
+      "total_turns": 369,
+      "kept_turns": 162,
+      "fraction": 0.43902439024390244,
+      "n_questions": 105
+    },
+    "conv-41": {
+      "total_turns": 663,
+      "kept_turns": 149,
+      "fraction": 0.22473604826546004,
+      "n_questions": 193
+    },
+    "conv-42": {
+      "total_turns": 629,
+      "kept_turns": 152,
+      "fraction": 0.24165341812400637,
+      "n_questions": 260
+    },
+    "conv-43": {
+      "total_turns": 680,
+      "kept_turns": 156,
+      "fraction": 0.22941176470588234,
+      "n_questions": 242
+    },
+    "conv-44": {
+      "total_turns": 675,
+      "kept_turns": 148,
+      "fraction": 0.21925925925925926,
+      "n_questions": 158
+    },
+    "conv-47": {
+      "total_turns": 689,
+      "kept_turns": 161,
+      "fraction": 0.23367198838896952,
+      "n_questions": 190
+    },
+    "conv-48": {
+      "total_turns": 681,
+      "kept_turns": 161,
+      "fraction": 0.23641703377386197,
+      "n_questions": 239
+    },
+    "conv-49": {
+      "total_turns": 509,
+      "kept_turns": 152,
+      "fraction": 0.29862475442043224,
+      "n_questions": 196
+    },
+    "conv-50": {
+      "total_turns": 568,
+      "kept_turns": 136,
+      "fraction": 0.23943661971830985,
+      "n_questions": 204
+    }
+  },
+  "total_turns": 5882,
+  "kept_turns": 1515,
+  "mean_gold_evidence_fraction_in_context": 0.25822092042234734,
+  "evidence_group_counts": {
+    "all": 337,
+    "partial": 130,
+    "none": 1060,
+    "unannotated": 4,
+    "malformed": 9
+  },
+  "summary": {
+    "all": {
+      "n": 1986,
+      "mean": {
+        "care": 0.5255809327544485,
+        "sim_retrieval": 0.406877680119267,
+        "full_context_8k": 0.19613134750016975,
+        "no_memory": 0.07738288208936349,
+        "relation_temporal": 0.5250759485899346
+      },
+      "care_minus_ci95": {
+        "sim_retrieval": [
+          0.0837271279651306,
+          0.15027093562031493
+        ],
+        "full_context_8k": [
+          0.30133535701877595,
+          0.35626117924963074
+        ],
+        "no_memory": [
+          0.4170552441992728,
+          0.4787230736035097
+        ]
+      }
+    },
+    "answerable": {
+      "n": 1540,
+      "mean": {
+        "care": 0.46480761847424334,
+        "sim_retrieval": 0.3123760212447171,
+        "full_context_8k": 0.2405953611268423,
+        "no_memory": 0.0997937687204389,
+        "relation_temporal": 0.46026028175299366
+      },
+      "care_minus_ci95": {
+        "sim_retrieval": [
+          0.12870693281711898,
+          0.1769946909491126
+        ],
+        "full_context_8k": [
+          0.1896526616365974,
+          0.25769622533190023
+        ],
+        "no_memory": [
+          0.33189268746241335,
+          0.397711520883036
+        ]
+      }
+    },
+    "adversarial": {
+      "n": 446,
+      "mean": {
+        "care": 0.7354260089686099,
+        "sim_retrieval": 0.7331838565022422,
+        "full_context_8k": 0.042600896860986545,
+        "no_memory": 0.0,
+        "relation_temporal": 0.7488789237668162
+      },
+      "care_minus_ci95": {
+        "sim_retrieval": [
+          -0.08293838862559241,
+          0.0835509138381201
+        ],
+        "full_context_8k": [
+          0.6431718061674009,
+          0.7397260273972602
+        ],
+        "no_memory": [
+          0.6900826446280992,
+          0.7769607843137255
+        ]
+      }
+    },
+    "category_1": {
+      "n": 282,
+      "mean": {
+        "care": 0.2608996093316993,
+        "sim_retrieval": 0.2283116338903102,
+        "full_context_8k": 0.23525123351744187,
+        "no_memory": 0.0965694997163913,
+        "relation_temporal": 0.2608996093316993
+      }
+    },
+    "category_2": {
+      "n": 321,
+      "mean": {
+        "care": 0.44149752981528684,
+        "sim_retrieval": 0.3018986612171105,
+        "full_context_8k": 0.23670075523120962,
+        "no_memory": 0.03357988498175414,
+        "relation_temporal": 0.43838226501777905
+      }
+    },
+    "category_3": {
+      "n": 96,
+      "mean": {
+        "care": 0.16468949164261665,
+        "sim_retrieval": 0.12627148468520155,
+        "full_context_8k": 0.20135378221315722,
+        "no_memory": 0.12562438896448397,
+        "relation_temporal": 0.16468949164261665
+      }
+    },
+    "category_4": {
+      "n": 841,
+      "mean": {
+        "care": 0.5763366758030883,
+        "sim_retrieval": 0.36580696691953035,
+        "full_context_8k": 0.2483532732006387,
+        "no_memory": 0.1231994298331986,
+        "relation_temporal": 0.5691988653979461
+      }
+    },
+    "category_5": {
+      "n": 446,
+      "mean": {
+        "care": 0.7354260089686099,
+        "sim_retrieval": 0.7331838565022422,
+        "full_context_8k": 0.042600896860986545,
+        "no_memory": 0.0,
+        "relation_temporal": 0.7488789237668162
+      }
+    },
+    "context_evidence_all": {
+      "n": 337,
+      "mean": {
+        "care": 0.49394465350532707,
+        "sim_retrieval": 0.3344353250657093,
+        "full_context_8k": 0.5926408425331346,
+        "no_memory": 0.09049572611374385,
+        "relation_temporal": 0.4854296231866585
+      },
+      "care_minus_ci95": {
+        "sim_retrieval": [
+          0.1289849364104513,
+          0.18866344733094298
+        ],
+        "full_context_8k": [
+          -0.13778640944263704,
+          -0.062032516846553275
+        ],
+        "no_memory": [
+          0.36013171414296513,
+          0.45435838330784883
+        ]
+      }
+    },
+    "context_evidence_partial": {
+      "n": 130,
+      "mean": {
+        "care": 0.2151637109663365,
+        "sim_retrieval": 0.19406094122807258,
+        "full_context_8k": 0.32417789349318116,
+        "no_memory": 0.12740289990992984,
+        "relation_temporal": 0.2151637109663365
+      },
+      "care_minus_ci95": {
+        "sim_retrieval": [
+          -0.03333340590867759,
+          0.06963541664647359
+        ],
+        "full_context_8k": [
+          -0.16436335663751434,
+          -0.053130028009052956
+        ],
+        "no_memory": [
+          0.02700456274409671,
+          0.1521986975436729
+        ]
+      }
+    },
+    "context_evidence_none": {
+      "n": 1060,
+      "mean": {
+        "care": 0.4892048392181072,
+        "sim_retrieval": 0.3210756351987174,
+        "full_context_8k": 0.11908572856100325,
+        "no_memory": 0.09755610533936443,
+        "relation_temporal": 0.48530546814892483
+      },
+      "care_minus_ci95": {
+        "sim_retrieval": [
+          0.14151880937754832,
+          0.1930355417309878
+        ],
+        "full_context_8k": [
+          0.3308636051228652,
+          0.40785934280131725
+        ],
+        "no_memory": [
+          0.3561567356579656,
+          0.42421819821797335
+        ]
+      }
+    },
+    "context_evidence_unannotated": {
+      "n": 4,
+      "mean": {
+        "care": 0.15833333333333333,
+        "sim_retrieval": 0.13333333333333333,
+        "full_context_8k": 0.13846153846153847,
+        "no_memory": 0.3147773279352227,
+        "relation_temporal": 0.15833333333333333
+      }
+    },
+    "context_evidence_malformed": {
+      "n": 9,
+      "mean": {
+        "care": 0.24251543209876544,
+        "sim_retrieval": 0.25032657401078456,
+        "full_context_8k": 0.20767195767195767,
+        "no_memory": 0.2171540188206855,
+        "relation_temporal": 0.24251543209876544
+      }
+    }
+  },
+  "source_sha256": {
+    "care": "ca88a9b46ccfb986cbc0a376c916d02fd797d2f3f9a244fb32ef273ba7babb7d",
+    "context": "1e6d172c06c28baad050ba63c21c1477e9debe4cbd5cf2d092d018b57654fb20",
+    "sim": "d067349048e4acbbeb7a4591351e5a29da21953c4b6081e655b54d781fe2a641"
+  }
+}

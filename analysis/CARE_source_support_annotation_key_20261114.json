@@ -1,0 +1,1287 @@
+{
+  "protocol": "care-source-support-audit-v1",
+  "selection": {
+    "category_1_one_pass": 10,
+    "category_1_repair": 10,
+    "category_2_one_pass": 10,
+    "category_2_repair": 10,
+    "category_3_one_pass": 10,
+    "category_3_repair": 10,
+    "category_4_one_pass": 10,
+    "category_4_repair": 10,
+    "category_5_one_pass": 10,
+    "category_5_repair": 10
+  },
+  "rows": [
+    {
+      "audit_id": "00007e3afaa8",
+      "question_id": "conv-43:52",
+      "sample_id": "conv-43",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.5,
+      "reference_answer": "Yoga, strength training",
+      "gold_evidence_ids": [
+        "D8:5",
+        "D20:2"
+      ]
+    },
+    {
+      "audit_id": "0042d150d9f6",
+      "question_id": "conv-30:73",
+      "sample_id": "conv-30",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "magical",
+      "gold_evidence_ids": [
+        "D15:8"
+      ]
+    },
+    {
+      "audit_id": "00559fb603b8",
+      "question_id": "conv-30:49",
+      "sample_id": "conv-30",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "cozy and comfortable",
+      "gold_evidence_ids": [
+        "D3:6",
+        "D3:8"
+      ]
+    },
+    {
+      "audit_id": "00585b340ea8",
+      "question_id": "conv-44:57",
+      "sample_id": "conv-44",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.5,
+      "reference_answer": "few days before November 2023",
+      "gold_evidence_ids": [
+        "D28:6"
+      ]
+    },
+    {
+      "audit_id": "0076fbb0ee22",
+      "question_id": "conv-49:113",
+      "sample_id": "conv-49",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "Painting",
+      "gold_evidence_ids": [
+        "D10:8"
+      ]
+    },
+    {
+      "audit_id": "007b3ce9ae19",
+      "question_id": "conv-50:108",
+      "sample_id": "conv-50",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "Boston",
+      "gold_evidence_ids": [
+        "D17:6"
+      ]
+    },
+    {
+      "audit_id": "00e5d4c0504b",
+      "question_id": "conv-43:106",
+      "sample_id": "conv-43",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "a new city",
+      "gold_evidence_ids": [
+        "D11:7"
+      ]
+    },
+    {
+      "audit_id": "0108c2dd5d55",
+      "question_id": "conv-48:25",
+      "sample_id": "conv-48",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.33333333333333337,
+      "reference_answer": "Sapiens, Avalanche by Neal Stephenson",
+      "gold_evidence_ids": [
+        "D4:21",
+        "D4:23"
+      ]
+    },
+    {
+      "audit_id": "01929e5cbe07",
+      "question_id": "conv-48:1",
+      "sample_id": "conv-48",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.3333333333333333,
+      "reference_answer": "mother, father, her friend Karlie",
+      "gold_evidence_ids": [
+        "D1:5",
+        "D2:1",
+        "D6:4"
+      ]
+    },
+    {
+      "audit_id": "01b1671f7cfb",
+      "question_id": "conv-30:32",
+      "sample_id": "conv-30",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.8,
+      "reference_answer": "June 2023",
+      "gold_evidence_ids": [
+        "D16:3"
+      ]
+    },
+    {
+      "audit_id": "01ca8db49dd1",
+      "question_id": "conv-49:75",
+      "sample_id": "conv-49",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "January 5, 2024",
+      "gold_evidence_ids": [
+        "D23:1"
+      ]
+    },
+    {
+      "audit_id": "01db42be2e32",
+      "question_id": "conv-26:0",
+      "sample_id": "conv-26",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "7 May 2023",
+      "gold_evidence_ids": [
+        "D1:3"
+      ]
+    },
+    {
+      "audit_id": "01e3c5391293",
+      "question_id": "conv-41:143",
+      "sample_id": "conv-41",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "Coco",
+      "gold_evidence_ids": [
+        "D30:1"
+      ]
+    },
+    {
+      "audit_id": "021a6ef7265d",
+      "question_id": "conv-49:119",
+      "sample_id": "conv-49",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "lifting weights",
+      "gold_evidence_ids": [
+        "D12:2"
+      ]
+    },
+    {
+      "audit_id": "02395cee5781",
+      "question_id": "conv-30:30",
+      "sample_id": "conv-30",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "20 June, 2023",
+      "gold_evidence_ids": [
+        "D15:5"
+      ]
+    },
+    {
+      "audit_id": "023b1fa02c8c",
+      "question_id": "conv-30:16",
+      "sample_id": "conv-30",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "24 April, 2023",
+      "gold_evidence_ids": [
+        "D10:1"
+      ]
+    },
+    {
+      "audit_id": "029af212305d",
+      "question_id": "conv-47:70",
+      "sample_id": "conv-47",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "bottle caps",
+      "gold_evidence_ids": [
+        "D2:12"
+      ]
+    },
+    {
+      "audit_id": "02d83c2cef15",
+      "question_id": "conv-48:13",
+      "sample_id": "conv-48",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.25,
+      "reference_answer": "sitting in a spot by the window in her Mom's house, sitting by the beach, Bali, forest trail in a nearby park",
+      "gold_evidence_ids": [
+        "D2:13",
+        "D4:34",
+        "D6:10",
+        "D19:17"
+      ]
+    },
+    {
+      "audit_id": "02dbb714aea8",
+      "question_id": "conv-26:148",
+      "sample_id": "conv-26",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 0.2,
+      "reference_answer": "She was happy and thankful",
+      "gold_evidence_ids": [
+        "D18:5"
+      ]
+    },
+    {
+      "audit_id": "02e973dda99d",
+      "question_id": "conv-41:48",
+      "sample_id": "conv-41",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.5,
+      "reference_answer": "The sunday before 3` July 2023",
+      "gold_evidence_ids": [
+        "D26:4"
+      ]
+    },
+    {
+      "audit_id": "02f3f0c7bb6c",
+      "question_id": "conv-48:46",
+      "sample_id": "conv-48",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "four months",
+      "gold_evidence_ids": [
+        "D3:1",
+        "D12:10",
+        "D13:1"
+      ]
+    },
+    {
+      "audit_id": "02f95d309b75",
+      "question_id": "conv-44:83",
+      "sample_id": "conv-44",
+      "category": 4,
+      "escalated": false,
+      "benchmark_score": 0.6896551724137931,
+      "reference_answer": "Long walks in the neighborhood, exploring new paths, sharing worries and hopes",
+      "gold_evidence_ids": [
+        "D13:10"
+      ]
+    },
+    {
+      "audit_id": "0345cc8b2939",
+      "question_id": "conv-26:90",
+      "sample_id": "conv-26",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.3636363636363636,
+      "reference_answer": "Mel and her husband have been married for 5 years.",
+      "gold_evidence_ids": [
+        "D3:16"
+      ]
+    },
+    {
+      "audit_id": "037aa12ea0fe",
+      "question_id": "conv-50:156",
+      "sample_id": "conv-50",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "Nearby park",
+      "gold_evidence_ids": [
+        "D30:15"
+      ]
+    },
+    {
+      "audit_id": "03ba9358bb80",
+      "question_id": "conv-26:76",
+      "sample_id": "conv-26",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.5,
+      "reference_answer": "19 October 2023",
+      "gold_evidence_ids": [
+        "D18:17"
+      ]
+    },
+    {
+      "audit_id": "03e5fbaa2ef9",
+      "question_id": "conv-49:44",
+      "sample_id": "conv-49",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.2222222222222222,
+      "reference_answer": "nature landscapes, portraits, abstract minimalism",
+      "gold_evidence_ids": [
+        "D8:20",
+        "D20:13",
+        "D20:15",
+        "D21:10",
+        "D21:14"
+      ]
+    },
+    {
+      "audit_id": "040ed132cbc0",
+      "question_id": "conv-49:190",
+      "sample_id": "conv-49",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D23:15"
+      ]
+    },
+    {
+      "audit_id": "04552907b976",
+      "question_id": "conv-41:121",
+      "sample_id": "conv-41",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666665,
+      "reference_answer": "Lots of homes were ruined.",
+      "gold_evidence_ids": [
+        "D23:1"
+      ]
+    },
+    {
+      "audit_id": "04b64d8566ea",
+      "question_id": "conv-49:48",
+      "sample_id": "conv-49",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.16666666666666666,
+      "reference_answer": "Healthy eating, exercise routine, running, hiking",
+      "gold_evidence_ids": [
+        "D8:1",
+        "D9:1",
+        "D21:9",
+        "D22:1"
+      ]
+    },
+    {
+      "audit_id": "05a7df46e86d",
+      "question_id": "conv-44:156",
+      "sample_id": "conv-44",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D25:8"
+      ]
+    },
+    {
+      "audit_id": "05d9fea1cc6e",
+      "question_id": "conv-47:21",
+      "sample_id": "conv-47",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "May 7, 2022",
+      "gold_evidence_ids": [
+        "D10:2"
+      ]
+    },
+    {
+      "audit_id": "060c9fdf690c",
+      "question_id": "conv-50:22",
+      "sample_id": "conv-50",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "yes",
+      "gold_evidence_ids": [
+        "D12:11",
+        "D18:7"
+      ]
+    },
+    {
+      "audit_id": "06fe91cf7a65",
+      "question_id": "conv-47:108",
+      "sample_id": "conv-47",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "Fortnite competitions",
+      "gold_evidence_ids": [
+        "D18:9"
+      ]
+    },
+    {
+      "audit_id": "076ed9f672ec",
+      "question_id": "conv-42:117",
+      "sample_id": "conv-42",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "strawberry",
+      "gold_evidence_ids": [
+        "D10:11"
+      ]
+    },
+    {
+      "audit_id": "077892d22839",
+      "question_id": "conv-50:96",
+      "sample_id": "conv-50",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "classic muscle car",
+      "gold_evidence_ids": [
+        "D13:7"
+      ]
+    },
+    {
+      "audit_id": "079588241cc8",
+      "question_id": "conv-47:22",
+      "sample_id": "conv-47",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.3333333333333333,
+      "reference_answer": "animal shelter, homeless, children's hospital",
+      "gold_evidence_ids": [
+        "D10:10",
+        "D10:12",
+        "D29:1"
+      ]
+    },
+    {
+      "audit_id": "07b2919b0a5f",
+      "question_id": "conv-30:36",
+      "sample_id": "conv-30",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "21 July 2023",
+      "gold_evidence_ids": [
+        "D18:18"
+      ]
+    },
+    {
+      "audit_id": "08f5ee3f1090",
+      "question_id": "conv-42:259",
+      "sample_id": "conv-42",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D29:8"
+      ]
+    },
+    {
+      "audit_id": "0905ddfd1daa",
+      "question_id": "conv-44:39",
+      "sample_id": "conv-44",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "Companionship",
+      "gold_evidence_ids": [
+        "D2:15",
+        "D23:18"
+      ]
+    },
+    {
+      "audit_id": "0960a87f39d3",
+      "question_id": "conv-26:15",
+      "sample_id": "conv-26",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.16666666666666666,
+      "reference_answer": "pottery, camping, painting, swimming",
+      "gold_evidence_ids": [
+        "D5:4",
+        "D9:1",
+        "D1:12",
+        "D1:18"
+      ]
+    },
+    {
+      "audit_id": "09bd642dac72",
+      "question_id": "conv-43:2",
+      "sample_id": "conv-43",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.3333333333333333,
+      "reference_answer": "sneakers, fantasy movie DVDs, jerseys",
+      "gold_evidence_ids": [
+        "D1:15",
+        "D12:18",
+        "D27:20"
+      ]
+    },
+    {
+      "audit_id": "0a418c59da7e",
+      "question_id": "conv-26:197",
+      "sample_id": "conv-26",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D18:17"
+      ]
+    },
+    {
+      "audit_id": "0a62f6f43ae5",
+      "question_id": "conv-44:50",
+      "sample_id": "conv-44",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "Grooming",
+      "gold_evidence_ids": [
+        "D16:2",
+        "D17:4"
+      ]
+    },
+    {
+      "audit_id": "0aab874c2828",
+      "question_id": "conv-42:244",
+      "sample_id": "conv-42",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D24:3"
+      ]
+    },
+    {
+      "audit_id": "0b0d1e88770e",
+      "question_id": "conv-47:7",
+      "sample_id": "conv-47",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "Connecticut.",
+      "gold_evidence_ids": [
+        "D5:1"
+      ]
+    },
+    {
+      "audit_id": "0b4919ab3991",
+      "question_id": "conv-49:23",
+      "sample_id": "conv-49",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "July 28, 2023",
+      "gold_evidence_ids": [
+        "D4:15"
+      ]
+    },
+    {
+      "audit_id": "0b8bbbb0d9cc",
+      "question_id": "conv-43:90",
+      "sample_id": "conv-43",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.9411764705882353,
+      "reference_answer": "A local organization helping disadvantaged kids with sports and school",
+      "gold_evidence_ids": [
+        "D6:17"
+      ]
+    },
+    {
+      "audit_id": "0c63c5b49ed2",
+      "question_id": "conv-42:80",
+      "sample_id": "conv-42",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "seven",
+      "gold_evidence_ids": [
+        "D1:3",
+        "D10:4",
+        "D14:8",
+        "D17:1",
+        "D19:1",
+        "D22:2",
+        "D27:1"
+      ]
+    },
+    {
+      "audit_id": "0ce9c1d95cb0",
+      "question_id": "conv-43:4",
+      "sample_id": "conv-43",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.23809523809523808,
+      "reference_answer": "Harry Potter, Game of Thrones, the Name of the Wind, The Alchemist, The Hobbit, A Dance with Dragons, and the Wheel of Time.",
+      "gold_evidence_ids": [
+        "D1:14",
+        "D2:7",
+        "D6:8",
+        "D11:26",
+        "D20:21",
+        "D26:36",
+        "D22:13"
+      ]
+    },
+    {
+      "audit_id": "0d3197ac8e2a",
+      "question_id": "conv-41:178",
+      "sample_id": "conv-41",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D21:22"
+      ]
+    },
+    {
+      "audit_id": "0df158cb5abe",
+      "question_id": "conv-26:9",
+      "sample_id": "conv-26",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "The week before 9 June 2023",
+      "gold_evidence_ids": [
+        "D3:11"
+      ]
+    },
+    {
+      "audit_id": "0e51ed4fb1d4",
+      "question_id": "conv-42:54",
+      "sample_id": "conv-42",
+      "category": 2,
+      "escalated": false,
+      "benchmark_score": 0.28571428571428575,
+      "reference_answer": "The Sunday before 25October, 2022.",
+      "gold_evidence_ids": [
+        "D25:1"
+      ]
+    },
+    {
+      "audit_id": "0f2ffe3e1b28",
+      "question_id": "conv-42:2",
+      "sample_id": "conv-42",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "2019",
+      "gold_evidence_ids": [
+        "D1:18"
+      ]
+    },
+    {
+      "audit_id": "0fa9fb673198",
+      "question_id": "conv-48:74",
+      "sample_id": "conv-48",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "coffee and fresh pastries",
+      "gold_evidence_ids": [
+        "D26:10",
+        "D26:12"
+      ]
+    },
+    {
+      "audit_id": "109fc20c85f0",
+      "question_id": "conv-43:43",
+      "sample_id": "conv-43",
+      "category": 1,
+      "escalated": false,
+      "benchmark_score": 0.3333333333333333,
+      "reference_answer": "His heart, determination, skills, and leadership.",
+      "gold_evidence_ids": [
+        "D12:20",
+        "D16:12"
+      ]
+    },
+    {
+      "audit_id": "113cb79cb88b",
+      "question_id": "conv-48:157",
+      "sample_id": "conv-48",
+      "category": 4,
+      "escalated": true,
+      "benchmark_score": 1.0,
+      "reference_answer": "3 years",
+      "gold_evidence_ids": [
+        "D20:21"
+      ]
+    },
+    {
+      "audit_id": "1186e0da8851",
+      "question_id": "conv-47:172",
+      "sample_id": "conv-47",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D23:15"
+      ]
+    },
+    {
+      "audit_id": "1268429c5f86",
+      "question_id": "conv-49:170",
+      "sample_id": "conv-49",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D8:14"
+      ]
+    },
+    {
+      "audit_id": "135d1041279f",
+      "question_id": "conv-43:217",
+      "sample_id": "conv-43",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D17:10"
+      ]
+    },
+    {
+      "audit_id": "1382a5cc6a79",
+      "question_id": "conv-42:218",
+      "sample_id": "conv-42",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D14:24"
+      ]
+    },
+    {
+      "audit_id": "14ebc8c35d1f",
+      "question_id": "conv-49:27",
+      "sample_id": "conv-49",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "fitness tracker",
+      "gold_evidence_ids": [
+        "D5:7"
+      ]
+    },
+    {
+      "audit_id": "15757aea93a3",
+      "question_id": "conv-49:37",
+      "sample_id": "conv-49",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.2142857142857143,
+      "reference_answer": "salad, grilled salmon and vegetables, grilled chicken and veggie stir-fry, Beef Merlot, fruit bowl, smoothie bowl",
+      "gold_evidence_ids": [
+        "D3:2",
+        "D8:1",
+        "D7:4",
+        "D8:7",
+        "D10:2",
+        "D11:1",
+        "D18:6"
+      ]
+    },
+    {
+      "audit_id": "1706bd7776de",
+      "question_id": "conv-44:0",
+      "sample_id": "conv-44",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 1.0,
+      "reference_answer": "2020",
+      "gold_evidence_ids": [
+        "D1:7"
+      ]
+    },
+    {
+      "audit_id": "18531a4e2764",
+      "question_id": "conv-49:69",
+      "sample_id": "conv-49",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.22222222222222224,
+      "reference_answer": "his partner gets pregnant and they get married",
+      "gold_evidence_ids": [
+        "D19:1",
+        "D21:2"
+      ]
+    },
+    {
+      "audit_id": "18936b6f9904",
+      "question_id": "conv-44:16",
+      "sample_id": "conv-44",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "August",
+      "gold_evidence_ids": [
+        "D11:7"
+      ]
+    },
+    {
+      "audit_id": "198e88c9a765",
+      "question_id": "conv-50:5",
+      "sample_id": "conv-50",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.5555555555555556,
+      "reference_answer": "open a car maintenance shop, work on classic cars, build a custom car from scratch",
+      "gold_evidence_ids": [
+        "D4:5",
+        "D4:5",
+        "D5:5"
+      ]
+    },
+    {
+      "audit_id": "199f989c4ad6",
+      "question_id": "conv-41:187",
+      "sample_id": "conv-41",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D29:10"
+      ]
+    },
+    {
+      "audit_id": "1a99268cd91d",
+      "question_id": "conv-41:186",
+      "sample_id": "conv-41",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D29:4"
+      ]
+    },
+    {
+      "audit_id": "1da6df936c0d",
+      "question_id": "conv-48:27",
+      "sample_id": "conv-48",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "in summer 2022",
+      "gold_evidence_ids": [
+        "D4:33"
+      ]
+    },
+    {
+      "audit_id": "1ee8244500f6",
+      "question_id": "conv-43:222",
+      "sample_id": "conv-43",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D20:2"
+      ]
+    },
+    {
+      "audit_id": "1f4ff0d97f32",
+      "question_id": "conv-26:2",
+      "sample_id": "conv-26",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.3333333333333333,
+      "reference_answer": "Psychology, counseling certification",
+      "gold_evidence_ids": [
+        "D1:9",
+        "D1:11"
+      ]
+    },
+    {
+      "audit_id": "200c8b2e4974",
+      "question_id": "conv-26:52",
+      "sample_id": "conv-26",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.4444444444444444,
+      "reference_answer": "Oliver, Luna, Bailey",
+      "gold_evidence_ids": [
+        "D13:4",
+        "D7:18"
+      ]
+    },
+    {
+      "audit_id": "2151034c9fc5",
+      "question_id": "conv-41:16",
+      "sample_id": "conv-41",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "The week before 2 April 2023",
+      "gold_evidence_ids": [
+        "D9:2"
+      ]
+    },
+    {
+      "audit_id": "22677aa73e81",
+      "question_id": "conv-49:18",
+      "sample_id": "conv-49",
+      "category": 1,
+      "escalated": true,
+      "benchmark_score": 0.12063492063492065,
+      "reference_answer": "flavored seltzer water, dark chocolate with high cocoa content, air-popped popcorn and fruit, veggies, healthy sandwich snacks, energy balls, grilled chicken salad with avocado",
+      "gold_evidence_ids": [
+        "D3:5",
+        "D4:10",
+        "D22:10",
+        "D22:14",
+        "D24:15"
+      ]
+    },
+    {
+      "audit_id": "22ba308cce14",
+      "question_id": "conv-50:186",
+      "sample_id": "conv-50",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D23:16"
+      ]
+    },
+    {
+      "audit_id": "238214c8fcad",
+      "question_id": "conv-49:191",
+      "sample_id": "conv-49",
+      "category": 5,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D24:9"
+      ]
+    },
+    {
+      "audit_id": "239a0dd38391",
+      "question_id": "conv-48:2",
+      "sample_id": "conv-48",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "a few years before 2023",
+      "gold_evidence_ids": [
+        "D1:5"
+      ]
+    },
+    {
+      "audit_id": "283d8cbc4841",
+      "question_id": "conv-50:2",
+      "sample_id": "conv-50",
+      "category": 2,
+      "escalated": true,
+      "benchmark_score": 0.6666666666666666,
+      "reference_answer": "on the weekend before March 26, 2023",
+      "gold_evidence_ids": [
+        "D2:10"
+      ]
+    },
+    {
+      "audit_id": "296a5d0b79b7",
+      "question_id": "conv-42:237",
+      "sample_id": "conv-42",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D22:19"
+      ]
+    },
+    {
+      "audit_id": "29b91f007cf7",
+      "question_id": "conv-50:167",
+      "sample_id": "conv-50",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D11:6"
+      ]
+    },
+    {
+      "audit_id": "2ab3871f32cc",
+      "question_id": "conv-26:184",
+      "sample_id": "conv-26",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D15:26"
+      ]
+    },
+    {
+      "audit_id": "360c69f2b575",
+      "question_id": "conv-43:200",
+      "sample_id": "conv-43",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D9:8"
+      ]
+    },
+    {
+      "audit_id": "365057854b7c",
+      "question_id": "conv-43:51",
+      "sample_id": "conv-43",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.4,
+      "reference_answer": "Hatha Yoga",
+      "gold_evidence_ids": [
+        "D20:2"
+      ]
+    },
+    {
+      "audit_id": "3bfc16ec14bb",
+      "question_id": "conv-49:192",
+      "sample_id": "conv-49",
+      "category": 5,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "",
+      "gold_evidence_ids": [
+        "D24:17"
+      ]
+    },
+    {
+      "audit_id": "3d20de21268b",
+      "question_id": "conv-50:4",
+      "sample_id": "conv-50",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "United States",
+      "gold_evidence_ids": [
+        "D3:9",
+        "D3:10"
+      ]
+    },
+    {
+      "audit_id": "40d45e738455",
+      "question_id": "conv-49:51",
+      "sample_id": "conv-49",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.07142857142857142,
+      "reference_answer": "Sam faces challenges like maintaining motivation and making dietary changes. He addresses them by enrolling in cooking classes and seeking support from friends like Evan.",
+      "gold_evidence_ids": [
+        "D4:2",
+        "D4:6",
+        "D14:1",
+        "D14:2"
+      ]
+    },
+    {
+      "audit_id": "4a77e683b5b2",
+      "question_id": "conv-41:17",
+      "sample_id": "conv-41",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "Political science, Public administration, Public affairs",
+      "gold_evidence_ids": [
+        "D9:6"
+      ]
+    },
+    {
+      "audit_id": "4d4b3715f2fe",
+      "question_id": "conv-49:71",
+      "sample_id": "conv-49",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "Christmas",
+      "gold_evidence_ids": [
+        "D21:2"
+      ]
+    },
+    {
+      "audit_id": "5629f4ed9932",
+      "question_id": "conv-48:28",
+      "sample_id": "conv-48",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 1.0,
+      "reference_answer": "Colombia",
+      "gold_evidence_ids": [
+        "D4:33"
+      ]
+    },
+    {
+      "audit_id": "587b1acc5804",
+      "question_id": "conv-49:65",
+      "sample_id": "conv-49",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "beach",
+      "gold_evidence_ids": [
+        "D16:16",
+        "D16:18",
+        "D16:20"
+      ]
+    },
+    {
+      "audit_id": "5e2992b384f4",
+      "question_id": "conv-48:11",
+      "sample_id": "conv-48",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "yes",
+      "gold_evidence_ids": [
+        "D2:5",
+        "D19:11",
+        "D23:4",
+        "D28:11"
+      ]
+    },
+    {
+      "audit_id": "6227cedc558f",
+      "question_id": "conv-42:85",
+      "sample_id": "conv-42",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "filmmaker.",
+      "gold_evidence_ids": [
+        "D29:1"
+      ]
+    },
+    {
+      "audit_id": "63d133564f86",
+      "question_id": "conv-47:30",
+      "sample_id": "conv-47",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "Canada",
+      "gold_evidence_ids": [
+        "D16:9",
+        "D16:11"
+      ]
+    },
+    {
+      "audit_id": "64a2d0d04e70",
+      "question_id": "conv-49:57",
+      "sample_id": "conv-49",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "California",
+      "gold_evidence_ids": [
+        "D13:14"
+      ]
+    },
+    {
+      "audit_id": "7aa4576c0aba",
+      "question_id": "conv-48:18",
+      "sample_id": "conv-48",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.0,
+      "reference_answer": "In France",
+      "gold_evidence_ids": [
+        "D2:24"
+      ]
+    },
+    {
+      "audit_id": "86f0d81cf450",
+      "question_id": "conv-47:25",
+      "sample_id": "conv-47",
+      "category": 3,
+      "escalated": true,
+      "benchmark_score": 0.18181818181818182,
+      "reference_answer": "No, James is a Liverpool fan and John is a Manchester City fan.",
+      "gold_evidence_ids": [
+        "D13:12",
+        "D13:15"
+      ]
+    },
+    {
+      "audit_id": "a64c77a273fe",
+      "question_id": "conv-48:5",
+      "sample_id": "conv-48",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 0.0,
+      "reference_answer": "In France",
+      "gold_evidence_ids": [
+        "D1:8"
+      ]
+    },
+    {
+      "audit_id": "c232972ee4e2",
+      "question_id": "conv-48:40",
+      "sample_id": "conv-48",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "beach",
+      "gold_evidence_ids": [
+        "D10:17"
+      ]
+    },
+    {
+      "audit_id": "dc63f5c75995",
+      "question_id": "conv-43:67",
+      "sample_id": "conv-43",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 0.25,
+      "reference_answer": "Writing a travel blog.",
+      "gold_evidence_ids": [
+        "D4:1",
+        "D6:6",
+        "D15:3",
+        "D27:37"
+      ]
+    },
+    {
+      "audit_id": "e2ae8dc3ab3b",
+      "question_id": "conv-47:35",
+      "sample_id": "conv-47",
+      "category": 3,
+      "escalated": false,
+      "benchmark_score": 1.0,
+      "reference_answer": "Greenland",
+      "gold_evidence_ids": [
+        "D17:22"
+      ]
+    }
+  ]
+}

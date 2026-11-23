@@ -1,0 +1,280 @@
+{
+  "protocol": "docs/CARE_factorial_protocol_20261117.md",
+  "locomo": {
+    "role": "development",
+    "arms": {
+      "bm25_first": {
+        "score": 0.4588360878346916,
+        "answerable": 0.3488626431426607,
+        "refusal_correct": 374,
+        "refusal_n": 446,
+        "refused_answerable": 630,
+        "answerable_n": 1540,
+        "calls": 1986,
+        "tokens": 1418914,
+        "evidence_recall": 0.5367261276229325,
+        "by_type": {
+          "adversarial": 0.8385650224215246,
+          "multi-hop": 0.15910739511569766,
+          "open-domain": 0.10012686965811966,
+          "single-hop": 0.4322241059005455,
+          "temporal": 0.3715499453817211
+        }
+      },
+      "bm25_lex": {
+        "score": 0.5255809327544485,
+        "answerable": 0.46480761847424334,
+        "refusal_correct": 328,
+        "refusal_n": 446,
+        "refused_answerable": 257,
+        "answerable_n": 1540,
+        "calls": 2990,
+        "tokens": 3647127,
+        "evidence_recall": 0.7050934581700835,
+        "by_type": {
+          "adversarial": 0.7354260089686099,
+          "multi-hop": 0.2608996093316993,
+          "open-domain": 0.16468949164261665,
+          "single-hop": 0.5763366758030883,
+          "temporal": 0.44149752981528684
+        }
+      },
+      "bm25_hyb": {
+        "score": 0.5405226774857957,
+        "answerable": 0.486024699666747,
+        "refusal_correct": 325,
+        "refusal_n": 446,
+        "refused_answerable": 210,
+        "answerable_n": 1540,
+        "calls": 2990,
+        "tokens": 3923331,
+        "evidence_recall": 0.7457426478761194,
+        "by_type": {
+          "adversarial": 0.7286995515695067,
+          "multi-hop": 0.2983211594094825,
+          "open-domain": 0.1780029637759901,
+          "single-hop": 0.5897396556108033,
+          "temporal": 0.4713150643057185
+        }
+      },
+      "dense_first": {
+        "score": 0.472902225224561,
+        "answerable": 0.37739209045193384,
+        "refusal_correct": 358,
+        "refusal_n": 446,
+        "refused_answerable": 470,
+        "answerable_n": 1540,
+        "calls": 1986,
+        "tokens": 1491615,
+        "evidence_recall": 0.6150536685384548,
+        "by_type": {
+          "adversarial": 0.8026905829596412,
+          "multi-hop": 0.24254329528035148,
+          "open-domain": 0.13096568544759335,
+          "single-hop": 0.4563739752325314,
+          "temporal": 0.36262738645916215
+        }
+      },
+      "dense_lex": {
+        "score": 0.5174984126080305,
+        "answerable": 0.4641245762594472,
+        "refusal_correct": 313,
+        "refusal_n": 446,
+        "refused_answerable": 221,
+        "answerable_n": 1540,
+        "calls": 2814,
+        "tokens": 3337677,
+        "evidence_recall": 0.7243565212294049,
+        "by_type": {
+          "adversarial": 0.7017937219730942,
+          "multi-hop": 0.3018477326110046,
+          "open-domain": 0.1812757052888632,
+          "single-hop": 0.5602895356845361,
+          "temporal": 0.4393296561520861
+        }
+      },
+      "dense_hyb": {
+        "score": 0.5202711768298351,
+        "answerable": 0.4702977644052289,
+        "refusal_correct": 309,
+        "refusal_n": 446,
+        "refused_answerable": 190,
+        "answerable_n": 1540,
+        "calls": 2814,
+        "tokens": 3576119,
+        "evidence_recall": 0.7396684011897223,
+        "by_type": {
+          "adversarial": 0.6928251121076233,
+          "multi-hop": 0.31385377227661876,
+          "open-domain": 0.18937906026721818,
+          "single-hop": 0.5635427361883836,
+          "temporal": 0.4474515965170171
+        }
+      },
+      "dense_graph": {
+        "score": 0.519523551711197,
+        "answerable": 0.4706323205834009,
+        "refusal_correct": 307,
+        "refusal_n": 446,
+        "refused_answerable": 193,
+        "answerable_n": 1540,
+        "calls": 2814,
+        "tokens": 3572726,
+        "evidence_recall": 0.7396141477175,
+        "by_type": {
+          "adversarial": 0.6883408071748879,
+          "multi-hop": 0.3198222365723024,
+          "open-domain": 0.18759597645288437,
+          "single-hop": 0.5627539359059953,
+          "temporal": 0.4464131749178478
+        }
+      },
+      "rag_dense_top18": {
+        "score": 0.45645686032010535,
+        "answerable": 0.3763138471400839,
+        "refusal_correct": 327,
+        "refusal_n": 446,
+        "refused_answerable": 271,
+        "answerable_n": 1540,
+        "calls": 1986,
+        "tokens": 2344198,
+        "evidence_recall": 0.7222009374070435,
+        "by_type": {
+          "adversarial": 0.7331838565022422,
+          "multi-hop": 0.292551272536783,
+          "open-domain": 0.15899075689446984,
+          "single-hop": 0.4311773520038713,
+          "temporal": 0.3711545172686343
+        }
+      }
+    },
+    "hypotheses": {
+      "H1": {
+        "mean": -0.005309755924613448,
+        "ci95": [
+          -0.016716647949805118,
+          0.007820304713885782
+        ],
+        "ci_bonferroni": [
+          -0.019070934759730297,
+          0.011962805222804476
+        ],
+        "better": 290,
+        "worse": 276,
+        "clusters_better": 3,
+        "clusters_total": 10
+      },
+      "H2": {
+        "mean": 0.002772764221804563,
+        "ci95": [
+          -0.002533027790793819,
+          0.008593291970656189
+        ],
+        "ci_bonferroni": [
+          -0.003805332221734063,
+          0.010200286213941675
+        ],
+        "better": 56,
+        "worse": 50,
+        "clusters_better": 6,
+        "clusters_total": 10
+      },
+      "H3": {
+        "mean": 0.014066137389869364,
+        "ci95": [
+          0.00653282996334962,
+          0.02272633689795196
+        ],
+        "ci_bonferroni": [
+          0.004459896032478887,
+          0.02571425618117017
+        ],
+        "better": 350,
+        "worse": 269,
+        "clusters_better": 9,
+        "clusters_total": 10
+      },
+      "H4": {
+        "mean": -0.0007476251186380307,
+        "ci95": [
+          -0.006829399946028249,
+          0.005568826183949192
+        ],
+        "ci_bonferroni": [
+          -0.00801110123658724,
+          0.007215340372872905
+        ],
+        "better": 30,
+        "worse": 31,
+        "clusters_better": 3,
+        "clusters_total": 10
+      }
+    },
+    "extra": {
+      "dense_hyb_vs_rag": {
+        "mean": 0.06381431650972971,
+        "ci95": [
+          0.03926069463795092,
+          0.08912682571867286
+        ],
+        "ci_bonferroni": [
+          0.03341994853217463,
+          0.09485262397771796
+        ],
+        "better": 663,
+        "worse": 457,
+        "clusters_better": 10,
+        "clusters_total": 10
+      },
+      "bm25_hyb_vs_bm25_lex": {
+        "mean": 0.01494174473134722,
+        "ci95": [
+          0.007024666337253633,
+          0.0251228308635926
+        ],
+        "ci_bonferroni": [
+          0.00550067722274745,
+          0.028525901040691783
+        ],
+        "better": 108,
+        "worse": 52,
+        "clusters_better": 9,
+        "clusters_total": 10
+      },
+      "dense_graph_vs_bm25_lex": {
+        "mean": -0.0060573810432514785,
+        "ci95": [
+          -0.0180412521757655,
+          0.005707213979272276
+        ],
+        "ci_bonferroni": [
+          -0.021438463422294555,
+          0.00895014362311364
+        ],
+        "better": 296,
+        "worse": 278,
+        "clusters_better": 4,
+        "clusters_total": 10
+      }
+    }
+  },
+  "reproducibility": {
+    "locomo_bm25_lex_vs_saved_care_answers": {
+      "identical": 1986,
+      "n": 1986
+    },
+    "locomo_dense_top8_overlap_with_frozen": 0.9971047331319235
+  },
+  "code_hashes": {
+    "care_fx_lme_s0/results": "43e71d771cc9a053",
+    "care_fx_lme_s1/results": "43e71d771cc9a053",
+    "care_fx_lme_s2/results": "43e71d771cc9a053",
+    "care_fx_lme_s3/results": "837e0b259a638ed1",
+    "care_fx_lme_s4/results": "837e0b259a638ed1",
+    "care_fx_locomo_s0/results": "43e71d771cc9a053",
+    "care_fx_locomo_s1/results": "43e71d771cc9a053",
+    "care_fx_locomo_s2/results": "43e71d771cc9a053",
+    "care_fx_locomo_s3/results": "43e71d771cc9a053",
+    "care_fx_locomo_s4/results": "837e0b259a638ed1"
+  }
+}

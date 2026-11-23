@@ -1,0 +1,82 @@
+"""Package the 30-question LongMemEval refusal probe as one private Kaggle notebook."""
+
+from __future__ import annotations
+
+import base64
+import hashlib
+import io
+import json
+from pathlib import Path
+import zipfile
+
+from scripts.prepare_care_full_kaggle import FILES, ROOT, _cell
+from scripts.prepare_care_longmemeval_kaggle import FILES_TRANSFER
+
+FILES_PROBE = (*FILES_TRANSFER, "scripts/run_care_longmemeval_probe.py")
+SLUG = "asem-care-longmemeval-probe"
+OUTPUT = "care_longmemeval_probe"
+
+
+def build(output: Path) -> dict:
+    output.mkdir(parents=True, exist_ok=True)
+    contents = {name: (ROOT / name).read_bytes() for name in FILES_PROBE}
+    contents["asem/__init__.py"] = b'"""CARE namespace."""\n'
+    contents["scripts/__init__.py"] = b'"""CARE script namespace."""\n'
+    manifest = {"protocol": "care-longmemeval-probe-v1",
+                "scope": "code/config only; benchmark downloaded from locked public URL",
+                "files": {n: hashlib.sha256(d).hexdigest() for n, d in sorted(contents.items())}}
+    contents["bundle-manifest.json"] = json.dumps(manifest, sort_keys=True).encode()
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, data in sorted(contents.items()):
+            info = zipfile.ZipInfo(name, (2020, 1, 1, 0, 0, 0))
+            info.external_attr = 0o100644 << 16
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, data)
+    payload = buffer.getvalue()
+    archive_sha = hashlib.sha256(payload).hexdigest()
+    (output / "care_longmemeval_probe_bundle.zip").write_bytes(payload)
+    bootstrap = f'''from pathlib import Path
+import base64, hashlib, io, json, os, sys, zipfile
+payload = base64.b64decode({base64.b64encode(payload).decode()!r})
+assert hashlib.sha256(payload).hexdigest() == {archive_sha!r}
+workspace = Path("/kaggle/working/care_code").resolve()
+workspace.mkdir(parents=True, exist_ok=True)
+with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+    for member in archive.infolist():
+        destination = (workspace / member.filename).resolve()
+        if not destination.is_relative_to(workspace) or ((member.external_attr >> 16) & 0o170000) == 0o120000:
+            raise ValueError("Unsafe bundle member")
+    archive.extractall(workspace)
+manifest = json.loads((workspace / "bundle-manifest.json").read_text())
+for name, expected in manifest["files"].items():
+    assert hashlib.sha256((workspace / name).read_bytes()).hexdigest() == expected, name
+os.chdir(workspace)
+sys.path.insert(0, str(workspace))
+print("Verified LongMemEval probe code bundle", len(manifest["files"]), "files")
+'''
+    run_source = (
+        "from scripts.run_care_kaggle import run\n"
+        f"run(output='/kaggle/working/{OUTPUT}', per_category=0, start_per_category=0, "
+        "categories=(1,), max_new_calls=220, dataset_name='longmemeval_oracle.json', "
+        "worker_module='scripts.run_care_longmemeval_probe')\n")
+    title = "ASEM CARE LongMemEval Probe"
+    notebook = {"nbformat": 4, "nbformat_minor": 5,
+                "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python",
+                                             "name": "python3"}, "language_info": {"name": "python"}},
+                "cells": [_cell("markdown", f"# {title}\n30-question paired diagnostic of CARE refusal "
+                                "behaviour (baseline vs wider bundle vs wider bundle + less abstention-heavy "
+                                "prompt). Not a benchmark result.\n"),
+                          _cell("code", bootstrap), _cell("code", run_source)]}
+    path = output / "CARE_LongMemEval_Probe.ipynb"
+    path.write_text(json.dumps(notebook, ensure_ascii=False), encoding="utf-8")
+    metadata = {"id": f"phamdinhdatai/{SLUG}", "title": title, "code_file": path.name,
+                "language": "python", "kernel_type": "notebook", "is_private": True,
+                "enable_gpu": True, "enable_internet": True, "machine_shape": "NvidiaTeslaT4",
+                "dataset_sources": [], "competition_sources": [], "kernel_sources": []}
+    (output / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    return {"notebook": str(path), "bundle_sha256": archive_sha}
+
+
+if __name__ == "__main__":
+    print(json.dumps(build(ROOT / "build/kaggle/care-longmemeval-probe"), indent=2))
